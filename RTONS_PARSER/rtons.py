@@ -60,18 +60,18 @@ def parse_utf8_str(fp, sz):
 # types 81, 90, 91
 def parse_str(fp, code):
 	# returns interned string
-	if code == b'\x90':
+	if code in b'\x81\x90':
 		result = parse_latin_str(fp, parse_varint(fp))
 		repeated_latin_string.append(result)
-	if code == b'\x91':
+	if code in b'\x91':
 		i = parse_varint(fp)
 		return repeated_latin_string[i]
-	if code == b'\x92':
+	if code in b'\x92':
 		result = parse_utf8_str(fp, parse_varint(fp))
 		repeated_utf8_string.append(result)
-	if code == b'\x93':
+	if code in b'\x93':
 		i = parse_varint(fp)
-		return repeated_utf8_string[i]	
+		return repeated_utf8_string[i]
 	
 	return result
 

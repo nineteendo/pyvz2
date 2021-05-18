@@ -51,27 +51,41 @@ def parse_varint(fp):
 	
 # helper for type string types
 def parse_latin_str(fp, sz):
-	return fp.read(sz).decode('latin-1')
+	string = fp.read(sz)
+	print(string)
+	return string.decode('latin-1')
 
 def parse_utf8_str(fp, sz):
-	return fp.read(sz).decode('utf-8')
+	string = fp.read(sz)
+	if string[0] in b'\x13\x16\x19\x1a\x1f#&1':
+		string+=fp.read(1)
+	if b'TPflanz' in string:
+		string+=fp.read(1)
+	if b'\xe2' in string:
+		string+=fp.read(2)
+	if b'\xc3' in string:
+		string+=fp.read(2)
+	if b'\x9c' in string:
+		string+=fp.read(1)
+	print(string)
+	return string.decode('utf-8')
 	
 	#return str(struct.unpack('{0}s'.format(sz), fp.read(sz))[0], 'utf8')
 # types 81, 90, 91
 def parse_str(fp, code):
 	# returns interned string
-	if code == b'\x90':
+	if code in b'\x81\x90':
 		result = parse_latin_str(fp, parse_varint(fp))
 		repeated_latin_string.append(result)
-	if code == b'\x91':
+	if code in b'\x91':
 		i = parse_varint(fp)
 		return repeated_latin_string[i]
-	if code == b'\x92':
+	if code in b'\x92':
 		result = parse_utf8_str(fp, parse_varint(fp))
 		repeated_utf8_string.append(result)
-	if code == b'\x93':
+	if code in b'\x93':
 		i = parse_varint(fp)
-		return repeated_utf8_string[i]	
+		return repeated_utf8_string[i]
 	
 	return result
 
@@ -231,7 +245,7 @@ def parse(fp, depth=0):
 	else:
 		return mappings[code](fp)
 def conversion(inp,out):
-	for entry in os.listdir(inp):
+	for entry in sorted(os.listdir(inp)):
 		pathin = os.path.join(inp, entry)
 		pathout = os.path.join(out, entry)
 		if os.path.isdir(pathin):
@@ -243,15 +257,15 @@ def conversion(inp,out):
 			repeated_utf8_string[:] = []
 			jfn=os.path.join(out,os.path.splitext(entry)[0]+'.json')
 			fh=open(pathin, 'rb')
-			try:
-				if fh.read(8) == b'RTON\x01\x00\x00\x00':
-					data=parse_map(fh)
-					open(jfn, 'wb').write(json.dumps(data, ensure_ascii=False,indent=4).encode('utf8'))
-					print('wrote '+format(jfn))
-				else:
-					fail.write('\nNO RTON: '+pathin)
-			except Exception as e:
- 				fail.write('\n' + str(type(e).__name__) + ': ' + pathin + ' pos {0}: '.format(fh.tell())+str(e))
+			#try:
+			if fh.read(8) == b'RTON\x01\x00\x00\x00':
+				data=parse_map(fh)
+				open(jfn, 'wb').write(json.dumps(data, ensure_ascii=False,indent=4).encode('utf8'))
+				print('wrote '+format(jfn))
+			else:
+				fail.write('\nNO RTON: '+pathin)
+			#except Exception as e:
+ 			#	print('\n' + str(type(e).__name__) + ': ' + pathin + ' pos {0}: '.format(fh.tell())+str(e))
 
 class FakeDict(dict):
 	def __init__(self, items):
@@ -266,4 +280,4 @@ fail=open("fail.txt","w")
 fail.write("fails:")
 conversion("rtons","jsons")
 fail.close()
-#os.system("open fail.txt")
+os.system("open fail.txt")
