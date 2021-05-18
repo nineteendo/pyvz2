@@ -1,0 +1,17 @@
+JSONS Parser instructions:
+
+1. If you don't have Python 3.x, get it here:
+
+   https://www.python.org/downloads/
+
+   I tested this with Python 3; if you have Python 2.x this may not work properly
+
+2. Add Python to your path: http://superuser.com/a/143121/43514
+
+   (in this case it will be C:\Python34 instead of C:\Python27)
+
+3. Put json files in /jsons where you extracted this
+
+4a. Run jsons.py if you want to parse rton files to /jsons
+4b. Run jsons_to_rtons.py if you want to parse rton files to /rtons
+4c. Run jsons_to_rtons_with_check if you want to parse rton files to /rtons and check with the rtons in /check

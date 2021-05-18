@@ -1,0 +1,4 @@
+fails:
+no json:jsons/.DS_Store
+no json:jsons/HOTUI/.DS_Store
+no json:jsons/WORLDS/.DS_Store
