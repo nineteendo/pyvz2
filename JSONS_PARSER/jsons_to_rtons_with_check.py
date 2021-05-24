@@ -132,10 +132,7 @@ def parse_json(data):
 				string += parse_json(v)
 			return string + object_end
 	elif isinstance(data, tuple):
-		string = b""
-		for k, v in enumerate(data):
-			string += parse_json(v)
-		return string
+		return encode_string(data[0]) + parse_json(data[1])
 	elif isinstance(data, bool):
 		return encode_bool(data)
 	if isinstance(data, int):
@@ -164,7 +161,12 @@ def conversion(inp, out, check):
 		elif not pathin.endswith('.' + 'rton'):
 			try:
 				data=json.loads(open(pathin, 'rb').read(), object_pairs_hook=parse_object_pairs)
-				write=os.path.join(out,os.path.splitext(entry)[0]+'.rton')
+				base = os.path.splitext(entry)[0]
+				if base == "pp":
+					base+='.dat'
+				else:
+					base+='.rton'
+				write=os.path.join(out,base)
 			except:
 				fail.write("\nno json:" + pathin)
 			else:
@@ -174,7 +176,7 @@ def conversion(inp, out, check):
 					data=b'RTON\x01\x00\x00\x00'+parse_json(data)[1:]+b'DONE'
 					
 					open(write, 'wb').write(data)
-					if (data == open(os.path.join(check,os.path.splitext(entry)[0]+'.RTON'), 'rb').read()):
+					if (data == open(os.path.join(check,base), 'rb').read()):
 						print("wrote " + format(write))
 					else:	
 						fail.write("\ndifferent rton:" + write)

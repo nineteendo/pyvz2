@@ -132,10 +132,7 @@ def parse_json(data):
 				string += parse_json(v)
 			return string + object_end
 	elif isinstance(data, tuple):
-		string = b""
-		for k, v in enumerate(data):
-			string += parse_json(v)
-		return string
+		return encode_string(data[0]) + parse_json(data[1])
 	elif isinstance(data, bool):
 		return encode_bool(data)
 	if isinstance(data, int):
