@@ -99,20 +99,20 @@ def encode_rtid(string):
 def encode_int(integ):
 	if integ == 0:
 		return int32_zero
-	elif -128 == integ:
-		return encode_int8(integ)
+	#elif -128 == integ:
+	#	return encode_int8(integ)
 	#elif 127 < integ < 256:
 	#	return encode_uint8(integ)
-	elif -32769 < integ < -16383 or 16383 < integ < 32768:
-		return encode_int16(integ)
+	#elif -32769 < integ < -16383 or 16383 < integ < 32768:
+	#	return encode_int16(integ)
 	#elif 32767 < integ < 65536:
 	#	return encode_uint16(integ)
 	elif -2147483649 < integ < -268435455 or 268435455 < integ < 2147483648:
 		return encode_int32(integ)
 	#elif 2147483647 < integ < 4294967296:
 	#	return encode_uint32(integ)
-	elif -9223372036854775809 < integ < -72057594037927936 or 72057594037927936 < integ < 9223372036854775808:
-		return encode_int64(integ)
+	#elif -9223372036854775809 < integ < -72057594037927936 or 72057594037927936 < integ < 9223372036854775808:
+	#	return encode_int64(integ)
 	#elif 9223372036854775807 < integ < 18446744073709551616:
 	#	return encode_uint64(integ)
 	else:
