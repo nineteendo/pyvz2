@@ -212,20 +212,23 @@ def parse(fp, depth=0):
 		return parse_map(fp, depth+1)
 	# handle No_Backup
 	elif code in ppdm:
-		return ppdm[code](fp)
+		ppdm[code](fp)
+		return code.hex()
 	else:
 		return mappings[code](fp)
-def conversion(inp):
+def conversion(inp,out):
 	for entry in sorted(os.listdir(inp)):
 		pathin = os.path.join(inp, entry)
+		pathout = os.path.join(out, entry)
 		if os.path.isdir(pathin):
-			conversion(pathin)
+			os.makedirs(pathout, exist_ok=True)
+			conversion(pathin,pathout)
 		elif not pathin.endswith('.' + 'json'):
 			# clear cached_latin_strings
 			cached_latin_strings[:] = []
 			cached_utf8_strings[:] = []
 			
-			jfn=os.path.join(inp,os.path.splitext(entry)[0]+'.json')
+			jfn=os.path.join(out,os.path.splitext(entry)[0]+'.json')
 			fh=open(pathin, 'rb')
 			try:
 				if fh.read(8) == b'RTON\x01\x00\x00\x00':
@@ -244,9 +247,10 @@ class FakeDict(dict):
 	def items(self):
 		return self._items
 
+os.makedirs("nobackup", exist_ok=True)
 os.makedirs("rtons", exist_ok=True)
 fail=open("fail.txt","w")
 fail.write("fails:")
-conversion("rtons")
+conversion("rtons","nobackup")
 fail.close()
 os.system("open fail.txt")

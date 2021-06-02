@@ -32,18 +32,20 @@ def parse_int32(fp):
 def parse_float(fp):
 	return struct.unpack('<f', fp.read(4))[0]
 	
-# type 24 - varint (1-3 bytes?)
+# type 24, 28, 44 and 48
 def parse_varint(fp):
 	result = 0;
+	i = 0
 	
-	for i in range(4):
+	while i == 0 or num > 127:
 		num = struct.unpack('B', fp.read(1))[0]
 		result += 128**i * (num & 0x7f)
-		
-		if num < 128:
-			break
-		
+		i+=1
 	return result
+
+# type 25, 29, 45 and 49
+def parse_negative_varint(fp):
+	return -parse_varint(fp)
 
 # type 26
 def parse_uint32(fp):
@@ -51,7 +53,7 @@ def parse_uint32(fp):
 
 # type 40
 def parse_int64(fp):
-	return struct.unpack('<l', fp.read(8))[0]
+	return struct.unpack('<q', fp.read(4))[0]
 
 # type 42
 def parse_double(fp):
@@ -59,7 +61,7 @@ def parse_double(fp):
 
 # type 46
 def parse_uint64(fp):
-	return struct.unpack('<L', fp.read(8))[0]
+	return struct.unpack('<Q', fp.read(8))[0]
 	
 # types 81, 90
 def parse_latin_str(fp):
@@ -92,18 +94,15 @@ def parse_ref(fp):
 	ch = fp.read(1)
 	
 	if ch == b'\x00':
-		return 'NULL'	
+		return 'RTID()'	
 	elif ch == b'\x03':
 		p1 = parse_utf8_str(fp)
 		p2 = parse_utf8_str(fp)
 	elif ch == b'\x02':
 		p1 = parse_utf8_str(fp)
-		c = fp.read(1)
-		if p1[0] == b'$':
-			rb = 6
-		else:
-			rb = 5
-		p2 = str(binascii.hexlify(c + fp.read(rb)), 'ascii')
+		i2 = str(parse_varint(fp))
+		i1 = str(parse_varint(fp))
+		p2 = i1 + "." + i2 + "." + fp.read(4)[::-1].hex()
 	else:
 		raise ValueError("unexpected headbyte for type 83, found: {0}".format(str(ch)))		
 	
@@ -117,29 +116,33 @@ def parse_map(fp, depth=0):
 		while True:
 			key = parse(fp)
 			val = parse(fp, depth)
-			
-			result.append((key,val))			
+			result.append((key,val))
 	except StopIteration:
-		pass
+		return FakeDict(result)
 	
-	return FakeDict(result)
-	
-def stop_iteration(fp):	
+def end_map(fp):
 	raise StopIteration
-	
+
 # type 86
 def parse_list(fp):	
 	if fp.read(1) != b'\xfd':
 		raise ValueError("list is missing start marker")
 	
 	result = []
-	for i in range(parse_varint(fp)):
-		result.append(parse(fp))
-		
-	if fp.read(1) != b'\xfe':
-		raise ValueError("list is missing end marker")
+	i1 = 0
+	i2 = parse_varint(fp)
+	try:
+		while True:
+			result.append(parse(fp))
+			i1+=1
+	except StopAsyncIteration:
+		if (i1 != i2):
+			fail.write("\n   SilentError: %s pos %s: Array of length %s found, expected %s" %(fp.name,fp.tell()-1,i1,i2))
 	
 	return result
+
+def end_list(fp):
+	raise StopAsyncIteration
 
 def raw_data(fp, code, sz):
 	return 'U{0}({1})'.format(str(binascii.hexlify(code), 'ascii'), str(binascii.hexlify(fp.read(sz)), 'ascii'))
@@ -148,27 +151,20 @@ def parse(fp, depth=0):
 		
 	mappings = {	
 		b'\x20': parse_int32,
-		b'\x21': lambda x: 0, #int32_zero
+		b'\x21': lambda x: 0, # int32_zero
 		b'\x22': parse_float,
-		b'\x23': lambda x: 0.0, #float_zero
-		b'\x24': parse_varint,
-				
-		b'\x26': parse_uint32,
-		b'\x27': lambda x: 0,
-		b'\x28': parse_varint,
+		b'\x23': lambda x: 0.0, # float_zero
+		b'\x24': parse_varint, # positive_int32_varint
+		b'\x25': parse_negative_varint, # negative_int32_varint
 		
-		
-		b'\x41': lambda x: 0, #int64_zero
 		b'\x42': parse_double,
 		
-		b'\x81': parse_latin_str,
-		b'\x82': parse_utf8_str,
 		b'\x83': parse_ref,
-		
-		b'\x85': parse_map,
+		b'\x84': lambda x: None, # None
 		b'\x86': parse_list,
 		
-		b'\xff': stop_iteration 
+		b'\xfe': end_list, 
+		b'\xff': end_map 
 		
 	}
 	
@@ -177,20 +173,31 @@ def parse(fp, depth=0):
 
 		b'\x08': parse_int8,  
 		b'\x09': lambda x: 0, # int8_zero
-		
-		b'\x0a': parse_uint8,  # 0b and 0a are related (ppd 04 vs 05)
+		b'\x0a': parse_uint8,
 		b'\x0b': lambda x: 0, # uint8_zero
 		
-		b'\x10': parse_int16, # found in dli section of ppd
+		b'\x10': parse_int16,
 		b'\x11': lambda x: 0,  # int16_zero
-		
-		b'\x12': parse_uint16, # all found under the wmed['e'] in ppds
+		b'\x12': parse_uint16,
 		b'\x13': lambda x: 0, # uint16_zero
 		
 		# only in NoBackup RTONs
-		b'\x27': lambda x: None, #uint_32_zero?	
-		b'\x45': parse_uint8,
+		b'\x26': parse_uint32,
+		b'\x27': lambda x: 0, #uint_32_zero
+		b'\x28': parse_varint, # positive_uint32_varint
+		b'\x29': parse_negative_varint, #negative_int32_varint
 		
+		b'\x41': lambda x: 0, #int64_zero
+		
+		b'\x44': parse_varint, # positive_int64_varint
+		b'\x45': parse_negative_varint, # negative_int64_varint
+		b'\x46': parse_uint64,
+		b'\x47': lambda x: 0, # uint64_zero
+		b'\x48': parse_varint, # positive_uint64_varint
+		b'\x49': parse_negative_varint, # negative_uint64_varint
+		
+		b'\x81': parse_latin_str, # uncached string with roman characters
+		b'\x82': parse_utf8_str, # uncached string with unicode characters
 	}
 	
 	code = fp.read(1)
@@ -200,28 +207,12 @@ def parse(fp, depth=0):
 	# handle string types
 	elif code in [b'\x90', b'\x91', b'\x92', b'\x93']:
 		return parse_cached_str(fp, code)
-	# move back
-	elif code == b'\x84':
-		return None
-	# negative int
-	elif code == b'\x25':
-		return -parse_varint(fp)
-	# DONE or raw data?
-	elif code == b'\x44':
-		# handle DONE marker
-		if fp.read(3) == b'ONE':
-			raise StopIteration
-		else:
-			# this is only for pp.dat
-			fp.seek(-3, 1)
-			raw_data(fp, code, 5)
-	# Map		
+	# handle Map
 	elif code == b'\x85':
 		return parse_map(fp, depth+1)
-	# pp.dat
+	# handle No_Backup
 	elif code in ppdm:
 		return ppdm[code](fp)
-				
 	else:
 		return mappings[code](fp)
 def conversion(inp,out):
@@ -244,9 +235,9 @@ def conversion(inp,out):
 					open(jfn, 'wb').write(json.dumps(data, ensure_ascii=False,indent=4).encode('utf8'))
 					print('wrote '+format(jfn))
 				else:
-					fail.write('\nNO RTON: '+pathin)
+					fail.write('\nNO RTON: ' + pathin)
 			except Exception as e:
- 				print('\n' + str(type(e).__name__) + ': ' + pathin + ' pos {0}: '.format(fh.tell())+str(e))
+ 				fail.write('\n' + str(type(e).__name__) + ': ' + pathin + ' pos {0}: '.format(fh.tell()-1)+str(e))
 
 class FakeDict(dict):
 	def __init__(self, items):
