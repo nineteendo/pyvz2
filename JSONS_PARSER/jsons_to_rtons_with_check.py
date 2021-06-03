@@ -23,26 +23,26 @@ int32 = b'\x20'
 int32_zero = b'\x21'
 floating_point = b'\x22'
 floating_point_zero = b'\x23'
-positive_varint_a = b'\x24'
-negative_varint_a= b'\x25'
-uint_32 = b'\x26'
-uint_32_zero = b'\x27'
-positive_varint_b = b'\28'
-negative_varint_b = b'\29'
+positive_int32_varint = b'\x24'
+negative_int32_varint= b'\x25'
+uint32 = b'\x26'
+uint32_zero = b'\x27'
+positive_uint32_varint = b'\x28'
+negative_uint32_varint = b'\x29'
 
-int64 = b'\40'
-int64_zero = b'\41'
+int64 = b'\x40'
+int64_zero = b'\x41'
 double = b'\x42'
 double_zero = b'\x43'
-positive_varint_c = b'\44'
-negative_varint_c = b'\45'
-uint_64 = b'\x46'
-uint_64_zero = b'\x47'
-positive_varint_c = b'\48'
-negative_varint_c = b'\49'
+positive_int64_varint = b'\x44'
+negative_int64_varint = b'\x45'
+uint64 = b'\x46'
+uint64_zero = b'\x47'
+positive_uint64_varint = b'\x48'
+negative_uint64_varint = b'\x49'
 
-latin_string = b'\81'
-UTF8_string = b'\82'
+latin_string = b'\x81'
+UTF8_string = b'\x82'
 RTID = b'\x83'
 null = b'\x84'
 object_start = b'\x85'
@@ -91,39 +91,35 @@ def encode_string(string):
 			return cached_UTF8_string_recall + encode_number(cached_UTF8_strings.index(string))
 
 def encode_rtid(string):
-	string = string[5:-1].split('@')
-	name = string[0]
-	type = string[-1]	
-	return RTID + rtid_string + encode_unicode(type) + encode_unicode(name)
+	if '@' in string:
+		string = string[5:-1].split('@')
+		name = string[0]
+		if name.count(".") == 2:
+			name = name.split(".")
+			name = encode_number(int(name[1])) + encode_number(int(name[0])) + bytes.fromhex(name[2])[::-1]
+			encode = rtid_id_string
+		else:
+			name = encode_unicode(name)
+			encode = rtid_string
+		type = string[-1]	
+		return RTID + encode + encode_unicode(type) + name
+	else:
+		return RTID + false
 
 def encode_int(integ):
 	if integ == 0:
 		return int32_zero
-	#elif -128 == integ:
-	#	return encode_int8(integ)
-	#elif 127 < integ < 256:
-	#	return encode_uint8(integ)
-	#elif -32769 < integ < -16383 or 16383 < integ < 32768:
-	#	return encode_int16(integ)
-	#elif 32767 < integ < 65536:
-	#	return encode_uint16(integ)
-	elif -2147483649 < integ < -268435455 or 268435455 < integ < 2147483648:
+	elif -2147483649 < integ < -1048574 or 1048574 < integ < 2147483648:
 		return encode_int32(integ)
-	#elif 2147483647 < integ < 4294967296:
-	#	return encode_uint32(integ)
-	#elif -9223372036854775809 < integ < -72057594037927936 or 72057594037927936 < integ < 9223372036854775808:
-	#	return encode_int64(integ)
-	#elif 9223372036854775807 < integ < 18446744073709551616:
-	#	return encode_uint64(integ)
 	else:
 		return encode_varint(integ)
 
 def encode_varint(integ):
 	if integ < 0:
-		encode=negative_varint_a
+		encode = negative_int32_varint
 		integ*=-1
 	else:
-		encode=positive_varint_a
+		encode = positive_int32_varint
 	return encode+encode_number(integ)
 
 def encode_int8(integ):
@@ -145,10 +141,10 @@ def encode_uint32(integ):
 	return uint32 + struct.pack('<I', integ)
 	
 def encode_int64(integ):
-	return int64 + struct.pack('<l', integ)
+	return int64 + struct.pack('<q', integ)
 	
 def encode_uint64(integ):
-	return uint64 + struct.pack('<L', integ)
+	return uint64 + struct.pack('<Q', integ)
 
 def encode_floating_point(dec):
 	if (dec == 0):
@@ -171,7 +167,14 @@ def parse_json(data):
 				string += parse_json(v)
 			return string + object_end
 	elif isinstance(data, tuple):
-		return encode_string(data[0]) + parse_json(data[1])
+		key = data[0]
+		value = data[1]
+		if key == "objclass":
+			if value in ["DraperSaveData","GlobalSaveData","PlayerInfoLocalSaveData","LootSaveData","SaveGameHeader"]:
+				extensions[0] = ".bin"
+			if value == "PlayerInfo":
+				extensions[0] = ".dat"
+		return encode_string(key) + parse_json(value)
 	elif isinstance(data, bool):
 		return encode_bool(data)
 	if isinstance(data, int):
@@ -181,7 +184,7 @@ def parse_json(data):
 	elif data == None:
 		return null
 	elif isinstance(data, str):
-		if data == 'RTID(' + data[5:-1] + ')' and '@' in data:
+		if data == 'RTID(' + data[5:-1] + ')':
 			return encode_rtid(data)
 		else:
 			return encode_string(data)
@@ -200,23 +203,24 @@ def conversion(inp, out, check):
 		elif not pathin.endswith('.' + 'rton'):
 			try:
 				data=json.loads(open(pathin, 'rb').read(), object_pairs_hook=parse_object_pairs)
-				base = os.path.splitext(entry)[0]+".rton"
-				write=os.path.join(out,base)
 			except:
 				fail.write("\nno json:" + pathin)
 			else:
 				try:
 					cached_latin_strings[:] = []
 					cached_UTF8_strings[:] = []
+					extensions[0] = ".rton"
 					data=b'RTON\x01\x00\x00\x00'+parse_json(data)[1:]+b'DONE'
-					
+					base = os.path.splitext(entry)[0]+extensions[0]
+					write=os.path.join(out,base)
+			
 					open(write, 'wb').write(data)
 					if (data == open(os.path.join(check,base), 'rb').read()):
 						print("wrote " + format(write))
-					else:	
+					else:
 						fail.write("\ndifferent rton:" + write)
 				except Exception as e:
- 					fail.write('\n' + str(type(e).__name__) + ': ' + pathin + str(e))
+					fail.write('\n' + str(type(e).__name__) + ': ' + pathin + str(e))
 
 def parse_object_pairs(pairs):
 	pairs.append(("",""))
@@ -224,6 +228,7 @@ def parse_object_pairs(pairs):
 
 cached_latin_strings=[]
 cached_UTF8_strings=[]
+extensions=[""]
 
 os.makedirs("jsons", exist_ok=True)
 os.makedirs("rtons", exist_ok=True)
