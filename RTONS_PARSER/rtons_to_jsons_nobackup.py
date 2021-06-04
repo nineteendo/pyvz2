@@ -2,11 +2,7 @@
 # written by 1Zulu and CLC2020
 
 # usage: put rton files in rtons & run
-import os, struct, time, json, binascii
-from collections import OrderedDict
-
-cached_latin_strings = []
-cached_utf8_strings = []
+import os, struct, json
 
 # type 08
 def parse_int8(fp):
@@ -109,13 +105,13 @@ def parse_ref(fp):
 	return 'RTID({0}@{1})'.format(p2, p1)
 
 # type 85
-def parse_map(fp, depth=0):
+def parse_map(fp):
 	result = []
 	
 	try:
 		while True:
 			key = parse(fp)
-			val = parse(fp, depth)
+			val = parse(fp, key)
 			result.append((key,val))
 	except StopIteration:
 		return FakeDict(result)
@@ -124,7 +120,7 @@ def end_map(fp):
 	raise StopIteration
 
 # type 86
-def parse_list(fp):	
+def parse_list(fp, key = ""):	
 	if fp.read(1) != b'\xfd':
 		raise ValueError("list is missing start marker")
 	
@@ -133,7 +129,7 @@ def parse_list(fp):
 	i2 = parse_varint(fp)
 	try:
 		while True:
-			result.append(parse(fp))
+			result.append(parse(fp, key))
 			i1+=1
 	except StopAsyncIteration:
 		if (i1 != i2):
@@ -144,10 +140,7 @@ def parse_list(fp):
 def end_list(fp):
 	raise StopAsyncIteration
 
-def raw_data(fp, code, sz):
-	return 'U{0}({1})'.format(str(binascii.hexlify(code), 'ascii'), str(binascii.hexlify(fp.read(sz)), 'ascii'))
-
-def parse(fp, depth=0):
+def parse(fp, key = ""):
 		
 	mappings = {	
 		b'\x20': parse_int32,
@@ -161,7 +154,7 @@ def parse(fp, depth=0):
 		
 		b'\x83': parse_ref,
 		b'\x84': lambda x: None, # None
-		b'\x86': parse_list,
+		b'\x85': parse_map,
 		
 		b'\xfe': end_list, 
 		b'\xff': end_map 
@@ -201,6 +194,11 @@ def parse(fp, depth=0):
 	}
 	
 	code = fp.read(1)
+	if key in ['uid', 'PlayerID', 'SlotName', 'QuestID', 'QuestIssueDate', 'QuestIssueDateString', 'QuestCompletionTime', 'QuestLastPlayTime', 'QuestEndTimeDisplayFallback', 'm_lastCompletedUniqueID', 'lspt', 'lzgpt', 'lodpt', 'lpt', 'lpurt', 'lpurmt', 'gp', 'sp', 'idx', 'conw', 'conl', 'tot', 'pay', 'jcw', 'jcl', 'jsw', 'jsl', 'jll', 'rcw', 'rcl', 'rczw', 'rczl', 'rze', 'm_lastAgeResetTime', 'm_localTimeOffsetFromServerTime', 'm_lastCDNReceivedPushKey', 'm_lastCDNReceivedPushVersion', 'm_inboxLatestMessageReadTime', 'm_nextJoustFreePlayTime', 'm_localJoustHighScore', 'm_seasonNextDayPopupTime', 'LastLevelPlayed', 'LastMonetizationDate', 'LastCashPurchaseObjectType', 'LastGemPurchaseObjectType', 'LastMintPurchaseObjectType', 'LastCoinPurchaseObjectType', 'LastDateQuestWasRecycled', 'Level', 'LastStoreOpenedTime', 'LastStoreTablesUpdatedTime', 'LastPennyFuelUpdatedTimeDelta', 'PennyFuelUpdateStartTime', 'LastZPSUpdatedTimeDelta', 'ZPSUpdateStartTime', 'ZombossUnlockedTime', 'UniqueId', 'n', 'rs', 'l', 'lsc', 'ltfet', 'W', 'E', 'w', 'i', 'wn', 'pfco', 'ts', 'hter', 'wml', 'lst', 'nst', 'a', 't', 'rt', 'g', 'lizg', 'alodet', 'r', 's', 'p', 'lm', 'zgb', 'sid', 'rid', 'rsid', 'rzw', 'rza', 'rzc', 'rpd0', 'rpd1', 'rpd2', 'rznt', 'ldco', 'cllt', 'cllst', 'pbi', 'b', 'k', 'LevelName', 'ResourceGroups', 'StartingResolution', 'LevelCRC', 'PlantRow', 'GridSquareType', 'GridSquareLocked', 'MowerAllowedInRow', 'Reward1', 'Reward2', 'Reward3', 'ConsecutiveLODReward', 'FirstUnpurchasedPremiumPlantPlanted', 'm_level', 'm_previousLevel', 'm_plantfoodCount', 'm_plantfoodCountMax', 'm_collectableID_SunFromSky', 'm_boardHolidayEventName', 'm_loadedResourceGroups', 'm_activatedAudioEvent', 'm_type', 'Key', 'TypeName', 'PlantFoodActivationSound', 'HelpedActivationSound', 'ProjectileLaunchSound', 'SuggestionAlts', 'Props', 'm_name', 'm_conditionFlags', 'm_musicTriggerOverride', 'm_methodName', 'm_availableSeeds', 'm_activeAnimBaseLabel', 'm_propertySheetName', 'm_overrideInputPriority', 'm_loadingResourcesList', 'm_targetFillPercent', 'm_flagsTriggered', 'm_flagCount', 'm_eyeIdleIndex', 'm_audioOnSlideIn', 'm_audioOnSlideOut', 'm_packetCount', 'm_autofillSeedTypes', 'm_contentsTypeName', 'm_packetFlags', 'LevelJam', 'ZombieSpawnPattern', 'AnimationLabel', 'm_groundTrackName', 'm_zombieType', 'zombieType']:
+		if not key in nobackup:
+			nobackup[key] = {}
+		if not code.hex() in nobackup[key]:
+			nobackup[key][code.hex()] = fp.name
 	# handle bool:
 	if code in [b'\x00', b'\x01']:
 		return code == b'\x01'
@@ -208,8 +206,8 @@ def parse(fp, depth=0):
 	elif code in [b'\x90', b'\x91', b'\x92', b'\x93']:
 		return parse_cached_str(fp, code)
 	# handle Map
-	elif code == b'\x85':
-		return parse_map(fp, depth+1)
+	elif code == b'\x86':
+		return parse_list(fp,key)
 	# handle No_Backup
 	elif code in ppdm:
 		ppdm[code](fp)
@@ -247,10 +245,15 @@ class FakeDict(dict):
 	def items(self):
 		return self._items
 
-os.makedirs("nobackup", exist_ok=True)
+cached_latin_strings = []
+cached_utf8_strings = []
+nobackup = {}
+
 os.makedirs("rtons", exist_ok=True)
+os.makedirs("nobackup", exist_ok=True)
 fail=open("fail.txt","w")
 fail.write("fails:")
 conversion("rtons","nobackup")
+json.dump(nobackup,open("abackup.json", 'w'),indent=4)
 fail.close()
 os.system("open fail.txt")
