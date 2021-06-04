@@ -76,15 +76,19 @@ def encode_number(integ):
 def encode_unicode(string):
 	return encode_number(len(string))+encode_number(len(string.encode("utf-8")))+string.encode('utf-8')
 
-def encode_string(string):
-	if len(string) == len(string.encode('latin-1', 'ignore')):
-		if not string in cached_latin_strings:
+def encode_string(string, special = 0):
+	if len(string) == len(string.encode('latin-1', 'ignore')) and special != 2:
+		if special == 1:
+			return latin_string + encode_number(len(string))+string.encode('latin-1')
+		elif not string in cached_latin_strings:
 			cached_latin_strings.append(string)
 			return cached_latin_string + encode_number(len(string))+string.encode('latin-1')
 		else:
 			return cached_latin_string_recall + encode_number(cached_latin_strings.index(string))
 	else:
-		if not string in cached_UTF8_strings:
+		if special == 2:
+			return UTF8_string + encode_unicode(string)
+		elif not string in cached_UTF8_strings:
 			cached_UTF8_strings.append(string)
 			return cached_UTF8_string + encode_unicode(string)
 		else:
@@ -106,20 +110,63 @@ def encode_rtid(string):
 	else:
 		return RTID + false
 
-def encode_int(integ):
+def encode_int(integ, special = 0):
 	if integ == 0:
-		return int32_zero
-	elif -2147483649 < integ < -1048574 or 1048574 < integ < 2147483648:
+		if special == 3:
+			return int8_zero
+		elif special == 4:
+			return uint8_zero
+		elif special == 5:
+			return int16_zero
+		elif special == 6:
+			return uint16_zero
+		elif special == 7:
+			return uint32_zero
+		elif special == 8:
+			return int64_zero
+		elif special == 9:
+			return uint64_zero
+		else:
+			return int32_zero
+	elif special == 3 and (-129 < integ < 128):
+		return encode_int8(integ)
+	elif special == 4 and (0 < integ < 256):
+		return encode_uint8(integ)
+	elif special == 5 and (-32769 < integ < 32768):
+		return encode_int16(integ)
+	elif special == 6 and (0 < integ < 65536):
+		return encode_uint16(integ)
+	elif special == 0 and (-2147483649 < integ < -1048574 or 1048574 < integ < 2147483648):
 		return encode_int32(integ)
+	elif special == 7 and (16777214 < integ < 4294967296):
+		return encode_uint32(integ)
+	elif special == 8 and (-9223372036854775809 < integ < -72057594037927936 or 72057594037927936 < integ < 9223372036854775808):
+		return encode_int64(integ)
+	elif special == 9 and (9223372036854775807 < integ < 18446744073709551616):
+		return encode_uint64(integ)
 	else:
-		return encode_varint(integ)
+		return encode_varint(integ, special)
 
-def encode_varint(integ):
+def encode_varint(integ, special = 0):
 	if integ < 0:
-		encode = negative_int32_varint
+		if special == 7:
+			encode = negative_uint32_varint
+		elif special == 8:
+			encode = negative_int64_varint
+		elif special == 9:
+			encode = negative_uint64_varint
+		else:
+			encode = negative_int32_varint
 		integ*=-1
 	else:
-		encode = positive_int32_varint
+		if special == 7:
+			encode = positive_uint32_varint
+		elif special == 8:
+			encode = positive_int64_varint
+		elif special == 9:
+			encode = positive_uint64_varint
+		else:
+			encode = positive_int32_varint
 	return encode+encode_number(integ)
 
 def encode_int8(integ):
@@ -146,48 +193,78 @@ def encode_int64(integ):
 def encode_uint64(integ):
 	return uint64 + struct.pack('<Q', integ)
 
-def encode_floating_point(dec):
+def encode_floating_point(dec, special = 0):
 	if (dec == 0):
 		return floating_point_zero
-	elif dec == struct.unpack('<f', struct.pack("<f", dec))[0]:
+	elif special != 10 and dec == struct.unpack('<f', struct.pack("<f", dec))[0]:
 		return floating_point + struct.pack("<f", dec)
 	else:
 		return double + struct.pack("<d", dec)
 
-def parse_json(data):
+def parse_json(data, oldkey = "", special = 0):
 	if isinstance(data, list):
 		if len(data) == 0 or not isinstance(data[0], tuple):
 			string = array+array_start+encode_number(len(data))
 			for k, v in enumerate(data):
-				string += parse_json(v)
+				string += parse_json(v, oldkey, special)
 			return string + array_end
 		else:
 			string = object_start
 			for v in data[:-1]:
-				string += parse_json(v)
+				string += parse_json(v, oldkey)
 			return string + object_end
 	elif isinstance(data, tuple):
 		key = data[0]
 		value = data[1]
 		if key == "objclass":
-			if value in ["DraperSaveData","GlobalSaveData","PlayerInfoLocalSaveData","LootSaveData","SaveGameHeader"]:
-				extensions[0] = ".bin"
-			if value == "PlayerInfo":
-				extensions[0] = ".dat"
-		return encode_string(key) + parse_json(value)
+			objclass[0] = value
+		if key == "uid":
+			objclass[1] = "uid"
+		if key in ["PlayerID","SlotName","QuestID","QuestIssueDateString","m_lastCompletedUniqueID","m_lastCDNReceivedPushKey","m_lastCDNReceivedPushVersion","LastLevelPlayed","LastMonetizationDate","LastCashPurchaseObjectType",
+		"LastGemPurchaseObjectType","LastMintPurchaseObjectType","LastCoinPurchaseObjectType","wn","wml","lizg","Reward1","Reward2","Reward3","ConsecutiveLODReward","FirstUnpurchasedPremiumPlantPlanted","m_previousLevel",
+		"m_collectableID_SunFromSky","m_boardHolidayEventName","m_activatedAudioEvent","HelpedActivationSound","m_musicTriggerOverride","m_methodName","m_activeAnimBaseLabel","m_audioOnSlideIn","m_audioOnSlideOut","m_contentsTypeName",
+		"AnimationLabel","m_groundTrackName","m_zombieType","zombieType","m_loadedResourceGroups","m_availableSeeds","m_loadingResourcesList","m_autofillSeedTypes"] or key == "uid" and len(value) > 11 or oldkey == "m_lastStandLoadout" and \
+		key == "Level" or oldkey == "m_lootEntryInstancedData" and key == "UniqueId" or oldkey == "pr" and key == "n" or oldkey == "objdata" and key in ["l","m_name"] or objclass[0] == "SaveGameHeader" and key == "ResourceGroups" or \
+		oldkey == "boarddata" and key == "m_level" or objclass[1] == "uid" and key in ["TypeName","PlantFoodActivationSound", "Key", "ProjectileLaunchSound","SuggestionAlts","Props","zombieType","LevelJam","ZombieSpawnPattern","LevelName"]:
+			special = 1 # uncached latin string 81
+		if key in ["m_propertySheetName"] or oldkey == "objdata" and key == "n":
+			special = 2 # uncached utf8 string 82
+		if key in ["PlantRow","GridSquareType","GridSquareLocked","MowerAllowedInRow"]:
+			special = 3 # int8 08 and 09
+		if key in ["W","w","pfco","hter","lm","m_plantfoodCount","m_plantfoodCountMax","m_overrideInputPriority","m_flagCount","m_eyeIdleIndex","m_packetCount","pbi","a","rt","m_conditionFlags","m_targetFillPercent","m_flagsTriggered"] or \
+		oldkey == "gpi" and key == "g": # or oldkey == "gpi" and key == "k" and value != 0
+			special = 4 # uint8 0a and 0b
+		if oldkey == "dli" and key in ["l","r","s"]:
+			special =  5 # int16 10 and 11
+		if key in ["E"] or oldkey == "dri" and key == "l" or oldkey == "e" and key == "i":
+			special = 6 # uint16 12 and 13
+		if key in ["rs","LevelCRC","m_type","conw","conl","pay","jcw","jcl","jsw","jsl","jll","rcw","rcl","rczw","rczl","rze","lsc","rzw","rza","rzc","tot","StartingResolution",'alodet'] or oldkey == "lp" and key in ["s","p"] or oldkey == \
+		"up" and key in ["i","p"] or key == "ltfet" and 536870911 < value < 4294967296 or oldkey == "m_groundEffect" and key == "m_type" or key == "m_packetFlags" and isinstance(value, int) or oldkey in ["ap","lp","cqi","puc","qlgi"] and \
+		key == "i":
+			special = 7 # uint32 26, 27, 28 and 29
+		if key in ["QuestCompletionTime","QuestLastPlayTime","QuestEndTimeDisplayFallback","LastDateQuestWasRecycled","LastStoreOpenedTime","LastStoreTablesUpdatedTime","ts","QuestIssueDate","b","m_localTimeOffsetFromServerTime","b","lst",
+		"nst"] or oldkey == "qlgi" and key == "l" or oldkey in ["pbi","gpi","pli","cqi"] and key == "t" or key == "ltfet" and 4294967295 < value < 9223372036854775808:
+			special = 8 # int64 40, 41, 44 and 45
+		if key in ["lspt","lzgpt","lodpt","lpt","lpurt","lpurmt","gp","sp","idx","m_lastAgeResetTime","m_inboxLatestMessageReadTime","m_nextJoustFreePlayTime","m_localJoustHighScore","m_seasonNextDayPopupTime",
+		"LastPennyFuelUpdatedTimeDelta","PennyFuelUpdateStartTime","LastZPSUpdatedTimeDelta","ZPSUpdateStartTime","ZombossUnlockedTime","zgb","sid","rid","rsid","rpd0","rpd1","rpd2","rznt","ldco","cllt","cllst"] or key == "ltfet" and \
+		9223372036854775807 < value < 18446744073709551616:
+			special = 9 # uint64 46, 47, 48 and 49
+		if key in ["NextScheduleTime","NextDropTime"]:
+			special = 10
+		return encode_string(key) + parse_json(value, key, special)
 	elif isinstance(data, bool):
 		return encode_bool(data)
 	if isinstance(data, int):
-		return encode_int(data)
+		return encode_int(data, special)
 	elif isinstance(data, float):
-		return encode_floating_point(data)
+		return encode_floating_point(data,special)
 	elif data == None:
 		return null
 	elif isinstance(data, str):
 		if data == 'RTID(' + data[5:-1] + ')':
 			return encode_rtid(data)
 		else:
-			return encode_string(data)
+			return encode_string(data,special)
 	else:
 		raise TypeError(type(data))
 
@@ -209,15 +286,20 @@ def conversion(inp, out, check):
 				try:
 					cached_latin_strings[:] = []
 					cached_UTF8_strings[:] = []
-					extensions[0] = ".rton"
+					objclass[:] = ["",""]
 					data=b'RTON\x01\x00\x00\x00'+parse_json(data)[1:]+b'DONE'
-					base = os.path.splitext(entry)[0]+extensions[0]
-					write=os.path.join(out,base)
-			
-					open(write, 'wb').write(data)
-					if (data == open(os.path.join(check,base), 'rb').read()):
-						print("wrote " + format(write))
+					if objclass[0] in ["DraperSaveData","GlobalSaveData","PlayerInfoLocalSaveData","LootSaveData","SaveGameHeader"]:
+						extension = ".bin"
+					elif objclass[0] == "PlayerInfo":
+						extension = ".dat"
 					else:
+						extension = ".rton"
+					base = os.path.splitext(entry)[0]+extension
+					write=os.path.join(out,base)
+		
+					open(write, 'wb').write(data)
+					print("wrote " + format(write))
+					if (data != open(os.path.join(check,base), 'rb').read()):
 						fail.write("\ndifferent rton:" + write)
 				except Exception as e:
 					fail.write('\n' + str(type(e).__name__) + ': ' + pathin + str(e))
@@ -228,7 +310,7 @@ def parse_object_pairs(pairs):
 
 cached_latin_strings=[]
 cached_UTF8_strings=[]
-extensions=[""]
+objclass=[""]
 
 os.makedirs("jsons", exist_ok=True)
 os.makedirs("rtons", exist_ok=True)
