@@ -65,8 +65,12 @@ def parse_latin_str(fp):
 	
 # type 82, 92
 def parse_utf8_str(fp):
-	parse_varint(fp) # Character length, only used when displaying text in game
-	return fp.read(parse_varint(fp)).decode('utf-8')
+	i1 = parse_varint(fp) # Character length
+	string = fp.read(parse_varint(fp)).decode('utf-8')
+	i2 = len(string)
+	if i1 != i2:
+		fail.write("\n	SilentError: %s pos %s: Unicode string of character length %s found, expected %s"%(fp.name,fp.tell()-1,i2,i1))
+	return string
 	
 # types 90, 91, 92, 93
 def parse_cached_str(fp, code):
@@ -113,16 +117,19 @@ def parse_map(fp):
 			key = parse(fp)
 			val = parse(fp, key)
 			result.append((key,val))
+	except KeyError as k:
+		if k.args[0] == b'':
+			fail.write("\n	SilentError: %s pos %s: End of file" %(fp.name,fp.tell()-1))
+		else:
+			raise k
 	except StopIteration:
-		return FakeDict(result)
+		pass
 	
-def end_map(fp):
-	raise StopIteration
-
+	return FakeDict(result)
 # type 86
 def parse_list(fp, key = ""):	
 	if fp.read(1) != b'\xfd':
-		raise ValueError("list is missing start marker")
+		fail.write("\n	SilentError: %s pos %s: List is missing start marker" %(fp.name,fp.tell()-1))
 	
 	result = []
 	i1 = 0
@@ -131,18 +138,25 @@ def parse_list(fp, key = ""):
 		while True:
 			result.append(parse(fp, key))
 			i1+=1
-	except StopAsyncIteration:
+	except KeyError as k:
+		if k.args[0] == b'':
+			fail.write("\n	SilentError: %s pos %s: End of file" %(fp.name,fp.tell()-1))
+		else:
+			raise k
+	except StopIteration:
 		if (i1 != i2):
-			fail.write("\n   SilentError: %s pos %s: Array of length %s found, expected %s" %(fp.name,fp.tell()-1,i1,i2))
+			fail.write("\n	SilentError: %s pos %s: Array of length %s found, expected %s" %(fp.name,fp.tell()-1,i1,i2))
 	
 	return result
 
-def end_list(fp):
-	raise StopAsyncIteration
+def end(fp):
+	raise StopIteration
 
 def parse(fp, key = ""):
 		
 	mappings = {	
+		b'\x00': lambda x: False,
+		b'\x01': lambda x: True,
 		b'\x20': parse_int32,
 		b'\x21': lambda x: 0, # int32_zero
 		b'\x22': parse_float,
@@ -156,8 +170,8 @@ def parse(fp, key = ""):
 		b'\x84': lambda x: None, # None
 		b'\x85': parse_map,
 		
-		b'\xfe': end_list, 
-		b'\xff': end_map 
+		b'\xfe': end, 
+		b'\xff': end
 		
 	}
 	
@@ -199,13 +213,10 @@ def parse(fp, key = ""):
 			nobackup[key] = {}
 		if not code.hex() in nobackup[key]:
 			nobackup[key][code.hex()] = fp.name
-	# handle bool:
-	if code in [b'\x00', b'\x01']:
-		return code == b'\x01'
 	# handle string types
-	elif code in [b'\x90', b'\x91', b'\x92', b'\x93']:
+	if code in [b'\x90', b'\x91', b'\x92', b'\x93']:
 		return parse_cached_str(fp, code)
-	# handle Map
+	# handle list
 	elif code == b'\x86':
 		return parse_list(fp,key)
 	# handle No_Backup
