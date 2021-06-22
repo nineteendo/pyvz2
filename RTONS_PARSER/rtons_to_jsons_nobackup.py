@@ -274,4 +274,10 @@ conversion(inp,out)
 os.makedirs("rtons", exist_ok=True)
 json.dump(nobackup,open("abackup.json", 'w'),indent=4)
 fail.close()
-os.system("open fail.txt")
+try:
+	os.startfile("fail.txt")
+except:
+	try:
+		os.system("open fail.txt")
+	except:
+		os.system("xdg-open fail.txt")
