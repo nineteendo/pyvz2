@@ -317,4 +317,10 @@ except:
 print(inp,">",out)
 conversion(inp,out)
 fail.close()
-os.system("open fail.txt")
+try:
+	os.startfile("fail.txt")
+except:
+	try:
+		os.system("open fail.txt")
+	except:
+		os.system("xdg-open fail.txt")
