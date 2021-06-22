@@ -88,11 +88,11 @@ def encode_string(string, special = 0):
 	else:
 		if special == 2:
 			return UTF8_string + encode_unicode(string)
-		elif not string in cached_UTF8_strings:
-			cached_UTF8_strings.append(string)
+		elif not string in cached_utf8_strings:
+			cached_utf8_strings.append(string)
 			return cached_UTF8_string + encode_unicode(string)
 		else:
-			return cached_UTF8_string_recall + encode_number(cached_UTF8_strings.index(string))
+			return cached_UTF8_string_recall + encode_number(cached_utf8_strings.index(string))
 
 def encode_rtid(string):
 	if '@' in string:
@@ -210,6 +210,10 @@ def parse_json(data, oldkey = "", special = 0):
 			return string + array_end
 		else:
 			string = object_start
+			if ("objclass","WorldData") in data:
+				objclass[0] = "WorldData"
+			if ("objclass","WorldMapList") in data:
+				objclass[0] = "WorldMapList"
 			for v in data[:-1]:
 				string += parse_json(v, oldkey)
 			return string + object_end
@@ -218,39 +222,33 @@ def parse_json(data, oldkey = "", special = 0):
 		value = data[1]
 		if key == "objclass":
 			objclass[0] = value
-		if key == "uid" and not value in ["2.0.06dcbdb1","2.0.05ac2eff","2.0.022f593c","2.0.0049e2bb","2.0.009807bc","2.0.0040a033","2.0.03d0c3b8","2.0.041196e0","2.0.07a4e595","2.0.0d808f14","2.0.0d9b671b","2.0.0470a981","2.0.0e46c3a8","2.0.0a20d660","2.0.004c6e93","2.0.0839b2e9","2.0.005ff25b","2.0.00a5c74a","2.0.06579702","2.0.072a44af","2.0.0535f1a2","2.0.00d4faf4","2.0.0d41f910","2.0.01561960","2.0.0005925a","2.0.017f766e","2.0.0031dd1d","2.0.0052346c","2.0.0e0e2f73","2.0.03899bee","2.0.0e6d6314","2.0.0ac76fc5","2.0.0c7ea8b7","2.0.0411b1c4","2.0.00ddd93d","2.0.0391496e","2.0.0380972f","2.0.0745556a","1.0.ffffffff","2.0.5c371969","2.0.3136bd51","2.0.3413bd93","2.0.74414528","2.0.f10a4528","2.0.11ca0953","2.0.199d14e3","2.0.1962c548","1.0.900cf319","1.0.77734805"] and len(value) > 11:
-			print(value)
+		if key == "uid" and not objclass[0] in ["WorldData","WorldMapList"] and len(value) > 11:
 			objclass[1] = True
-		if key in ["PlayerID","SlotName","QuestID","QuestIssueDateString","m_lastCompletedUniqueID","m_lastCDNReceivedPushKey","m_lastCDNReceivedPushVersion","LastLevelPlayed","LastMonetizationDate","LastCashPurchaseObjectType",
-		"LastGemPurchaseObjectType","LastMintPurchaseObjectType","LastCoinPurchaseObjectType","wn","wml","lizg","Reward1","Reward2","Reward3","ConsecutiveLODReward","FirstUnpurchasedPremiumPlantPlanted","m_previousLevel",
-		"m_collectableID_SunFromSky","m_boardHolidayEventName","m_activatedAudioEvent","HelpedActivationSound","m_musicTriggerOverride","m_methodName","m_activeAnimBaseLabel","m_audioOnSlideIn","m_audioOnSlideOut","m_contentsTypeName",
-		"AnimationLabel","m_groundTrackName","m_zombieType","m_loadedResourceGroups","m_availableSeeds","m_loadingResourcesList","m_autofillSeedTypes"] or objclass[1] and key == "uid" or oldkey == "m_lastStandLoadout" and \
-		key == "Level" or oldkey == "m_lootEntryInstancedData" and key == "UniqueId" or oldkey == "pr" and key == "n" or oldkey == "objdata" and key in ["l","m_name"] or objclass[0] == "SaveGameHeader" and key == "ResourceGroups" or \
-		oldkey == "boarddata" and key == "m_level" or objclass[1] and key in ["TypeName","PlantFoodActivationSound", "Key", "ProjectileLaunchSound","SuggestionAlts","Props","zombieType","LevelJam","ZombieSpawnPattern","LevelName"]:
+		if key in ["PlayerID", "SlotName", "QuestID", "QuestIssueDateString", "m_lastCompletedUniqueID", "m_lastCDNReceivedPushKey", "m_lastCDNReceivedPushVersion", "LastLevelPlayed", "LastMonetizationDate", "LastCashPurchaseObjectType",
+		"LastGemPurchaseObjectType", "LastMintPurchaseObjectType", "LastCoinPurchaseObjectType", "wn", "wml", "lizg", "Reward1", "Reward2", "Reward3", "ConsecutiveLODReward", "FirstUnpurchasedPremiumPlantPlanted", "m_previousLevel",
+		"m_collectableID_SunFromSky", "m_boardHolidayEventName", "m_activatedAudioEvent", "HelpedActivationSound", "m_musicTriggerOverride", "m_methodName", "m_activeAnimBaseLabel", "m_audioOnSlideIn", "m_audioOnSlideOut", "m_contentsTypeName",
+		"AnimationLabel", "m_groundTrackName", "m_zombieType", "m_loadedResourceGroups", "m_availableSeeds", "m_loadingResourcesList", "m_autofillSeedTypes"] or oldkey == "m_lastStandLoadout" and key == "Level" or oldkey == "m_lootEntryInstancedData" and key == "UniqueId" or oldkey == "pr" and key == "n" or oldkey == "objdata" and key in ["l", "m_name"] or oldkey == "boarddata" and key == "m_level" or objclass[1] and key in ["uid", "TypeName", "PlantFoodActivationSound", "Key",
+		"ProjectileLaunchSound", "SuggestionAlts", "Props", "zombieType", "LevelJam", "ZombieSpawnPattern", "LevelName", "ResourceGroups"]:
 			special = 1 # uncached latin string 81
 		if key in ["m_propertySheetName"] or oldkey == "objdata" and key == "n":
 			special = 2 # uncached utf8 string 82
-		if key in ["PlantRow","GridSquareType","GridSquareLocked","MowerAllowedInRow"]:
+		if key in ["PlantRow", "GridSquareType", "GridSquareLocked", "MowerAllowedInRow"]:
 			special = 3 # int8 08 and 09
-		if key in ["W","w","pfco","hter","lm","m_plantfoodCount","m_plantfoodCountMax","m_overrideInputPriority","m_flagCount","m_eyeIdleIndex","m_packetCount","pbi","a","rt","m_conditionFlags","m_targetFillPercent","m_flagsTriggered"] or \
-		oldkey == "gpi" and key == "g": # or oldkey == "gpi" and key == "k" and value != 0
+		if key in ["W", "w", "pfco", "hter", "lm", "m_plantfoodCount", "m_plantfoodCountMax", "m_overrideInputPriority", "m_flagCount", "m_eyeIdleIndex", "m_packetCount", "pbi", "a", "rt", "m_conditionFlags", "m_targetFillPercent", "m_flagsTriggered"] or oldkey == "gpi" and key == "g": # or oldkey == "gpi" and key == "k" and value != 0
 			special = 4 # uint8 0a and 0b
-		if oldkey == "dli" and key in ["l","r","s"]:
+		if oldkey == "dli" and key in ["l", "r", "s"]:
 			special =  5 # int16 10 and 11
 		if key in ["E"] or oldkey == "dri" and key == "l" or oldkey == "e" and key == "i":
 			special = 6 # uint16 12 and 13
-		if key in ["rs","LevelCRC","m_type","conw","conl","pay","jcw","jcl","jsw","jsl","jll","rcw","rcl","rczw","rczl","rze","lsc","rzw","rza","rzc","tot","StartingResolution",'alodet'] or oldkey == "lp" and key in ["s","p"] or oldkey == \
-		"up" and key in ["i","p"] or key == "ltfet" and 536870911 < value < 4294967296 or oldkey == "m_groundEffect" and key == "m_type" or key == "m_packetFlags" and isinstance(value, int) or oldkey in ["ap","lp","cqi","puc","qlgi"] and \
-		key == "i":
+		if key in ["rs", "LevelCRC", "m_type", "conw", "conl", "pay", "jcw", "jcl", "jsw", "jsl", "jll", "rcw", "rcl", "rczw", "rczl", "rze", "lsc", "rzw", "rza", "rzc", "tot", "StartingResolution",'alodet'] or oldkey == "lp" and key in ["s", "p"] or oldkey == "up" and key in ["i", "p"] or key == "ltfet" and 536870911 < value < 4294967296 or oldkey == "m_groundEffect" and key == "m_type" or key == "m_packetFlags" and isinstance(value, int) or oldkey in ["ap", "lp", "cqi", "puc", "qlgi"] and key == "i":
 			special = 7 # uint32 26, 27, 28 and 29
-		if key in ["QuestCompletionTime","QuestLastPlayTime","QuestEndTimeDisplayFallback","LastDateQuestWasRecycled","LastStoreOpenedTime","LastStoreTablesUpdatedTime","ts","QuestIssueDate","b","m_localTimeOffsetFromServerTime","b","lst",
-		"nst"] or oldkey == "qlgi" and key == "l" or oldkey in ["pbi","gpi","pli","cqi"] and key == "t" or key == "ltfet" and 4294967295 < value < 9223372036854775808:
+		if key in ["QuestCompletionTime", "QuestLastPlayTime", "QuestEndTimeDisplayFallback", "LastDateQuestWasRecycled", "LastStoreOpenedTime", "LastStoreTablesUpdatedTime", "ts", "QuestIssueDate", "b", "m_localTimeOffsetFromServerTime", "b", "lst",
+		"nst"] or oldkey == "qlgi" and key == "l" or oldkey in ["pbi", "gpi", "pli", "cqi"] and key == "t" or key == "ltfet" and 4294967295 < value < 9223372036854775808:
 			special = 8 # int64 40, 41, 44 and 45
-		if key in ["lspt","lzgpt","lodpt","lpt","lpurt","lpurmt","gp","sp","idx","m_lastAgeResetTime","m_inboxLatestMessageReadTime","m_nextJoustFreePlayTime","m_localJoustHighScore","m_seasonNextDayPopupTime",
-		"LastPennyFuelUpdatedTimeDelta","PennyFuelUpdateStartTime","LastZPSUpdatedTimeDelta","ZPSUpdateStartTime","ZombossUnlockedTime","zgb","sid","rid","rsid","rpd0","rpd1","rpd2","rznt","ldco","cllt","cllst"] or key == "ltfet" and \
-		9223372036854775807 < value < 18446744073709551616:
+		if key in ["lspt", "lzgpt", "lodpt", "lpt", "lpurt", "lpurmt", "gp", "sp", "idx", "m_lastAgeResetTime", "m_inboxLatestMessageReadTime", "m_nextJoustFreePlayTime", "m_localJoustHighScore", "m_seasonNextDayPopupTime",
+		"LastPennyFuelUpdatedTimeDelta", "PennyFuelUpdateStartTime", "LastZPSUpdatedTimeDelta", "ZPSUpdateStartTime", "ZombossUnlockedTime", "zgb", "sid", "rid", "rsid", "rpd0", "rpd1", "rpd2", "rznt", "ldco", "cllt", "cllst"] or key == "ltfet" and 9223372036854775807 < value < 18446744073709551616:
 			special = 9 # uint64 46, 47, 48 and 49
-		if key in ["NextScheduleTime","NextDropTime"]:
+		if key in ["NextScheduleTime", "NextDropTime"]:
 			special = 10
 		return encode_string(key) + parse_json(value, key, special)
 	elif isinstance(data, bool):
@@ -269,51 +267,54 @@ def parse_json(data, oldkey = "", special = 0):
 	else:
 		raise TypeError(type(data))
 
-def conversion(inp, out):
-	for entry in sorted(os.listdir(inp)):
-		pathin = os.path.join(inp, entry)
-		pathout = os.path.join(out, entry)
-		if os.path.isdir(pathin):
-			os.makedirs(pathout, exist_ok=True)
-			conversion(pathin,pathout)
-		elif not pathin.endswith('.' + 'rton'):
+def conversion(inp,out):
+	if os.path.isdir(inp):
+		os.makedirs(out, exist_ok=True)
+		for entry in sorted(os.listdir(inp)):
+			conversion(os.path.join(inp, entry),os.path.join(out, entry))
+	elif not inp.endswith('.' + 'rton'):
+		try:
+			data=json.loads(open(inp, 'rb').read(), object_pairs_hook=parse_object_pairs)
+		except:
+			fail.write("\nno json:" + inp)
+		else:
 			try:
-				data=json.loads(open(pathin, 'rb').read(), object_pairs_hook=parse_object_pairs)
-			except:
-				fail.write("\nno json:" + pathin)
-			else:
-				try:
-					cached_latin_strings[:] = []
-					cached_UTF8_strings[:] = []
-					objclass[:] = ["",False]
-					data=b'RTON\x01\x00\x00\x00'+parse_json(data)[1:]+b'DONE'
-					if objclass[0] in ["DraperSaveData","GlobalSaveData","PlayerInfoLocalSaveData","LootSaveData","SaveGameHeader"]:
-						extension = ".bin"
-					elif objclass[0] == "PlayerInfo":
-						extension = ".dat"
-					else:
-						extension = ".rton"
-					base = os.path.splitext(entry)[0]+extension
-					write=os.path.join(out,base)
-		
-					open(write, 'wb').write(data)
-					print("wrote " + format(write))
-				except Exception as e:
-					fail.write('\n' + str(type(e).__name__) + ': ' + pathin + str(e))
+				cached_latin_strings[:] = []
+				cached_utf8_strings[:] = []
+				objclass[:] = ["",False]
+				data=b'RTON\x01\x00\x00\x00'+parse_json(data)[1:]+b'DONE'
+				if objclass[0] in ["DraperSaveData","GlobalSaveData","PlayerInfoLocalSaveData","LootSaveData","SaveGameHeader"]:
+					extension = ".bin"
+				elif objclass[0] == "PlayerInfo":
+					extension = ".dat"
+				else:
+					extension = ".rton"
+				write=os.path.splitext(out)[0]+extension
+	
+				open(write, 'wb').write(data)
+				print("wrote " + write)
+			except Exception as e:
+				fail.write('\n' + str(type(e).__name__) + ': ' + inp + str(e))
 
 def parse_object_pairs(pairs):
 	pairs.append(("",""))
 	return pairs
 
-cached_latin_strings=[]
-cached_UTF8_strings=[]
+cached_latin_strings = []
+cached_utf8_strings = []
 objclass=[""]
-
-os.makedirs("jsons", exist_ok=True)
-os.makedirs("rtons", exist_ok=True)
 
 fail=open("fail.txt","w")
 fail.write("fails:")
-conversion("jsons","rtons")
+try:
+	inp = input("Input file or directory:")
+	out = os.path.join(input("Output directory:"),os.path.basename(inp))
+except:
+	inp = "jsons/"
+	out = "rtons/"
+	os.makedirs(inp, exist_ok=True)
+
+print(inp,">",out)
+conversion(inp,out)
 fail.close()
 os.system("open fail.txt")
