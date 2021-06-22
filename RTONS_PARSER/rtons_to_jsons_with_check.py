@@ -483,20 +483,18 @@ def parse(fp):
 	else:
 		return mappings[code](fp)
 def conversion(inp,out):
-	for entry in sorted(os.listdir(inp)):
-		pathin = os.path.join(inp, entry)
-		pathout = os.path.join(out, entry)
-		if os.path.isdir(pathin):
-			os.makedirs(pathout, exist_ok=True)
-			conversion(pathin,pathout)
-		elif not pathin.endswith('.' + 'json'):
-			# clear cached_latin_strings
-			cached_latin_strings[:] = []
-			cached_utf8_strings[:] = []
-			
-			jfn=os.path.join(out,os.path.splitext(entry)[0]+'.json')
-			fh=open(pathin, 'rb')
-			#try:
+	if os.path.isdir(inp):
+		os.makedirs(out, exist_ok=True)
+		for entry in sorted(os.listdir(inp)):
+			conversion(os.path.join(inp, entry),os.path.join(out, entry))
+	elif not inp.endswith('.' + 'json'):
+		# clear cached_latin_strings
+		cached_latin_strings[:] = []
+		cached_utf8_strings[:] = []
+		
+		jfn=os.path.splitext(out)[0]+'.json'
+		fh=open(inp, 'rb')
+		try:
 			if fh.read(8) == b'RTON\x01\x00\x00\x00':
 				data=parse_map(fh)
 				w = json.dumps(data, ensure_ascii=False,indent=4).encode('utf8')
@@ -505,12 +503,12 @@ def conversion(inp,out):
 				objclass[:] = ["",False]
 				cached_latin_strings[:] = []
 				cached_utf8_strings[:] = []
-				if open(pathin, 'rb').read() != b'RTON\x01\x00\x00\x00'+parse_json(json.loads(w, object_pairs_hook=parse_object_pairs))[1:]+b'DONE':
-					fail.write("\n	SilentError can't convert back from:" + pathin)
+				if open(inp, 'rb').read() != b'RTON\x01\x00\x00\x00'+parse_json(json.loads(w, object_pairs_hook=parse_object_pairs))[1:]+b'DONE':
+					fail.write("\n	SilentError can't convert back from:" + inp)
 			else:
-				fail.write('\nNO RTON: ' + pathin)
-			#except Exception as e:
- 			#	fail.write('\n' + str(type(e).__name__) + ': ' + pathin + ' pos {0}: '.format(fh.tell()-1)+str(e))
+				fail.write('\nNO RTON: ' + inp)
+		except Exception as e:
+			fail.write('\n' + str(type(e).__name__) + ': ' + inp + ' pos {0}: '.format(fh.tell()-1)+str(e))
 
 class FakeDict(dict):
 	def __init__(self, items):
@@ -525,13 +523,19 @@ def parse_object_pairs(pairs):
 
 cached_latin_strings = []
 cached_utf8_strings = []
-
-os.makedirs("rtons", exist_ok=True)
-os.makedirs("jsons", exist_ok=True)
 objclass=[""]
 
 fail=open("fail.txt","w")
 fail.write("fails:")
-conversion("rtons","jsons")
+try:
+	inp = input("Input file or directory:")
+	out = os.path.join(input("Output directory:"),os.path.basename(inp))
+except:
+	inp = "rtons/"
+	out = "jsons/"
+	os.makedirs(inp, exist_ok=True)
+
+print(inp,">",out)
+conversion(inp,out)
 fail.close()
 os.system("open fail.txt")

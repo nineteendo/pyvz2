@@ -226,28 +226,26 @@ def parse(fp, key = ""):
 	else:
 		return mappings[code](fp)
 def conversion(inp,out):
-	for entry in sorted(os.listdir(inp)):
-		pathin = os.path.join(inp, entry)
-		pathout = os.path.join(out, entry)
-		if os.path.isdir(pathin):
-			os.makedirs(pathout, exist_ok=True)
-			conversion(pathin,pathout)
-		elif not pathin.endswith('.' + 'json'):
-			# clear cached_latin_strings
-			cached_latin_strings[:] = []
-			cached_utf8_strings[:] = []
-			
-			jfn=os.path.join(out,os.path.splitext(entry)[0]+'.json')
-			fh=open(pathin, 'rb')
-			try:
-				if fh.read(8) == b'RTON\x01\x00\x00\x00':
-					data=parse_map(fh)
-					open(jfn, 'wb').write(json.dumps(data, ensure_ascii=False,indent=4).encode('utf8'))
-					print('wrote '+format(jfn))
-				else:
-					fail.write('\nNO RTON: ' + pathin)
-			except Exception as e:
- 				fail.write('\n' + str(type(e).__name__) + ': ' + pathin + ' pos {0}: '.format(fh.tell()-1)+str(e))
+	if os.path.isdir(inp):
+		os.makedirs(out, exist_ok=True)
+		for entry in sorted(os.listdir(inp)):
+			conversion(os.path.join(inp, entry),os.path.join(out, entry))
+	elif not inp.endswith('.' + 'json'):
+		# clear cached_latin_strings
+		cached_latin_strings[:] = []
+		cached_utf8_strings[:] = []
+		
+		jfn=os.path.splitext(out)[0]+'.json'
+		fh=open(inp, 'rb')
+		try:
+			if fh.read(8) == b'RTON\x01\x00\x00\x00':
+				data=parse_map(fh)
+				open(jfn, 'wb').write(json.dumps(data, ensure_ascii=False,indent=4).encode('utf8'))
+				print('wrote '+format(jfn))
+			else:
+				fail.write('\nNO RTON: ' + inp)
+		except Exception as e:
+			fail.write('\n' + str(type(e).__name__) + ': ' + inp + ' pos {0}: '.format(fh.tell()-1)+str(e))
 
 class FakeDict(dict):
 	def __init__(self, items):
@@ -260,11 +258,20 @@ cached_latin_strings = []
 cached_utf8_strings = []
 nobackup = {}
 
-os.makedirs("rtons", exist_ok=True)
-os.makedirs("nobackup", exist_ok=True)
 fail=open("fail.txt","w")
 fail.write("fails:")
-conversion("rtons","nobackup")
+try:
+	inp = input("Input file or directory:")
+	out = os.path.join(input("Output directory:"),os.path.basename(inp))
+except:
+	inp = "rtons/"
+	out = "nobackup/"
+	os.makedirs(inp, exist_ok=True)
+
+print(inp,">",out)
+conversion(inp,out)
+
+os.makedirs("rtons", exist_ok=True)
 json.dump(nobackup,open("abackup.json", 'w'),indent=4)
 fail.close()
 os.system("open fail.txt")
