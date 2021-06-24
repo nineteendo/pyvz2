@@ -306,6 +306,7 @@ objclass=[""]
 
 fail=open("fail.txt","w")
 fail.write("fails:")
+print("JSONSParser v1.0.0\nby Nineteendo")
 try:
 	inp = input("Input file or directory:")
 	out = os.path.join(input("Output directory:"),os.path.basename(inp))

@@ -1,5 +1,5 @@
 # JSON parser (ALPHA!)
-# written by CLC2020
+# written by Nineteendo
 # usage: put json files in jsons & run
 
 import os, json, struct
@@ -309,6 +309,7 @@ objclass=[""]
 
 fail=open("fail.txt","w")
 fail.write("fails:")
+print("JSONSParser v1.0.0\nby Nineteendo")
 try:
 	inp = input("Input file or directory:")
 	out = os.path.join(input("Output directory:"),os.path.basename(inp))
