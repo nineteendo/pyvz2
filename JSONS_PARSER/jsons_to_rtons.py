@@ -1,5 +1,5 @@
 # JSON parser (ALPHA!)
-# written by CLC2020
+# written by Nineteendo
 # usage: put json files in jsons & run
 
 import os, json, struct
