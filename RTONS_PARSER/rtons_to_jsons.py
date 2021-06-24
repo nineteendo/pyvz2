@@ -1,5 +1,5 @@
 # RTON parser (BETA!)
-# written by 1Zulu and CLC2020
+# written by 1Zulu and Nineteendo
 
 # usage: put rton files in rtons & run
 import os, struct, json
@@ -251,6 +251,7 @@ cached_utf8_strings = []
 
 fail=open("fail.txt","w")
 fail.write("fails:")
+print("RTONSParser v1.0.0\nby Nineteendo")
 try:
 	inp = input("Input file or directory:")
 	out = os.path.join(input("Output directory:"),os.path.basename(inp))
