@@ -42,7 +42,7 @@ positive_uint64_varint = b'\x48'
 negative_uint64_varint = b'\x49'
 
 latin_string = b'\x81'
-UTF8_string = b'\x82'
+utf8_string = b'\x82'
 RTID = b'\x83'
 null = b'\x84'
 object_start = b'\x85'
@@ -50,8 +50,8 @@ array = b'\x86'
 
 cached_latin_string = b'\x90'
 cached_latin_string_recall = b'\x91'
-cached_UTF8_string = b'\x92'
-cached_UTF8_string_recall = b'\x93'
+cached_utf8_string = b'\x92'
+cached_utf8_string_recall = b'\x93'
 
 array_start = b'\xfd'
 array_end = b'\xfe'
@@ -87,12 +87,12 @@ def encode_string(string, special = 0):
 			return cached_latin_string_recall + encode_number(cached_latin_strings.index(string))
 	else:
 		if special == 2:
-			return UTF8_string + encode_unicode(string)
-		elif not string in cached_UTF8_strings:
-			cached_UTF8_strings.append(string)
-			return cached_UTF8_string + encode_unicode(string)
+			return utf8_string + encode_unicode(string)
+		elif not string in cached_utf8_strings:
+			cached_utf8_strings.append(string)
+			return cached_utf8_string + encode_unicode(string)
 		else:
-			return cached_UTF8_string_recall + encode_number(cached_UTF8_strings.index(string))
+			return cached_utf8_string_recall + encode_number(cached_utf8_strings.index(string))
 
 def encode_rtid(string):
 	if '@' in string:
