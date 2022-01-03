@@ -1,4 +1,5 @@
-OBB unpacker
+OBBUnpacker/obbs
 RTONS_PARSER/jsons
 RTONS_PARSER/rtons
 .DS_Store
+RTONS_PARSER/fail.txt
