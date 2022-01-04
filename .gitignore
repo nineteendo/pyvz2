@@ -1,4 +1,6 @@
-OBBUnpacker/obbs
+OBBUnpacker/fail.txt
+OBBUnpacker/input
+OBBUnpacker/output
 RTONS_PARSER/jsons
 RTONS_PARSER/rtons
 .DS_Store

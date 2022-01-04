@@ -1,0 +1,16 @@
+{
+	"DEBUG_MODE": true,
+	"extractAllFiles": false,
+	"dumpRsgp": false,
+	"enteredPath": false,
+	"extractRsgp": true,
+	"extensions": [
+		".1rsb",
+		".obb",
+		".rsb",
+		".rsgp "
+	],
+	"startswith": [
+		"PACKAGES/"
+	]
+}
