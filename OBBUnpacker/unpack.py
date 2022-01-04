@@ -3,8 +3,11 @@
 import os, struct, zlib, sys, traceback, json, time
 options = {
 	"DEBUG_MODE": False,
-	"extractAllFiles": False,
 	"dumpRsgp": False,
+	"endswith": (
+		".RTON"
+	),
+	"endswithIgnore": False,
 	"enteredPath": False,
 	"extractRsgp": True,
 	"extensions": (
@@ -14,8 +17,10 @@ options = {
 		".rsgp "
 	),
 	"startswith": (
-		"PACKAGES/"
-	)
+		"PACKAGES/",
+		"PROPERTIES/"
+	),
+	"startswithIgnore": True
 }
 
 def error_message(string):
@@ -85,27 +90,25 @@ def pgsr_extract(obb, out, PGSR_NAME, PGSR_OFFSET, PGSR_SIZE):
 			SIZE = struct.unpack('<L', obb.read(4))[0]
 			if ENCODED != 0:
 				obb.seek(20, 1)
-				if TYPE == 1:
-					temp = obb.tell()
-					obb.seek(PGSR_OFFSET + PGSR_BASE)
-					DECOMPRESSED = zlib.decompress(obb.read(X_ZSIZE))
-					obb.seek(temp)
-				
-			temp = obb.tell()
-			if DECODED_NAME != "" and (DECODED_NAME.startswith(options["startswith"]) or options["extractAllFiles"]):
+			
+			temp = obb.tell()	
+			if DECODED_NAME != "" and (DECODED_NAME.startswith(options["startswith"]) or options["startswithIgnore"]) and (DECODED_NAME.endswith(options["endswith"]) or options["endswithIgnore"]):
 				os.makedirs(os.path.dirname(os.path.join(out, DECODED_NAME)), exist_ok=True)
 				if ENCODED == 0 and TYPE == 1:
 					obb.seek(PGSR_OFFSET + PGSR_BASE + FILE_OFFSET)
 					open(os.path.join(out, DECODED_NAME), "wb").write(obb.read(SIZE))
 				else:
-					if DECOMPRESSED == b"":
+					if TYPE == 1:
+						obb.seek(PGSR_OFFSET + PGSR_BASE)
+						DECOMPRESSED = zlib.decompress(obb.read(X_ZSIZE))
+					elif DECOMPRESSED == b"":
 						obb.seek(PGSR_OFFSET + OFFSET)
 						print("\033[94mDecompressing files ...\033[0m")
 						DECOMPRESSED = zlib.decompress(obb.read(X_ZSIZE))
 			
 					open(os.path.join(out, DECODED_NAME), "wb").write(DECOMPRESSED[FILE_OFFSET:FILE_OFFSET+SIZE])
 				
-				print("wrote " + os.path.join(os.path.relpath(out, pathout), DECODED_NAME))
+				print("wrote " + os.path.relpath(os.path.join(out, DECODED_NAME), pathout))
 			
 			obb.seek(temp)
 			
@@ -116,11 +119,14 @@ def conversion(inp, out):
 	if os.path.isdir(inp) and os.path.realpath(inp) != os.path.realpath(pathout):
 		os.makedirs(out, exist_ok=True)
 		for entry in sorted(os.listdir(inp)):
-			conversion(os.path.join(inp, entry), os.path.join(out, entry))
+			input_file = os.path.join(inp, entry)
+			output_file = os.path.join(out, entry)
+			if os.path.isfile(input_file):
+				output_file = os.path.splitext(output_file)[0]
+			conversion(input_file, output_file)
 	elif os.path.isfile(inp) and inp.endswith(options["extensions"]):
 		try:
 			obb = open(inp,"rb")
-			out = os.path.splitext(out)[0]
 			SIGN = obb.read(4)
 			if SIGN == b"pgsr":
 				obb.seek(0, 2)
@@ -142,7 +148,7 @@ def conversion(inp, out):
 						obb.seek(OFFSET)
 						os.makedirs(out, exist_ok=True)
 						open(os.path.join(out, NAME + ".pgsr"), "wb").write(obb.read(SIZE))
-						print("wrote " + os.path.join(os.path.relpath(out, pathout), NAME + ".pgsr"))
+						print("wrote " + os.path.relpath(os.path.join(out, NAME + ".pgsr"), pathout))
 						obb.seek(temp)
 					
 					if options["extractRsgp"]:

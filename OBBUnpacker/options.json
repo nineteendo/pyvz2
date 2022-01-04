@@ -1,7 +1,10 @@
 {
-	"DEBUG_MODE": true,
-	"extractAllFiles": false,
+	"DEBUG_MODE": false,
 	"dumpRsgp": false,
+	"endswith": [
+		".RTON"
+	],
+	"endswithIgnore": false,
 	"enteredPath": false,
 	"extractRsgp": true,
 	"extensions": [
@@ -11,6 +14,8 @@
 		".rsgp "
 	],
 	"startswith": [
-		"PACKAGES/"
-	]
+		"PACKAGES/",
+		"PROPERTIES/"
+	],
+	"startswithIgnore": true
 }
