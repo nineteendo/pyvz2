@@ -1,8 +1,15 @@
 # OBBPatcher
 - extract.py
+- options.json
 - patch.py
 - README.md: this file
 - versions.cfg version configuration file
+
+# options.json
+key | purpose
+--- | ---
+DEBUG_MODE | Show full error traceback
+enteredPath | Don't use hybrid paths that can be escaped
 
 # versions.cfg
 - name:			can be any alphanumeric character plus underscore "_" and dot "."

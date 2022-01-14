@@ -12,7 +12,7 @@ DEBUG_MODE | Show full error traceback
 dumpRsgp | Extract RSGPs from OBB
 endswith |  Only unpack paths ending with these strings
 endswithIgnore | Ignore the end of the path
-enteredPath | Don't replace "\ " with " "
+enteredPath | Don't use hybrid paths that can be escaped
 extractRsgp | Extract files directly from OBBs
 extensions | Only unpack from files with these extensions
 startswith | Only unpack paths starting with these strings

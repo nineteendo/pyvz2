@@ -1,6 +1,6 @@
 # OBBUnpacker
 # written by Luigi Auriemma & Nineteendo
-import os, struct, zlib, sys, traceback, json, time
+import os, struct, zlib, sys, traceback, json, datetime
 options = {
 	"DEBUG_MODE": False,
 	"dumpRsgp": False,
@@ -29,6 +29,36 @@ def error_message(string):
 	
 	fail.write(string + "\n")
 	print("\33[91m%s\33[0m" % string)
+
+def path_input(text):
+	newstring = input(text)
+	if options["enteredPath"]:
+		string = newstring
+	else:
+		string = ""
+		quoted = False
+		escaped = False
+		tempstring = ""
+		for char in newstring:
+			if escaped:
+				if char == '"' or not quoted and char in "\\ ":
+					string += tempstring + char
+				else:
+					string += tempstring + "\\" + char
+				
+				tempstring = ""
+				escaped = False
+			elif char == "\\":
+				escaped = True
+			elif char == '"':
+				quoted = not quoted
+			elif quoted or char != " ":
+				string += tempstring + char
+				tempstring = ""
+			else:
+				tempstring += " "
+		
+		return os.path.realpath(string)
 
 def GET_NAME(file, OFFSET, NAME_DICT):
 	NAME = b""
@@ -83,7 +113,7 @@ def pgsr_extract(file, out, PGSR_NAME, PGSR_OFFSET, PGSR_SIZE):
 		NAME_DICT = {}
 		while DECODED_NAME != "":			
 			NAME, NAME_DICT = GET_NAME(file, TMP, NAME_DICT)
-			DECODED_NAME = NAME.decode().replace("\\", "/")
+			DECODED_NAME = NAME.decode().replace("\\", os.sep)
 			ENCODED = struct.unpack('<L', file.read(4))[0]
 			FILE_OFFSET = struct.unpack('<L', file.read(4))[0]
 			SIZE = struct.unpack('<L', file.read(4))[0]
@@ -115,7 +145,7 @@ def pgsr_extract(file, out, PGSR_NAME, PGSR_OFFSET, PGSR_SIZE):
 		
 ## Recursive file convert function
 def conversion(inp, out):
-	if os.path.isdir(inp) and os.path.realpath(inp) != os.path.realpath(pathout):
+	if os.path.isdir(inp) and inp != pathout:
 		os.makedirs(out, exist_ok=True)
 		for entry in sorted(os.listdir(inp)):
 			input_file = os.path.join(inp, entry)
@@ -160,7 +190,6 @@ try:
 		raise RuntimeError("Must be using Python 3")
     
 	print("\033[95m\033[1mOBBUnpacker v1.1.0\n(C) 2021 by Nineteendo\033[0m\n")
-	print("Working directory: " + os.getcwd())
 	try:
 		newoptions = json.load(open(os.path.join(sys.path[0], "options.json"), "rb"))
 		for key in options:
@@ -172,16 +201,15 @@ try:
 	except Exception as e:
 		error_message('%s in options.json: %s' % (type(e).__name__, e))
 	
-	pathin = input("\033[1mInput file or directory\033[0m: ")
-	pathout = input("\033[1mOutput directory\033[0m: ")
-	if not options["enteredPath"]:
-		pathin = pathin.replace("\\ ", " ")
-		pathout = pathout.replace("\\ ", " ")
-
+	print("Working directory: " + os.getcwd())
+	pathin = path_input("\033[1mInput file or directory\033[0m: ")
+	pathout = path_input("\033[1mOutput directory\033[0m: ")
+	
 	# Start conversion
-	start_time = time.time()
+	start_time = datetime.datetime.now()
 	conversion(pathin, pathout)
-	print("--- %s seconds ---" % (time.time() - start_time))
+	print("Duration: %s" % (datetime.datetime.now() - start_time))
 except BaseException as e:
 	error_message('%s: %s' % (type(e).__name__, e))
+
 fail.close()

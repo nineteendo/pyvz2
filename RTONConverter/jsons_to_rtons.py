@@ -54,6 +54,36 @@ def error_message(string):
 	fail.write(string + "\n")
 	print("\33[91m%s\33[0m" % string)
 
+def path_input(text):
+	newstring = input(text)
+	if options["enteredPath"]:
+		string = newstring
+	else:
+		string = ""
+		quoted = False
+		escaped = False
+		tempstring = ""
+		for char in newstring:
+			if escaped:
+				if char == '"' or not quoted and char in "\\ ":
+					string += tempstring + char
+				else:
+					string += tempstring + "\\" + char
+				
+				tempstring = ""
+				escaped = False
+			elif char == "\\":
+				escaped = True
+			elif char == '"':
+				quoted = not quoted
+			elif quoted or char != " ":
+				string += tempstring + char
+				tempstring = ""
+			else:
+				tempstring += " "
+		
+		return os.path.realpath(string)
+
 # Data Types
 false = b'\x00'
 true = b'\x01'
@@ -260,7 +290,7 @@ def parse_json(data, cached_latin_strings, cached_utf8_strings):
 
 # Convert file
 def conversion(inp, out):
-	if os.path.isdir(inp) and os.path.realpath(inp) != os.path.realpath(pathout):
+	if os.path.isdir(inp) and inp != pathout:
 		os.makedirs(out, exist_ok=True)
 		for entry in sorted(os.listdir(inp)):
 			conversion(os.path.join(inp, entry), os.path.join(out, entry))
@@ -314,7 +344,6 @@ try:
 		raise RuntimeError("Must be using Python 3")
 
 	print("\033[95m\033[1mJSON RTONEncoder v1.1.0\n(C) 2021 by Nineteendo\033[0m\n")
-	print("Working directory: " + os.getcwd())
 	try:
 		newoptions = json.load(open(os.path.join(sys.path[0], "options.json"), "rb"))
 		for key in options:
@@ -328,15 +357,12 @@ try:
 	except Exception as e:
 		error_message("%s in options.json: %s" % (type(e).__name__, e))
 	
-	pathin = input("\033[1mInput file or directory\033[0m: ")
+	print("Working directory: " + os.getcwd())
+	pathin = path_input("\033[1mInput file or directory\033[0m: ")
 	if os.path.isfile(pathin):
-		pathout = input("\033[1mOutput file\033[0m: ").removesuffix(".json")
+		pathout = path_input("\033[1mOutput file\033[0m: ").removesuffix(".json")
 	else:
-		pathout = input("\033[1mOutput directory\033[0m: ")
-
-	if not options["EnteredPath"]:
-		pathin = pathin.replace("\\ ", " ").removesuffix(" ")
-		pathout = pathout.replace("\\ ", " ").removesuffix(" ")
+		pathout = path_input("\033[1mOutput directory\033[0m: ")
 	
 	# Start conversion
 	start_time = datetime.datetime.now()
