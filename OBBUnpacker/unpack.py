@@ -2,25 +2,37 @@
 # written by Luigi Auriemma & Nineteendo
 import os, struct, zlib, sys, traceback, json, datetime
 options = {
+	"confirmPath": True,
 	"DEBUG_MODE": False,
 	"dumpRsgp": False,
 	"endswith": (
-		".RTON"
+		".rton",
 	),
 	"endswithIgnore": False,
 	"enteredPath": False,
 	"extractRsgp": True,
 	"extensions": (
-		".1rsb",
-		".obb",
+		".1bsr",
+		".rsb1",
+		".bsr",
 		".rsb",
-		".rsgp "
+		".obb",
+		".pgsr",
+		".rsgp"
 	),
+	"pgsrEndswith": (),
+	"pgsrEndswithIgnore": True,
+	"pgsrStartswith": (
+		"packages",
+		"__manifestgroup__",
+		"worldpackages_"
+	),
+	"pgsrStartswithIgnore": False,
 	"startswith": (
-		"PACKAGES/",
-		"PROPERTIES/"
+		"packages/",
+		"properties/"
 	),
-	"startswithIgnore": True
+	"startswithIgnore": False
 }
 
 def error_message(string):
@@ -31,34 +43,46 @@ def error_message(string):
 	print("\33[91m%s\33[0m" % string)
 
 def path_input(text):
-	newstring = input(text)
-	if options["enteredPath"]:
-		string = newstring
-	else:
-		string = ""
-		quoted = False
-		escaped = False
-		tempstring = ""
-		for char in newstring:
-			if escaped:
-				if char == '"' or not quoted and char in "\\ ":
+	string = ""
+	newstring = input("\033[1m%s:\033[0m " % text)
+	while newstring or string == "":
+		if options["enteredPath"]:
+			string = newstring
+		else:
+			string = ""
+			quoted = 0
+			escaped = False
+			tempstring = ""
+			for char in newstring:
+				if escaped:
+					if quoted != 1 and char == "'" or quoted != 2 and char == '"' or quoted == 0 and char in "\\ ":
+						string += tempstring + char
+					else:
+						string += tempstring + "\\" + char
+					
+					tempstring = ""
+					escaped = False
+				elif char == "\\":
+					escaped = True
+				elif quoted != 2 and char == "'":
+					quoted = 1 - quoted
+				elif quoted != 1 and char == '"':
+					quoted = 2 - quoted
+				elif quoted != 0 or char != " ":
 					string += tempstring + char
+					tempstring = ""
 				else:
-					string += tempstring + "\\" + char
-				
-				tempstring = ""
-				escaped = False
-			elif char == "\\":
-				escaped = True
-			elif char == '"':
-				quoted = not quoted
-			elif quoted or char != " ":
-				string += tempstring + char
-				tempstring = ""
-			else:
-				tempstring += " "
-		
-		return os.path.realpath(string)
+					tempstring += " "
+
+		if string == "":
+			newstring = input("\033[1m\33[91mEnter a path:\33[0m\33[0m ")
+		else:
+			newstring = ""
+			string = os.path.realpath(string)
+			if options["confirmPath"]:
+				newstring = input("\033[1mConfirm \33[100m%s\033[0m:\033[0m " % string)
+
+	return string
 
 def GET_NAME(file, OFFSET, NAME_DICT):
 	NAME = b""
@@ -77,37 +101,43 @@ def GET_NAME(file, OFFSET, NAME_DICT):
 			NAME_DICT[NAME] = TMP_LENGTH
 	return (NAME, NAME_DICT)
 
-def pgsr_extract(file, out, PGSR_NAME, PGSR_OFFSET, PGSR_SIZE):
+def pgsr_extract(file, out, PGSR_OFFSET, PGSR_SIZE):
 	BACKUP_OFFSET = file.tell()
 	file.seek(PGSR_OFFSET)
 	if file.read(4) == b"pgsr":
 		VER = struct.unpack('<L', file.read(4))[0]
+		
 		file.seek(8, 1)
 		TYPE = struct.unpack('<L', file.read(4))[0]
 		PGSR_BASE = struct.unpack('<L', file.read(4))[0]
-		OFFSET = 0
-		ZSIZE = 0
-		SIZE = 0
-		for x in range(0, 2):
-			TMP_OFFSET = struct.unpack('<L', file.read(4))[0]
-			TMP_ZSIZE = struct.unpack('<L', file.read(4))[0]
-			TMP_SIZE = struct.unpack('<L', file.read(4))[0]
+		
+		data = ""
+		OFFSET = struct.unpack('<L', file.read(4))[0]
+		ZSIZE = struct.unpack('<L', file.read(4))[0]
+		SIZE = struct.unpack('<L', file.read(4))[0]
+		if SIZE != 0:
+			file.seek(PGSR_OFFSET + OFFSET)
+			if TYPE == 1:
+				data = file.read(ZSIZE)
+			else:
+				print("\033[94mDecompressing ...\033[0m")
+				data = zlib.decompress(file.read(ZSIZE))
+		else:
 			file.seek(4, 1)
-			if TMP_SIZE != 0:
-				OFFSET = TMP_OFFSET
-				ZSIZE = TMP_ZSIZE
-				SIZE = TMP_SIZE
+			OFFSET = struct.unpack('<L', file.read(4))[0]
+			ZSIZE = struct.unpack('<L', file.read(4))[0]
+			SIZE = struct.unpack('<L', file.read(4))[0]
+			if SIZE != 0:
+				file.seek(PGSR_OFFSET + OFFSET)
+				print("\033[94mDecompressing ...\033[0m")
+				data = zlib.decompress(file.read(ZSIZE))
 		
-		file.seek(16, 1)
+		file.seek(PGSR_OFFSET + 72)
 		INFO_SIZE = struct.unpack('<L', file.read(4))[0]
-		INFO_OFFSET = struct.unpack('<L', file.read(4))[0]
-		INFO_OFFSET += PGSR_OFFSET
+		INFO_OFFSET = PGSR_OFFSET + struct.unpack('<L', file.read(4))[0]
 		INFO_LIMIT = INFO_OFFSET + INFO_SIZE
-		file.seek(INFO_OFFSET)
 		
-		DECOMPRESSED = b""
-		X_ZSIZE = ZSIZE
-		X_SIZE = SIZE
+		file.seek(INFO_OFFSET)
 		TMP = file.tell()
 		DECODED_NAME = None
 		NAME_DICT = {}
@@ -120,26 +150,10 @@ def pgsr_extract(file, out, PGSR_NAME, PGSR_OFFSET, PGSR_SIZE):
 			if ENCODED != 0:
 				file.seek(20, 1)
 			
-			temp = file.tell()	
-			if DECODED_NAME != "" and (DECODED_NAME.startswith(options["startswith"]) or options["startswithIgnore"]) and (DECODED_NAME.endswith(options["endswith"]) or options["endswithIgnore"]):
+			if DECODED_NAME != "" and (DECODED_NAME.lower().startswith(options["startswith"]) or options["startswithIgnore"]) and (DECODED_NAME.lower().endswith(options["endswith"]) or options["endswithIgnore"]):
 				os.makedirs(os.path.dirname(os.path.join(out, DECODED_NAME)), exist_ok=True)
-				if ENCODED == 0 and TYPE == 1:
-					file.seek(PGSR_OFFSET + PGSR_BASE + FILE_OFFSET)
-					open(os.path.join(out, DECODED_NAME), "wb").write(file.read(SIZE))
-				else:
-					if TYPE == 1:
-						file.seek(PGSR_OFFSET + PGSR_BASE)
-						DECOMPRESSED = zlib.decompress(file.read(X_ZSIZE))
-					elif DECOMPRESSED == b"":
-						file.seek(PGSR_OFFSET + OFFSET)
-						print("\033[94mDecompressing files ...\033[0m")
-						DECOMPRESSED = zlib.decompress(file.read(X_ZSIZE))
-			
-					open(os.path.join(out, DECODED_NAME), "wb").write(DECOMPRESSED[FILE_OFFSET:FILE_OFFSET+SIZE])
-				
+				open(os.path.join(out, DECODED_NAME), "wb").write(data[FILE_OFFSET: FILE_OFFSET + ZSIZE])
 				print("wrote " + os.path.relpath(os.path.join(out, DECODED_NAME), pathout))
-			
-			file.seek(temp)
 			
 	file.seek(BACKUP_OFFSET)
 		
@@ -153,16 +167,10 @@ def conversion(inp, out):
 			if os.path.isfile(input_file):
 				output_file = os.path.splitext(output_file)[0]
 			conversion(input_file, output_file)
-	elif os.path.isfile(inp) and inp.endswith(options["extensions"]):
+	elif os.path.isfile(inp) and inp.lower().endswith(options["extensions"]):
 		try:
 			file = open(inp,"rb")
-			SIGN = file.read(4)
-			if SIGN == b"pgsr":
-				file.seek(0, 2)
-				SIZE = file.tell()
-				file.seek(0)
-				pgsr_extract("", 0, SIZE)
-			elif SIGN == b"1bsr":
+			if file.read(4) == b"1bsr":
 				file.seek(40)
 				FILES = struct.unpack('<L', file.read(4))[0]
 				OFFSET = struct.unpack('<L', file.read(4))[0]
@@ -171,17 +179,23 @@ def conversion(inp, out):
 					NAME = file.read(128).strip(b"\x00").decode()
 					OFFSET = struct.unpack('<L', file.read(4))[0]
 					SIZE = struct.unpack('<L', file.read(4))[0]
-					file.seek(68, 1)
-					if options["dumpRsgp"]:
-						temp = file.tell()
-						file.seek(OFFSET)
-						os.makedirs(out, exist_ok=True)
-						open(os.path.join(out, NAME + ".rsgp"), "wb").write(file.read(SIZE))
-						print("wrote " + os.path.relpath(os.path.join(out, NAME + ".pgsr"), pathout))
-						file.seek(temp)
 					
-					if options["extractRsgp"]:
-						pgsr_extract(file, out, NAME, OFFSET, SIZE)
+					file.seek(68, 1)
+					if (NAME.lower().startswith(options["pgsrStartswith"]) or options["pgsrStartswithIgnore"]) and (NAME.lower().endswith(options["pgsrEndswith"]) or options["pgsrEndswithIgnore"]):
+						if options["dumpRsgp"]:
+							temp = file.tell()
+							file.seek(OFFSET)
+							os.makedirs(out, exist_ok=True)
+							open(os.path.join(out, NAME + ".rsgp"), "wb").write(file.read(SIZE))
+							print("wrote " + os.path.relpath(os.path.join(out, NAME + ".rsgp"), pathout))
+							file.seek(temp)
+						
+						if options["extractRsgp"]:
+							pgsr_extract(file, out, OFFSET, SIZE)
+			else:
+				file.seek(0, 2)
+				SIZE = file.tell()
+				pgsr_extract(file, out, 0, SIZE)
 		except Exception as e:
 			error_message("Failed OBBUnpack: %s in %s pos %s: %s" % (type(e).__name__, inp, file.tell() - 1, e))
 try:
@@ -197,18 +211,18 @@ try:
 				if type(options[key]) == type(newoptions[key]):
 					options[key] = newoptions[key]
 				elif isinstance(options[key], tuple) and isinstance(newoptions[key], list):
-					options[key] = tuple([str(i) for i in newoptions[key]])
+					options[key] = tuple([str(i).lower() for i in newoptions[key]])
 	except Exception as e:
 		error_message('%s in options.json: %s' % (type(e).__name__, e))
 	
 	print("Working directory: " + os.getcwd())
-	pathin = path_input("\033[1mInput file or directory\033[0m: ")
-	pathout = path_input("\033[1mOutput directory\033[0m: ")
+	pathin = path_input("Input file or directory")
+	pathout = path_input("Output directory")
 	
 	# Start conversion
 	start_time = datetime.datetime.now()
 	conversion(pathin, pathout)
-	print("Duration: %s" % (datetime.datetime.now() - start_time))
+	print("\33[32mfinished unpacking %s in %s\33[0m" % (pathin, datetime.datetime.now() - start_time))
 except BaseException as e:
 	error_message('%s: %s' % (type(e).__name__, e))
 

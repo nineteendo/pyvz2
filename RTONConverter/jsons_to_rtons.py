@@ -6,29 +6,31 @@ import os, json, struct, sys, traceback, datetime
 
 # Default Options
 options = {
-	"AllowNan": True,
-	"AllowAllJSON": True,
-	"BinObjclasses": (
+	"allowNan": True,
+	"allowAllJSON": True,
+	"binObjClasses": (
 		"DraperSaveData",
 		"GlobalSaveData",
 		"PlayerInfoLocalSaveData",
 		"LootSaveData",
 		"SaveGameHeader"
 	),
-	"CommaSeparator": "",
-	"DatObjclasses": (
+	"cachLimit": 128,
+	"commaSeparator": "",
+	"confirmPath": True,
+	"datObjClasses": (
 		"PlayerInfo",
 	),
 	"DEBUG_MODE": False,
-	"DoublePointSeparator": " ",
-	"EnsureAscii": False,
-	"EnteredPath": False,
-	"Indent": "\t",
+	"doublePointSeparator": " ",
+	"ensureAscii": False,
+	"enteredPath": False,
+	"indent": "\t",
 	"RTONExtensions": (
 		".bin",
 		".dat",
-		".RTON",
-		".rton"
+		".rton",
+		".section"
 	),
 	"RTONNoExtensions": (
 		"draper_",
@@ -36,10 +38,9 @@ options = {
 		"loot",
 		"_saveheader_rton"
 	),
-	"RepairFiles": False,
-	"ShortNames": False,
-	"SortKeys": False,
-	"UncachedStrings": True
+	"repairFiles": False,
+	"shortNames": False,
+	"sortKeys": False
 }
 
 # Extra list class
@@ -55,34 +56,46 @@ def error_message(string):
 	print("\33[91m%s\33[0m" % string)
 
 def path_input(text):
-	newstring = input(text)
-	if options["enteredPath"]:
-		string = newstring
-	else:
-		string = ""
-		quoted = False
-		escaped = False
-		tempstring = ""
-		for char in newstring:
-			if escaped:
-				if char == '"' or not quoted and char in "\\ ":
+	string = ""
+	newstring = input("\033[1m%s:\033[0m " % text)
+	while newstring or string == "":
+		if options["enteredPath"]:
+			string = newstring
+		else:
+			string = ""
+			quoted = 0
+			escaped = False
+			tempstring = ""
+			for char in newstring:
+				if escaped:
+					if quoted != 1 and char == "'" or quoted != 2 and char == '"' or quoted == 0 and char in "\\ ":
+						string += tempstring + char
+					else:
+						string += tempstring + "\\" + char
+					
+					tempstring = ""
+					escaped = False
+				elif char == "\\":
+					escaped = True
+				elif quoted != 2 and char == "'":
+					quoted = 1 - quoted
+				elif quoted != 1 and char == '"':
+					quoted = 2 - quoted
+				elif quoted != 0 or char != " ":
 					string += tempstring + char
+					tempstring = ""
 				else:
-					string += tempstring + "\\" + char
-				
-				tempstring = ""
-				escaped = False
-			elif char == "\\":
-				escaped = True
-			elif char == '"':
-				quoted = not quoted
-			elif quoted or char != " ":
-				string += tempstring + char
-				tempstring = ""
-			else:
-				tempstring += " "
-		
-		return os.path.realpath(string)
+					tempstring += " "
+
+		if string == "":
+			newstring = input("\033[1m\33[91mEnter a path:\33[0m\33[0m ")
+		else:
+			newstring = ""
+			string = os.path.realpath(string)
+			if options["confirmPath"]:
+				newstring = input("\033[1mConfirm \33[100m%s\033[0m:\033[0m " % string)
+
+	return string
 
 # Data Types
 false = b'\x00'
@@ -138,14 +151,17 @@ def encode_bool(boolean):
 		return true
 
 def encode_number(integ):
-	string=b""
-	while integ or string == b"":
-		if (integ > 127):
-			string+=bytes([integ%128+128])
-		else:
-			string+=bytes([integ%128])
+	integ, i = divmod(integ, 128)
+	if (integ):
+		i += 128
+	
+	string = bytes([i])
+	while integ:
+		integ, i = divmod(integ, 128)
+		if (integ):
+			i += 128
 		
-		integ=int(integ/128)
+		string += bytes([i])
 	
 	return string
 
@@ -171,57 +187,34 @@ def encode_rtid(string):
 def encode_int(integ):
 	if integ == 0:
 		return int32_zero
-	elif -129 < integ < 128:
-		return encode_int8(integ)
-	elif 0 < integ < 256:
-		return encode_uint8(integ)
-	elif -32769 < integ < 32768:
-		return encode_int16(integ)
-	elif 0 < integ < 65536:
-		return encode_uint16(integ)
-	elif -2147483649 < integ < 2147483648:
-		return encode_int32(integ)
-	elif 16777214 < integ < 4294967296:
-		return encode_uint32(integ)
-	elif -9223372036854775809 < integ < 9223372036854775808:
-		return encode_int64(integ)
-	elif 9223372036854775807 < integ < 18446744073709551616:
-		return encode_uint64(integ)
+	elif -128 <= integ <= 127:
+		return int8 + struct.pack('<b', integ)
+	elif 0 <= integ <= 255:
+		return uint8 + struct.pack('<B', integ)
+	elif -32768 <= integ <= 32767:
+		return int16 + struct.pack('<h', integ)
+	elif 0 <= integ < 65535:
+		return uint16 + struct.pack('<H', integ)
+	elif 0 <= integ <= 2097151:
+		return positive_int32_varint + encode_number(integ)
+	elif -2097151 <= integ <= 0:
+		return negative_int32_varint + encode_number(-integ)
+	elif -2147483648 <= integ <= 2147483647:
+		return int32 + struct.pack('<i', integ)
+	elif 0 <= integ < 4294967295:
+		return uint32 + struct.pack('<I', integ)
+	elif 0 <= integ <= 562949953421311:
+		return positive_int64_varint + encode_number(integ)
+	elif -562949953421311 <= integ <= 0:
+		return negative_int64_varint + encode_number(-integ)
+	elif -9223372036854775808 <= integ <= 9223372036854775807:
+		return int64 + struct.pack('<q', integ)
+	elif 0 <= integ <= 18446744073709551615:
+		return uint64 + struct.pack('<Q', integ)
+	elif 0 <= integ:
+		return positive_int64_varint + encode_number(integ)
 	else:
-		return encode_varint(integ)
-
-def encode_varint(integ):
-	if integ < 0:
-		encode = negative_int32_varint
-		integ*=-1
-	else:
-		encode = positive_int32_varint
-	
-	return encode+encode_number(integ)
-
-def encode_int8(integ):
-	return int8 + struct.pack('<b', integ)
-
-def encode_uint8(integ):
-	return uint8 + struct.pack('<B', integ)
-
-def encode_int16(integ):
-	return int16 + struct.pack('<h', integ)
-
-def encode_uint16(integ):
-	return uint16 + struct.pack('<H', integ)
-
-def encode_int32(integ):
-	return int32 + struct.pack('<i', integ)
-	
-def encode_uint32(integ):
-	return uint32 + struct.pack('<I', integ)
-	
-def encode_int64(integ):
-	return int64 + struct.pack('<q', integ)
-	
-def encode_uint64(integ):
-	return uint64 + struct.pack('<Q', integ)
+		return negative_int64_varint + encode_number(-integ)
 
 def encode_floating_point(dec):
 	if dec == 0:
@@ -233,7 +226,7 @@ def encode_floating_point(dec):
 
 def encode_string(string, cached_latin_strings, cached_utf8_strings):
 	if len(string) == len(string.encode('latin-1', 'ignore')):
-		if options["UncachedStrings"]:
+		if len(cached_latin_strings) >= options["cachLimit"]:
 			data = latin_string + encode_number(len(string)) + string.encode('latin-1')
 		elif not string in cached_latin_strings:
 			cached_latin_strings.append(string)
@@ -241,7 +234,7 @@ def encode_string(string, cached_latin_strings, cached_utf8_strings):
 		else:
 			data = cached_latin_string_recall + encode_number(cached_latin_strings.index(string))
 	else:
-		if options["UncachedStrings"]:
+		if len(cached_utf8_strings) >= options["cachLimit"]:
 			data = utf8_string + encode_unicode(string)
 		elif not string in cached_utf8_strings:
 			cached_utf8_strings.append(string)
@@ -294,7 +287,7 @@ def conversion(inp, out):
 		os.makedirs(out, exist_ok=True)
 		for entry in sorted(os.listdir(inp)):
 			conversion(os.path.join(inp, entry), os.path.join(out, entry))
-	elif os.path.isfile(inp) and inp.endswith(".json") and (options["AllowAllJSON"] or inp.endswith(options["RTONExtensions"], 0, -5) or os.path.basename(inp).startswith(options["RTONNoExtensions"])):
+	elif os.path.isfile(inp) and inp.lower().endswith(".json") and (options["allowAllJSON"] or inp.lower().endswith(options["RTONExtensions"], 0, -5) or os.path.basename(inp).lower().startswith(options["RTONNoExtensions"])):
 		write = out.removesuffix(".json")
 		try:
 			data = json.load(open(inp, 'rb'), object_pairs_hook = encode_object_pairs).data
@@ -303,30 +296,30 @@ def conversion(inp, out):
 			error_message('%s in %s: %s' % (type(e).__name__, inp, e))
 		else:
 			try:
-				data = b'RTON\x01\x00\x00\x00%sDONE' % parse_object(data, [], [])[0][1:]
+				encoded_data = b'RTON\x01\x00\x00\x00%sDONE' % parse_object(data, [], [])[0][1:]
 				# No RTON extension
-				if "" == os.path.splitext(write)[1] and not os.path.basename(write).startswith(options["RTONNoExtensions"]):
+				if "" == os.path.splitext(write)[1] and not os.path.basename(write).lower().startswith(options["RTONNoExtensions"]):
 					vals = list(values_from_keys(data, ["objects","objclass"]))
-					if any(value in vals for value in options["DatObjClasses"]):
+					if any(value in vals for value in options["datObjClasses"]):
 						write += ".dat"
-					elif any(value in vals for value in options["BinObjclasses"]):
+					elif any(value in vals for value in options["binObjClasses"]):
 						write += ".bin"
 					else:
 						write += ".rton"
-				open(write, 'wb').write(data)
+				open(write, 'wb').write(encoded_data)
 				print("wrote " + os.path.relpath(write, pathout))
 			except Exception as e:
 				error_message('%s in %s: %s' % (type(e).__name__, inp, e))
 
 def encode_object_pairs(pairs):
-	if options["SortKeys"]:
+	if options["sortKeys"]:
 		pairs = sorted(pairs)
 		
 	return list2(pairs)
 
 def values_from_keys(data, keyz):
 	if keyz == []:
-		yield data
+		yield str(data).lower()
 	elif isinstance(data, list):
 		for val in data:
 			yield from values_from_keys(val, keyz)
@@ -347,27 +340,27 @@ try:
 	try:
 		newoptions = json.load(open(os.path.join(sys.path[0], "options.json"), "rb"))
 		for key in options:
-			if key in newoptions and newoptions[key] != options[key]:
+			if key in newoptions:
 				if type(options[key]) == type(newoptions[key]):
 					options[key] = newoptions[key]
 				elif isinstance(options[key], tuple) and isinstance(newoptions[key], list):
-					options[key] = tuple([str(i) for i in newoptions[key]])
+					options[key] = tuple([str(i).lower() for i in newoptions[key]])
 				elif key == "Indent" and type(newoptions[key]) in [int, type(None)]:
 					options[key] = newoptions[key]
 	except Exception as e:
 		error_message("%s in options.json: %s" % (type(e).__name__, e))
 	
 	print("Working directory: " + os.getcwd())
-	pathin = path_input("\033[1mInput file or directory\033[0m: ")
+	pathin = path_input("Input file or directory")
 	if os.path.isfile(pathin):
-		pathout = path_input("\033[1mOutput file\033[0m: ").removesuffix(".json")
+		pathout = path_input("Output file").removesuffix(".json")
 	else:
-		pathout = path_input("\033[1mOutput directory\033[0m: ")
+		pathout = path_input("Output directory")
 	
 	# Start conversion
 	start_time = datetime.datetime.now()
 	conversion(pathin, pathout)
-	print("Duration: %s" % (datetime.datetime.now() - start_time))
+	print("\33[32mfinished converting %s in %s\33[0m" % (pathin, datetime.datetime.now() - start_time))
 except BaseException as e:
 	error_message("%s: %s" % (type(e).__name__, e))
 fail.close()

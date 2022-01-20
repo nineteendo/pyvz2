@@ -6,29 +6,31 @@ import os, json, struct, sys, traceback, datetime
 
 # Default Options
 options = {
-	"AllowNan": True,
-	"AllowAllJSON": True,
-	"BinObjclasses": (
+	"allowNan": True,
+	"allowAllJSON": True,
+	"binObjClasses": (
 		"DraperSaveData",
 		"GlobalSaveData",
 		"PlayerInfoLocalSaveData",
 		"LootSaveData",
 		"SaveGameHeader"
 	),
-	"CommaSeparator": "",
-	"DatObjclasses": (
+	"cachLimit": 128,
+	"commaSeparator": "",
+	"confirmPath": True,
+	"datObjClasses": (
 		"PlayerInfo",
 	),
 	"DEBUG_MODE": False,
-	"DoublePointSeparator": " ",
-	"EnsureAscii": False,
-	"EnteredPath": False,
-	"Indent": "\t",
+	"doublePointSeparator": " ",
+	"ensureAscii": False,
+	"enteredPath": False,
+	"indent": "\t",
 	"RTONExtensions": (
 		".bin",
 		".dat",
-		".RTON",
-		".rton"
+		".rton",
+		".section"
 	),
 	"RTONNoExtensions": (
 		"draper_",
@@ -36,10 +38,9 @@ options = {
 		"loot",
 		"_saveheader_rton"
 	),
-	"RepairFiles": False,
-	"ShortNames": False,
-	"SortKeys": False,
-	"UncachedStrings": True
+	"repairFiles": False,
+	"shortNames": False,
+	"sortKeys": False
 }
 class FakeDict(dict):
 	def __init__(self, items):
@@ -60,34 +61,46 @@ def warning_message(string):
 	print("\33[93m%s\33[0m" % string)
 
 def path_input(text):
-	newstring = input(text)
-	if options["enteredPath"]:
-		string = newstring
-	else:
-		string = ""
-		quoted = False
-		escaped = False
-		tempstring = ""
-		for char in newstring:
-			if escaped:
-				if char == '"' or not quoted and char in "\\ ":
+	string = ""
+	newstring = input("\033[1m%s:\033[0m " % text)
+	while newstring or string == "":
+		if options["enteredPath"]:
+			string = newstring
+		else:
+			string = ""
+			quoted = 0
+			escaped = False
+			tempstring = ""
+			for char in newstring:
+				if escaped:
+					if quoted != 1 and char == "'" or quoted != 2 and char == '"' or quoted == 0 and char in "\\ ":
+						string += tempstring + char
+					else:
+						string += tempstring + "\\" + char
+					
+					tempstring = ""
+					escaped = False
+				elif char == "\\":
+					escaped = True
+				elif quoted != 2 and char == "'":
+					quoted = 1 - quoted
+				elif quoted != 1 and char == '"':
+					quoted = 2 - quoted
+				elif quoted != 0 or char != " ":
 					string += tempstring + char
+					tempstring = ""
 				else:
-					string += tempstring + "\\" + char
-				
-				tempstring = ""
-				escaped = False
-			elif char == "\\":
-				escaped = True
-			elif char == '"':
-				quoted = not quoted
-			elif quoted or char != " ":
-				string += tempstring + char
-				tempstring = ""
-			else:
-				tempstring += " "
-		
-		return os.path.realpath(string)
+					tempstring += " "
+
+		if string == "":
+			newstring = input("\033[1m\33[91mEnter a path:\33[0m\33[0m ")
+		else:
+			newstring = ""
+			string = os.path.realpath(string)
+			if options["confirmPath"]:
+				newstring = input("\033[1mConfirm \33[100m%s\033[0m:\033[0m " % string)
+
+	return string
 
 # type 08
 def parse_int8(fp):
@@ -115,12 +128,13 @@ def parse_float(fp):
 	
 # type 24, 28, 44 and 48
 def parse_varint(fp):
-	result = 0;
-	i = 0
-	while i == 0 or num > 127:
+	result = 0
+	i = 1
+	while i == 1 or num > 127:
 		num = struct.unpack("B", fp.read(1))[0]
-		result += 128 ** i * (num & 0x7f)
-		i += 1
+		result += i * (num & 0x7f)
+		i *= 128
+	
 	return result
 
 # type 25, 29, 45 and 49
@@ -201,7 +215,7 @@ def parse_map(fp, cached_latin_strings, cached_utf8_strings):
 			result.append((key,val))
 	except KeyError as k:
 		if str(k) == 'b""':
-			if options["RepairFiles"]:
+			if options["repairFiles"]:
 				warning_message("SilentError: %s pos %s: end of file" %(fp.name, fp.tell() - 1))
 			else:
 				raise EOFError
@@ -227,7 +241,7 @@ def parse_list(fp, cached_latin_strings, cached_utf8_strings):
 			i1 += 1
 	except KeyError as k:
 		if str(k) == 'b""':
-			if options["RepairFiles"]:
+			if options["repairFiles"]:
 				warning_message("SilentError: %s pos %s: end of file" %(fp.name, fp.tell() - 1))
 			else:
 				raise EOFError
@@ -309,8 +323,8 @@ def conversion(inp, out):
 		os.makedirs(out, exist_ok=True)
 		for entry in sorted(os.listdir(inp)):
 			conversion(os.path.join(inp, entry), os.path.join(out, entry))
-	elif os.path.isfile(inp) and (inp.endswith(options["RTONExtensions"]) or os.path.basename(inp).startswith(options["RTONNoExtensions"])):	
-		if options["ShortNames"]:
+	elif os.path.isfile(inp) and (inp.lower().endswith(options["RTONExtensions"]) or os.path.basename(inp).lower().startswith(options["RTONNoExtensions"])):	
+		if options["shortNames"]:
 			out = os.path.splitext(out)[0]
 			 
 		jfn = out + ".json"
@@ -318,7 +332,7 @@ def conversion(inp, out):
 		try:
 			if file.read(8) == b"RTON\x01\x00\x00\x00":
 				data = parse_map(file, [], [])[0]
-				json.dump(data, open(jfn, "w"), allow_nan = options["AllowNan"], ensure_ascii = options["EnsureAscii"], indent = options["Indent"], separators = ("," + options["CommaSeparator"], ":" + options["DoublePointSeparator"]), sort_keys = options["SortKeys"])
+				json.dump(data, open(jfn, "w"), allow_nan = options["allowNan"], ensure_ascii = options["ensureAscii"], indent = options["indent"], separators = ("," + options["commaSeparator"], ":" + options["doublePointSeparator"]), sort_keys = options["sortKeys"])
 				print("wrote " + os.path.relpath(jfn, pathout))
 			else:
 				raise Warning("No RTON: " + inp)
@@ -334,27 +348,27 @@ try:
 	try:
 		newoptions = json.load(open(os.path.join(sys.path[0], "options.json"), "rb"))
 		for key in options:
-			if key in newoptions and newoptions[key] != options[key]:
+			if key in newoptions:
 				if type(options[key]) == type(newoptions[key]):
 					options[key] = newoptions[key]
 				elif isinstance(options[key], tuple) and isinstance(newoptions[key], list):
-					options[key] = tuple([str(i) for i in newoptions[key]])
+					options[key] = tuple([str(i).lower() for i in newoptions[key]])
 				elif key == "Indent" and type(newoptions[key]) in [int, type(None)]:
 					options[key] = newoptions[key]
 	except Exception as e:
 		error_message("%s in options.json: %s" % (type(e).__name__, e))
 	
 	print("Working directory: " + os.getcwd())
-	pathin = path_input("\033[1mInput file or directory\033[0m: ")
+	pathin = path_input("Input file or directory")
 	if os.path.isfile(pathin):
-		pathout = path_input("\033[1mOutput file\033[0m: ").removesuffix(".json")
+		pathout = path_input("Output file").removesuffix(".json")
 	else:
-		pathout = path_input("\033[1mOutput directory\033[0m: ")
+		pathout = path_input("Output directory")
 		
 	# Start conversion
 	start_time = datetime.datetime.now()
 	conversion(pathin, pathout)
-	print("Duration: %s" % (datetime.datetime.now() - start_time))
+	print("\33[32mfinished converting %s in %s\33[0m" % (pathin, datetime.datetime.now() - start_time))
 except BaseException as e:
 	error_message("%s: %s" % (type(e).__name__, e))
 

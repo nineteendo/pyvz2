@@ -1,27 +1,29 @@
 {
-	"AllowNan": true,
-	"AllowAllJSON": true,
-	"BinObjclasses": [
+	"allowNan": true,
+	"allowAllJSON": true,
+	"binObjClasses": [
 		"DraperSaveData",
 		"GlobalSaveData",
 		"PlayerInfoLocalSaveData",
 		"LootSaveData",
 		"SaveGameHeader"
 	],
-	"CommaSeparator": "",
-	"DatObjclasses": [
+	"cachLimit": 128,
+	"commaSeparator": "",
+	"confirmPath": true,
+	"datObjClasses": [
 		"PlayerInfo"
 	],
 	"DEBUG_MODE": false,
-	"DoublePointSeparator": " ",
-	"EnsureAscii": false,
-	"EnteredPath": false,
-	"Indent": "\t",
+	"doublePointSeparator": " ",
+	"ensureAscii": false,
+	"enteredPath": false,
+	"indent": "\t",
 	"RTONExtensions": [
 		".bin",
 		".dat",
-		".RTON",
-		".rton"
+		".rton",
+		".section"
 	],
 	"RTONNoExtensions": [
 		"draper_",
@@ -29,8 +31,7 @@
 		"loot",
 		"_saveheader_rton"
 	],
-	"RepairFiles": false,
-	"ShortNames": true,
-	"SortKeys": false,
-	"UncachedStrings": true
+	"repairFiles": false,
+	"shortNames": true,
+	"sortKeys": false
 }

@@ -1,4 +1,14 @@
 {
+	"confirmPath": true,
 	"DEBUG_MODE": false,
-	"enteredPath": false
+	"enteredPath": false,
+	"singleFile": false,
+	"pgsrEndswith": [],
+	"pgsrEndswithIgnore": true,
+	"pgsrStartswith": [
+		"packages",
+		"__manifestgroup__",
+		"worldpackages_"
+	],
+	"pgsrStartswithIgnore": false
 }

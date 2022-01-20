@@ -1,4 +1,7 @@
 # Personal Data
+OBBPatcher/input
+OBBPatcher/output
+OBBPatcher/patch
 OBBUnpacker/1bsr_pgsr.bms
 OBBUnpacker/input
 OBBUnpacker/header_test.py

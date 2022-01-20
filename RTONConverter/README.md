@@ -13,18 +13,20 @@
 # Options.json
 key | purpose
 --- | ---
-AllowNan | Allow NaN, -infinity & infinity as values
-AllowAllJSON | Encode every file ending in JSON
-BinObjclasses | Objclasses for files that have the .bin extension
-CommaSeparator | Separator between values in JSON
+allowNan | Allow NaN, -infinity & infinity as values
+allowAllJSON | Encode every file ending in JSON
+binObjClasses | Objclasses for files that have the .bin extension
+cachLimit | Cached strings cap (negative for manual editing, don't set too high)
+commaSeparator | Separator between values in JSON
+confirmPath | Confirm or change parsed path before conversion
+datObjClasses | Objclasses for files that have the .dat extension
 DEBUG_MODE | Show full error traceback
-DoublePointSeparator | Separator between key & value in JSON
-EnsureAscii | Escape non-ASCII characters
-EnteredPath | Don't use hybrid paths that can be escaped
-Indent | Number of spaces or text as indent, *null:* no indent
+doublePointSeparator | Separator between key & value in JSON
+ensureAscii | Escape non-ASCII characters
+enteredPath | Don't use hybrid paths that can be escaped
+indent | Number of spaces or text as indent, *null:* no indent
 RTONExtensions | Extensions of RTON files
 RTONNoExtensions | Start of RTON files with no extension
-RepairFiles | Repair NBT files that end abruptly
-ShortNames | Remove RTON extensions for JSON files
-SortKeys | Sort keys in dictionary
-UncachedStrings | Always use uncached strings (useful for hex editing)
+repairFiles | Repair NBT files that end abruptly
+shortNames | Remove RTON extensions for JSON files
+sortKeys | Sort keys in dictionary

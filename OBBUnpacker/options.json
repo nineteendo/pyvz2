@@ -1,21 +1,33 @@
 {
+	"confirmPath": true,
 	"DEBUG_MODE": false,
 	"dumpRsgp": false,
 	"endswith": [
-		".RTON"
+		".rton"
 	],
 	"endswithIgnore": false,
 	"enteredPath": false,
 	"extractRsgp": true,
 	"extensions": [
-		".1rsb",
-		".obb",
+		".1bsr",
+		".rsb1",
+		".bsr",
 		".rsb",
-		".rsgp "
+		".obb",
+		".pgsr",
+		".rsgp"
 	],
+	"pgsrEndswith": [],
+	"pgsrEndswithIgnore": true,
+	"pgsrStartswith": [
+		"packages",
+		"__manifestgroup__",
+		"worldpackages_"
+	],
+	"pgsrStartswithIgnore": false,
 	"startswith": [
-		"PACKAGES/",
-		"PROPERTIES/"
+		"packages/",
+		"properties/"
 	],
-	"startswithIgnore": true
+	"startswithIgnore": false
 }
