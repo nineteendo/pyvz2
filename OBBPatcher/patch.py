@@ -19,11 +19,11 @@ def error_message(string):
 		string = traceback.format_exc()
 	
 	fail.write(string + "\n")
-	print("\33[91m%s\33[0m" % string)
+	print("\033[91m%s\033[0m" % string)
 
 def path_input(text):
 	string = ""
-	newstring = input("\033[1m%s:\033[0m " % text)
+	newstring = input("\033[1m%s\033[0m: " % text)
 	while newstring or string == "":
 		if options["enteredPath"]:
 			string = newstring
@@ -54,12 +54,12 @@ def path_input(text):
 					tempstring += " "
 
 		if string == "":
-			newstring = input("\033[1m\33[91mEnter a path:\33[0m\33[0m ")
+			newstring = input("\033[1m\033[91mEnter a path\033[0m: ")
 		else:
 			newstring = ""
 			string = os.path.realpath(string)
 			if options["confirmPath"]:
-				newstring = input("\033[1mConfirm \33[100m%s\033[0m:\033[0m " % string)
+				newstring = input("\033[1mConfirm \033[100m%s\033[0m: " % string)
 
 	return string
 
@@ -110,13 +110,19 @@ def pgsr_patch_data(NAME, file, pathout_data, PGSR_OFFSET):
 	return pathout_data
 
 try:
-	fail = open(os.path.join(sys.path[0], "fail.txt"), "w")
+	os.system('')
+	if getattr(sys, 'frozen', False):
+		application_path = os.path.dirname(sys.executable)
+	else:
+		application_path = sys.path[0]
+
+	fail = open(os.path.join(application_path, "fail.txt"), "w")
 	if sys.version_info[0] < 3:
 		raise RuntimeError("Must be using Python 3")
 	
-	print("\033[95m\033[1mOBB SectionPatch_dataer v1.1.0\n(C) 2021 by Nineteendo\033[0m\033[0m\n")
+	print("\033[95m\033[1mOBB SectionPatch_dataer v1.1.0\n(C) 2021 by Nineteendo\033[0m\n")
 	try:
-		newoptions = json.load(open(os.path.join(sys.path[0], "options.json"), "rb"))
+		newoptions = json.load(open(os.path.join(application_path, "options.json"), "rb"))
 		for key in options:
 			if key in newoptions:
 				if type(options[key]) == type(newoptions[key]):
@@ -153,7 +159,8 @@ try:
 		pathout_data = pgsr_patch_data(file, pathout, 0)
 		
 	open(pathout, "wb").write(pathout_data)
-	print("\33[32mpatched %s in %s\33[0m" % (pathout, datetime.datetime.now() - start_time))
+	print("\033[32mpatched %s in %s\033[0m" % (pathout, datetime.datetime.now() - start_time))
+	input("\033[95m\033[1mPRESS [ENTER]\033[0m")
 except BaseException as e:
 	error_message('%s: %s' % (type(e).__name__, e))
 
