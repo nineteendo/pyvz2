@@ -9,17 +9,17 @@ options = {
 	"allowNan": True,
 	"allowAllJSON": True,
 	"binObjClasses": (
-		"DraperSaveData",
-		"GlobalSaveData",
-		"PlayerInfoLocalSaveData",
-		"LootSaveData",
-		"SaveGameHeader"
+		"drapersavedata",
+		"globalsavedata",
+		"playerinfolocalsavedata",
+		"lootsavedata",
+		"savegameheader"
 	),
 	"cachLimit": 128,
 	"commaSeparator": "",
 	"confirmPath": True,
 	"datObjClasses": (
-		"PlayerInfo",
+		"playerinfo",
 	),
 	"DEBUG_MODE": False,
 	"doublePointSeparator": " ",
@@ -42,6 +42,7 @@ options = {
 	"shortNames": False,
 	"sortKeys": False
 }
+
 class FakeDict(dict):
 	def __init__(self, items):
 		self["something"] = "something"

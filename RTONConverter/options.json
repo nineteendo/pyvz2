@@ -2,17 +2,17 @@
 	"allowNan": true,
 	"allowAllJSON": true,
 	"binObjClasses": [
-		"DraperSaveData",
-		"GlobalSaveData",
-		"PlayerInfoLocalSaveData",
-		"LootSaveData",
-		"SaveGameHeader"
+		"drapersavedata",
+		"globalsavedata",
+		"playerinfolocalsavedata",
+		"lootsavedata",
+		"savegameheader"
 	],
 	"cachLimit": 128,
 	"commaSeparator": "",
 	"confirmPath": true,
 	"datObjClasses": [
-		"PlayerInfo"
+		"playerinfo"
 	],
 	"DEBUG_MODE": false,
 	"doublePointSeparator": " ",

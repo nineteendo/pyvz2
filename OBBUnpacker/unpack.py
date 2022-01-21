@@ -150,7 +150,7 @@ def pgsr_extract(file, out, PGSR_OFFSET, PGSR_SIZE):
 			if ENCODED != 0:
 				file.seek(20, 1)
 			
-			if DECODED_NAME != "" and (DECODED_NAME.lower().startswith(options["startswith"]) or options["startswithIgnore"]) and (DECODED_NAME.lower().endswith(options["endswith"]) or options["endswithIgnore"]):
+			if DECODED_NAME != "" and (DECODED_NAME.replace("\\", "/").lower().startswith(options["startswith"]) or options["startswithIgnore"]) and (DECODED_NAME.replace("\\", "/").lower().endswith(options["endswith"]) or options["endswithIgnore"]):
 				os.makedirs(os.path.dirname(os.path.join(out, DECODED_NAME)), exist_ok=True)
 				open(os.path.join(out, DECODED_NAME), "wb").write(data[FILE_OFFSET: FILE_OFFSET + ZSIZE])
 				print("wrote " + os.path.relpath(os.path.join(out, DECODED_NAME), pathout))
