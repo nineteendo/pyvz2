@@ -1,6 +1,6 @@
 # OBBPatcher
 - extract.py
-- options.json
+- options.json settings for the patching (see below)
 - patch.py
 - README.md: this file
 - versions.cfg Previous configuration file

@@ -15,7 +15,8 @@ options = {
 		"lootsavedata",
 		"savegameheader"
 	),
-	"cachLimit": 128,
+	"cachKeyLimit": 1048575,
+	"cachValueLimit": 1048575,
 	"commaSeparator": "",
 	"confirmPath": True,
 	"datObjClasses": (

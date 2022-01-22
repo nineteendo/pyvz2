@@ -1,7 +1,7 @@
 # OBBUnpacker
 - 1bsr_pgsr.bms outdated script this was based upon
 - fail.txt: file with the latest errors
-- options.json: settings (see below)
+- options.json: settings for unpacking (see below)
 - README.md: this file
 - unpack.py a tool to unpack 1bsr and pgsr
 

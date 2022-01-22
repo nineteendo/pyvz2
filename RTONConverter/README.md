@@ -16,7 +16,8 @@ key | purpose
 allowNan | Allow NaN, -infinity & infinity as values
 allowAllJSON | Encode every file ending in JSON
 binObjClasses | Objclasses for files that have the .bin extension
-cachLimit | Cached strings cap (negative for manual editing, don't set too high)
+cachKeyLimit | Cached keys cap (make negative for manual editing)
+cachValueLimit | Cached values cap (make negative for manual editing)
 commaSeparator | Separator between values in JSON
 confirmPath | Confirm or change parsed path before conversion
 datObjClasses | Objclasses for files that have the .dat extension

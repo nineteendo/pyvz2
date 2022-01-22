@@ -15,7 +15,8 @@ options = {
 		"lootsavedata",
 		"savegameheader"
 	),
-	"cachLimit": 128,
+	"cachKeyLimit": 1048575,
+	"cachValueLimit": 1048575,
 	"commaSeparator": "",
 	"confirmPath": True,
 	"datObjClasses": (
@@ -42,12 +43,6 @@ options = {
 	"shortNames": False,
 	"sortKeys": False
 }
-
-# Extra list class
-class list2:
-	def __init__(self, data):
-		self.data = data
-
 def error_message(string):
 	if options["DEBUG_MODE"]:
 		string = traceback.format_exc()
@@ -96,6 +91,11 @@ def path_input(text):
 				newstring = input("\033[1mConfirm \033[100m%s\033[0m: " % string)
 
 	return string
+
+# Extra list class
+class list2:
+	def __init__(self, data):
+		self.data = data
 
 # Data Types
 false = b'\x00'
@@ -224,23 +224,44 @@ def encode_floating_point(dec):
 	else:
 		return double + struct.pack("<d", dec)
 
-def encode_string(string, cached_latin_strings, cached_utf8_strings):
+def encode_key(string, cached_latin_strings, cached_utf8_strings):
 	if len(string) == len(string.encode('latin-1', 'ignore')):
-		if len(cached_latin_strings) >= options["cachLimit"]:
-			data = latin_string + encode_number(len(string)) + string.encode('latin-1')
-		elif not string in cached_latin_strings:
-			cached_latin_strings.append(string)
-			data = cached_latin_string + encode_number(len(string))+string.encode('latin-1')
+		if string in cached_latin_strings:
+			data = cached_latin_string_recall + encode_number(cached_latin_strings[string])
+		elif len(cached_latin_strings) < options["cachKeyLimit"]:
+			cached_latin_strings[string] = len(cached_latin_strings)
+			data = cached_latin_string + encode_number(len(string)) + string.encode('latin-1')
 		else:
-			data = cached_latin_string_recall + encode_number(cached_latin_strings.index(string))
+			data = latin_string + encode_number(len(string)) + string.encode('latin-1')
 	else:
-		if len(cached_utf8_strings) >= options["cachLimit"]:
-			data = utf8_string + encode_unicode(string)
-		elif not string in cached_utf8_strings:
-			cached_utf8_strings.append(string)
+		if string in cached_utf8_strings:
+			data = cached_utf8_string_recall + encode_number(cached_utf8_strings[string])
+		elif len(cached_utf8_strings) < options["cachKeyLimit"]:
+			cached_utf8_strings[string] = len(cached_utf8_strings)
 			data = cached_utf8_string + encode_unicode(string)
 		else:
-			data = cached_utf8_string_recall + encode_number(cached_utf8_strings.index(string))
+			data = utf8_string + encode_unicode(string)
+	
+	return (data, cached_latin_strings, cached_utf8_strings)
+
+
+def encode_string(string, cached_latin_strings, cached_utf8_strings):
+	if len(string) == len(string.encode('latin-1', 'ignore')):
+		if string in cached_latin_strings:
+			data = cached_latin_string_recall + encode_number(cached_latin_strings[string])
+		elif len(cached_latin_strings) < options["cachValueLimit"]:
+			cached_latin_strings[string] = len(cached_latin_strings)
+			data = cached_latin_string + encode_number(len(string)) + string.encode('latin-1')
+		else:
+			data = latin_string + encode_number(len(string)) + string.encode('latin-1')
+	else:
+		if string in cached_utf8_strings:
+			data = cached_utf8_string_recall + encode_number(cached_utf8_strings[string])
+		elif len(cached_utf8_strings) < options["cachValueLimit"]:
+			cached_utf8_strings[string] = len(cached_utf8_strings)
+			data = cached_utf8_string + encode_unicode(string)
+		else:
+			data = utf8_string + encode_unicode(string)
 	
 	return (data, cached_latin_strings, cached_utf8_strings)
 
@@ -256,7 +277,7 @@ def parse_object(data, cached_latin_strings, cached_utf8_strings):
 	string = object_start
 	for v in data:
 		key, value = v
-		key, cached_latin_strings, cached_utf8_strings = encode_string(key, cached_latin_strings, cached_utf8_strings)
+		key, cached_latin_strings, cached_utf8_strings = encode_key(key, cached_latin_strings, cached_utf8_strings)
 		value, cached_latin_strings, cached_utf8_strings = parse_json(value, cached_latin_strings, cached_utf8_strings)
 		string += key + value
 	
@@ -296,7 +317,7 @@ def conversion(inp, out):
 			error_message('%s in %s: %s' % (type(e).__name__, inp, e))
 		else:
 			try:
-				encoded_data = b'RTON\x01\x00\x00\x00%sDONE' % parse_object(data, [], [])[0][1:]
+				encoded_data = b'RTON\x01\x00\x00\x00%sDONE' % parse_object(data, {}, {})[0][1:]
 				# No RTON extension
 				if "" == os.path.splitext(write)[1] and not os.path.basename(write).lower().startswith(options["RTONNoExtensions"]):
 					vals = list(values_from_keys(data, ["objects","objclass"]))
@@ -370,4 +391,5 @@ try:
 	input("\033[95m\033[1mPRESS [ENTER]\033[0m")
 except BaseException as e:
 	error_message("%s: %s" % (type(e).__name__, e))
+
 fail.close()
