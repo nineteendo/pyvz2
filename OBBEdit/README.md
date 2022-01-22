@@ -1,4 +1,4 @@
-# OBBUnpacker
+# OBBEdit
 - 1bsr_pgsr.bms outdated script this was based upon
 - fail.txt: file with the latest errors
 - options.json: settings for unpacking (see below)
