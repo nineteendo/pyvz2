@@ -1,7 +1,7 @@
 # RTON parser
 # written by 1Zulu and Nineteendo
 
-# usage: put rton files in rtons & run
+# Import libraries
 import os, json, struct, sys, traceback, datetime
 
 # Default Options
@@ -44,17 +44,15 @@ options = {
 	"sortKeys": False
 }
 
-class FakeDict(dict):
+# List of tuples to fake object
+class FakeObject(dict):
 	def __init__(self, items):
 		self["something"] = "something"
 		self._items = items
 	def items(self):
 		return self._items
 
-def warning_message(string):
-	fail.write("\t" + string + "\n")
-	print("\33[93m%s\33[0m" % string)
-
+# Print & log error
 def error_message(string):
 	if options["DEBUG_MODE"]:
 		string = traceback.format_exc()
@@ -62,9 +60,27 @@ def error_message(string):
 	fail.write(string + "\n")
 	print("\033[91m%s\033[0m" % string)
 
+# Print & log warning
+def warning_message(string):
+	fail.write("\t" + string + "\n")
+	print("\33[93m%s\33[0m" % string)
+
+# Print in blue text
+def blue_print(text):
+	print("\033[94m%s\033[0m" % text)
+
+# Print in green text
+def green_print(text):
+	print("\033[32m%s\033[0m" % text)
+
+# Input in bold text
+def bold_input(text):
+	return input("\033[1m%s\033[0m: " % text)
+
+# Input hybrid path
 def path_input(text):
 	string = ""
-	newstring = input("\033[1m%s\033[0m: " % text)
+	newstring = bold_input(text)
 	while newstring or string == "":
 		if options["enteredPath"]:
 			string = newstring
@@ -95,12 +111,12 @@ def path_input(text):
 					tempstring += " "
 
 		if string == "":
-			newstring = input("\033[1m\033[91mEnter a path\033[0m: ")
+			newstring = bold_input("\033[91mEnter a path")
 		else:
 			newstring = ""
 			string = os.path.realpath(string)
 			if options["confirmPath"]:
-				newstring = input("\033[1mConfirm \033[100m%s\033[0m: " % string)
+				newstring = bold_input("Confirm \033[100m" + string)
 
 	return string
 
@@ -170,6 +186,7 @@ def parse_utf8_str(fp):
 	i2 = len(string)
 	if i1 != i2:
 		warning_message("SilentError: %s pos %s: Unicode string of character length %s found, expected %s" % (fp.name,fp.tell()-1,i2,i1))
+	
 	return string
 	
 # types 90, 91, 92, 93
@@ -177,12 +194,12 @@ def parse_cached_str(fp, code, cached_latin_strings, cached_utf8_strings):
 	if code == b"\x90":
 		result = parse_latin_str(fp)
 		cached_latin_strings.append(result)
-	if code in b"\x91":
+	elif code in b"\x91":
 		result = cached_latin_strings[parse_varint(fp)]
-	if code in b"\x92":
+	elif code in b"\x92":
 		result = parse_utf8_str(fp)
 		cached_utf8_strings.append(result)
-	if code in b"\x93":
+	elif code in b"\x93":
 		result = cached_utf8_strings[parse_varint(fp)]
 	
 	return (result, cached_latin_strings, cached_utf8_strings)
@@ -190,7 +207,6 @@ def parse_cached_str(fp, code, cached_latin_strings, cached_utf8_strings):
 # type 83
 def parse_ref(fp):
 	ch = fp.read(1)
-	
 	if ch == b"\x00":
 		return "RTID()"
 	elif ch == b"\x03":
@@ -209,7 +225,6 @@ def parse_ref(fp):
 # type 85
 def parse_map(fp, cached_latin_strings, cached_utf8_strings):
 	result = []
-	
 	try:
 		while True:
 			key, cached_latin_strings, cached_utf8_strings = parse(fp, cached_latin_strings, cached_utf8_strings)
@@ -226,7 +241,8 @@ def parse_map(fp, cached_latin_strings, cached_utf8_strings):
 	except StopIteration:
 		pass
 	
-	return (FakeDict(result), cached_latin_strings, cached_utf8_strings)
+	return (FakeObject(result), cached_latin_strings, cached_utf8_strings)
+
 # type 86
 def parse_list(fp, cached_latin_strings, cached_utf8_strings):	
 	code = fp.read(1)
@@ -255,25 +271,24 @@ def parse_list(fp, cached_latin_strings, cached_utf8_strings):
 	
 	return (result, cached_latin_strings, cached_utf8_strings)
 
+# Stop reading list and object
 def end(fp):
 	raise StopIteration
 
+# Parse data type
 def parse(fp, cached_latin_strings, cached_utf8_strings):
 	# mappings
 	mappings = {	
 		b"\x00": lambda x: False,
 		b"\x01": lambda x: True,
-		
 		b"\x08": parse_int8,  
 		b"\x09": lambda x: 0, # int8_zero
 		b"\x0a": parse_uint8,
 		b"\x0b": lambda x: 0, # uint8_zero
-		
 		b"\x10": parse_int16,
 		b"\x11": lambda x: 0,  # int16_zero
 		b"\x12": parse_uint16,
 		b"\x13": lambda x: 0, # uint16_zero
-		
 		b"\x20": parse_int32,
 		b"\x21": lambda x: 0, # int32_zero
 		b"\x22": parse_float,
@@ -285,7 +300,6 @@ def parse(fp, cached_latin_strings, cached_utf8_strings):
 		b"\x27": lambda x: 0, #uint_32_zero
 		b"\x28": parse_varint, # positive_uint32_varint
 		b"\x29": parse_negative_varint, #negative_int32_varint
-		
 		b"\x40": parse_int64,
 		b"\x41": lambda x: 0, #int64_zero
 		b"\x42": parse_double,
@@ -301,25 +315,24 @@ def parse(fp, cached_latin_strings, cached_utf8_strings):
 		b"\x82": parse_utf8_str, # uncached string with unicode characters
 		b"\x83": parse_ref,
 		b"\x84": lambda x: "RTID()", # Empty reference?
-	
 		b"\xfe": end, 
 		b"\xff": end
-	
 	}
 	cached_data = {
 		b"\x85": parse_map,
 		b"\x86": parse_list
-	} 
+	}
 	code = fp.read(1)
 	# handle string types
 	if code in [b"\x90", b"\x91", b"\x92", b"\x93"]:
 		return parse_cached_str(fp, code, cached_latin_strings, cached_utf8_strings)
-	# handle No_Backup
+	# handle cached strings
 	elif code in cached_data:
 		return cached_data[code](fp, cached_latin_strings, cached_utf8_strings)
 	else:
 		return (mappings[code](fp), cached_latin_strings, cached_utf8_strings)
-## Recursive file convert function
+
+# Recursive file convert function
 def conversion(inp, out):
 	if os.path.isdir(inp) and inp != pathout:
 		os.makedirs(out, exist_ok=True)
@@ -337,13 +350,14 @@ def conversion(inp, out):
 				json.dump(data, open(jfn, "w"), allow_nan = options["allowNan"], ensure_ascii = options["ensureAscii"], indent = options["indent"], separators = ("," + options["commaSeparator"], ":" + options["doublePointSeparator"]), sort_keys = options["sortKeys"])
 				print("wrote " + os.path.relpath(jfn, pathout))
 			else:
-				raise Warning("No RTON: " + inp)
+				raise Warning("No RTON")
 		except Exception as e:
 			error_message("%s in %s pos %s: %s" % (type(e).__name__, inp, file.tell() - 1, e))
 
+# Start code
 try:
-	os.system('')
-	if getattr(sys, 'frozen', False):
+	os.system("")
+	if getattr(sys, "frozen", False):
 		application_path = os.path.dirname(sys.executable)
 	else:
 		application_path = sys.path[0]
@@ -366,7 +380,7 @@ try:
 	except Exception as e:
 		error_message("%s in options.json: %s" % (type(e).__name__, e))
 	
-	print("Working directory: " + os.getcwd())
+	blue_print("Working directory: " + os.getcwd())
 	pathin = path_input("Input file or directory")
 	if os.path.isfile(pathin):
 		pathout = path_input("Output file").removesuffix(".json")
@@ -376,9 +390,10 @@ try:
 	# Start conversion
 	start_time = datetime.datetime.now()
 	conversion(pathin, pathout)
-	print("\033[32mfinished converting %s in %s\033[0m" % (pathin, datetime.datetime.now() - start_time))
-	input("\033[95m\033[1mPRESS [ENTER]\033[0m")
+	green_print("finished converting %s in %s" % (pathin, datetime.datetime.now() - start_time))
+	bold_input("\033[95mPRESS [ENTER]")
 except BaseException as e:
 	error_message("%s: %s" % (type(e).__name__, e))
 
+# Close log
 fail.close()

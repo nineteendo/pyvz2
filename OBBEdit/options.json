@@ -7,27 +7,29 @@
 	],
 	"endswithIgnore": false,
 	"enteredPath": false,
-	"extractRsgp": true,
-	"extensions": [
+	"rsbExtensions": [
 		".1bsr",
 		".rsb1",
 		".bsr",
 		".rsb",
-		".obb",
+		".rsb.smf",
+		".obb"
+	],
+	"rsbUnpackLevel": 4,
+	"rsgpExtensions": [
 		".pgsr",
 		".rsgp"
 	],
-	"pgsrEndswith": [],
-	"pgsrEndswithIgnore": true,
-	"pgsrStartswith": [
+	"rsgpEndswith": [],
+	"rsgpEndswithIgnore": true,
+	"rsgpStartswith": [
 		"packages",
-		"__manifestgroup__",
 		"worldpackages_"
 	],
-	"pgsrStartswithIgnore": false,
+	"rsgpStartswithIgnore": false,
+	"rsgpUnpackLevel": 2,
 	"startswith": [
-		"packages/",
-		"properties/"
+		"packages/"
 	],
 	"startswithIgnore": false
 }

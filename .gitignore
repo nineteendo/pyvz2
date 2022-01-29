@@ -1,14 +1,20 @@
 # Personal Data
-OBBPatcher/input
-OBBPatcher/output
-OBBPatcher/patch
-OBBUnpacker/1bsr_pgsr.bms
-OBBUnpacker/input
-OBBUnpacker/header_test.py
-OBBUnpacker/output
+OBBEdit/1a_obb_original
+OBBEdit/1b_obb_modded
+OBBEdit/2a_rsgp_original
+OBBEdit/2b_rsgp_modded
+OBBEdit/3a_obb_section_patches
+OBBEdit/3b_rsgp_section_patches
+OBBEdit/4a_obb_encoded_patches
+OBBEdit/4b_rsgp_encoded_patches
+OBBEdit/5a_obb_decoded_patches
+OBBEdit/5b_rsgp_decoded_patches
+OBBEdit/1bsr_pgsr.bms
+OBBEdit/header_test.py
 RTONConverter/jsons
 RTONConverter/rtons
 RTONConverter/check
+ShopCreator/
 
 # MISC
 fail.txt

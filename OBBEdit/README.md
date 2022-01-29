@@ -1,7 +1,7 @@
 # OBBEdit
-- 1bsr_pgsr.bms outdated script this was based upon
 - fail.txt: file with the latest errors
 - options.json: settings for unpacking (see below)
+- patch.py a tool to patch 1bsr and pgsr
 - README.md: this file
 - unpack.py a tool to unpack 1bsr and pgsr
 
@@ -14,12 +14,14 @@ dumpRsgp | Extract RSGPs from OBB
 endswith | Only unpack paths ending with these strings
 endswithIgnore | Ignore the end of the path
 enteredPath | Don't use hybrid paths that can be escaped
-extractRsgp | Extract files directly from OBBs
-extensions | Only unpack from files with these extensions
-pgsrEndswith | Only unpack PGSRS ending with these strings
-pgsrEndswithIgnore | Ignore the end of PGSRS
-pgsrStartswith | Only unpack PGSRS starting with these strings
-pgsrStartswithIgnore | Ignore the start of PGSRS
+rsbExtensions | Only unpack from OBBs with these extensions
+rsbUnpackLevel | Level to unpack OBBs to (make negative for manual input)
+rsgpExtensions | Only unpack from RSGPs with these extensions
+rsgpEndswith | Only unpack RSGPs ending with these strings
+rsgpEndswithIgnore | Ignore the end of RSGPs
+rsgpStartswith | Only unpack RSGPs starting with these strings
+rsgpStartswithIgnore | Ignore the start of RSGPs
+rsgpUnpackLevel | Level to unpack RSGPs to (make negative for manual input)
 startswith | Only unpack paths starting with these strings
 startswithIgnore | Ignore the start of the path
 
@@ -99,33 +101,49 @@ UNCOMPRESSED_SIZE_B | long | uncompressed size B  of files
 
 Get Data of files:
 ```
-def pgsr_extract(file, out, PGSR_OFFSET, PGSR_SIZE):
-	BACKUP_OFFSET = file.tell()
-	file.seek(PGSR_OFFSET)
+def rsgp_extract(rsgp_NAME, rsgp_OFFSET, file, out, pathout, level):
 	if file.read(4) == b"pgsr":
-		VER = struct.unpack('<L', file.read(4))[0]	
-		file.seek(8, 1)
-		TYPE = struct.unpack('<L', file.read(4))[0]
-		PGSR_BASE = struct.unpack('<L', file.read(4))[0]
+		try:
+			VER = struct.unpack("<I", file.read(4))[0]
+			
+			file.seek(8, 1)
+			TYPE = struct.unpack("<I", file.read(4))[0]
+			rsgp_BASE = struct.unpack("<I", file.read(4))[0]
 
-		data = ""
-		OFFSET = struct.unpack('<L', file.read(4))[0]
-		ZSIZE = struct.unpack('<L', file.read(4))[0]
-		SIZE = struct.unpack('<L', file.read(4))[0]
-		if SIZE != 0:
-			file.seek(PGSR_OFFSET + OFFSET)
-			if TYPE == 1:
-				data = file.read(ZSIZE)
-			else:
-				print("\033[94mDecompressing ...\033[0m")
-				data = zlib.decompress(file.read(ZSIZE))
-		else:
-			file.seek(4, 1)
-			OFFSET = struct.unpack('<L', file.read(4))[0]
-			ZSIZE = struct.unpack('<L', file.read(4))[0]
-			SIZE = struct.unpack('<L', file.read(4))[0]
+			data = None
+			OFFSET = struct.unpack("<I", file.read(4))[0]
+			ZSIZE = struct.unpack("<I", file.read(4))[0]
+			SIZE = struct.unpack("<I", file.read(4))[0]
 			if SIZE != 0:
-				file.seek(PGSR_OFFSET + OFFSET)
-				print("\033[94mDecompressing ...\033[0m")
-				data = zlib.decompress(file.read(ZSIZE))
+				file.seek(rsgp_OFFSET + OFFSET)
+				if TYPE == 0: # Encypted files
+					# Insert encyption here
+					data = file.read(ZSIZE)
+				elif TYPE == 1: # Uncompressed files
+					data = file.read(ZSIZE)
+				elif TYPE == 3: # Compressed files
+					blue_print("Decompressing ...")
+					data = zlib.decompress(file.read(ZSIZE))
+				else: # Unknown files
+					raise TypeError(TYPE)
+			else:
+				file.seek(4, 1)
+				OFFSET = struct.unpack("<I", file.read(4))[0]
+				ZSIZE = struct.unpack("<I", file.read(4))[0]
+				SIZE = struct.unpack("<I", file.read(4))[0]
+				if SIZE != 0:
+					file.seek(rsgp_OFFSET + OFFSET)
+					if TYPE == 0: # Encypted files
+						# Insert encyption here
+						data = file.read(ZSIZE)
+					elif TYPE == 1: # Compressed files
+						blue_print("Decompressing ...")
+						data = zlib.decompress(file.read(ZSIZE))
+					elif TYPE == 3: # Compressed files
+						blue_print("Decompressing ...")
+						data = zlib.decompress(file.read(ZSIZE))
+					else: # Unknown files
+						raise TypeError(TYPE)
+		except:
+			error_message("%s while extracting %s.rsgp: %s" % (type(e).__name__, rsgp_NAME, e))
 ```

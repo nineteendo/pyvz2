@@ -1,7 +1,7 @@
 # JSON parser
 # written by Nineteendo
-# usage: put json files in jsons & run
 
+# Import libraries
 import os, json, struct, sys, traceback, datetime
 
 # Default Options
@@ -23,7 +23,7 @@ options = {
 		"playerinfo",
 	),
 	"DEBUG_MODE": False,
-	"doublePointSeparator": " ",
+	"float64PointSeparator": " ",
 	"ensureAscii": False,
 	"enteredPath": False,
 	"indent": "\t",
@@ -43,6 +43,8 @@ options = {
 	"shortNames": False,
 	"sortKeys": False
 }
+
+# Print & log error
 def error_message(string):
 	if options["DEBUG_MODE"]:
 		string = traceback.format_exc()
@@ -50,9 +52,22 @@ def error_message(string):
 	fail.write(string + "\n")
 	print("\033[91m%s\033[0m" % string)
 
+# Print in blue text
+def blue_print(text):
+	print("\033[94m%s\033[0m" % text)
+
+# Print in green text
+def green_print(text):
+	print("\033[32m%s\033[0m" % text)
+
+# Input in bold text
+def bold_input(text):
+	return input("\033[1m%s\033[0m: " % text)
+
+# Input hybrid path
 def path_input(text):
 	string = ""
-	newstring = input("\033[1m%s\033[0m: " % text)
+	newstring = bold_input(text)
 	while newstring or string == "":
 		if options["enteredPath"]:
 			string = newstring
@@ -83,12 +98,12 @@ def path_input(text):
 					tempstring += " "
 
 		if string == "":
-			newstring = input("\033[1m\033[91mEnter a path\033[0m: ")
+			newstring = bold_input("\033[91mEnter a path")
 		else:
 			newstring = ""
 			string = os.path.realpath(string)
 			if options["confirmPath"]:
-				newstring = input("\033[1mConfirm \033[100m%s\033[0m: " % string)
+				newstring = bold_input("Confirm \033[100m" + string)
 
 	return string
 
@@ -98,58 +113,63 @@ class list2:
 		self.data = data
 
 # Data Types
-false = b'\x00'
-true = b'\x01'
-rtid_id_string = b'\x02'
-rtid_string = b'\x03'
-int8 = b'\x08'
-int8_zero = b'\x09'
-uint8 = b'\x0a'
-uint8_zero = b'\x0b'
-int16 = b'\x10'
-int16_zero = b'\x11'
-uint16 = b'\x12'
-uint16_zero = b'\x13'
-int32 = b'\x20'
-int32_zero = b'\x21'
-floating_point = b'\x22'
-floating_point_zero = b'\x23'
-positive_int32_varint = b'\x24'
-negative_int32_varint= b'\x25'
-uint32 = b'\x26'
-uint32_zero = b'\x27'
-positive_uint32_varint = b'\x28'
-negative_uint32_varint = b'\x29'
-int64 = b'\x40'
-int64_zero = b'\x41'
-double = b'\x42'
-double_zero = b'\x43'
-positive_int64_varint = b'\x44'
-negative_int64_varint = b'\x45'
-uint64 = b'\x46'
-uint64_zero = b'\x47'
-positive_uint64_varint = b'\x48'
-negative_uint64_varint = b'\x49'
-latin_string = b'\x81'
-utf8_string = b'\x82'
-RTID = b'\x83'
-RTID_empty = b'\x84'
-object_start = b'\x85'
-array = b'\x86'
-cached_latin_string = b'\x90'
-cached_latin_string_recall = b'\x91'
-cached_utf8_string = b'\x92'
-cached_utf8_string_recall = b'\x93'
-array_start = b'\xfd'
-array_end = b'\xfe'
-object_end = b'\xff'
+false = b"\x00"
+true = b"\x01"
+rtid_id_string = b"\x02"
+rtid_string = b"\x03"
+int8 = b"\x08"
+int8_zero = b"\x09"
+uint8 = b"\x0a"
+uint8_zero = b"\x0b"
+int16 = b"\x10"
+int16_zero = b"\x11"
+uint16 = b"\x12"
+uint16_zero = b"\x13"
+int32 = b"\x20"
+int32_zero = b"\x21"
+float32 = b"\x22"
+float32_zero = b"\x23"
+positive_int32_varint = b"\x24"
+negative_int32_varint= b"\x25"
+uint32 = b"\x26"
+uint32_zero = b"\x27"
+positive_uint32_varint = b"\x28"
+negative_uint32_varint = b"\x29"
+int64 = b"\x40"
+int64_zero = b"\x41"
+float64 = b"\x42"
+float64_zero = b"\x43"
+positive_int64_varint = b"\x44"
+negative_int64_varint = b"\x45"
+uint64 = b"\x46"
+uint64_zero = b"\x47"
+positive_uint64_varint = b"\x48"
+negative_uint64_varint = b"\x49"
+latin_string = b"\x81"
+utf8_string = b"\x82"
+RTID = b"\x83"
+RTID_empty = b"\x84"
+object_start = b"\x85"
+array = b"\x86"
+cached_latin_string = b"\x90"
+cached_latin_string_recall = b"\x91"
+cached_utf8_string = b"\x92"
+cached_utf8_string_recall = b"\x93"
+array_start = b"\xfd"
+array_end = b"\xfe"
+object_end = b"\xff"
 
+# Inf and -inf values
+Infinity = [float("Infinity"), float("-Infinity")]
+
+# Boolian
 def encode_bool(boolean):
 	if boolean == False:
 		return false
 	else:
 		return true
 
+# Number with variable length
 def encode_number(integ):
 	integ, i = divmod(integ, 128)
 	if (integ):
@@ -165,13 +185,15 @@ def encode_number(integ):
 	
 	return string
 
+# Unicode string
 def encode_unicode(string):
 	encoded_string = string.encode()
 	return encode_number(len(string)) + encode_number(len(encoded_string)) + encoded_string
 
+# RTID
 def encode_rtid(string):
-	if '@' in string:
-		name, type = string[5:-1].split('@')
+	if "@" in string:
+		name, type = string[5:-1].split("@")
 		if name.count(".") == 2:
 			i2, i1, i3 = name.split(".")
 			name = encode_number(int(i1)) + encode_number(int(i2)) + bytes.fromhex(i3)[::-1]
@@ -184,55 +206,58 @@ def encode_rtid(string):
 	else:
 		return RTID + false
 
+# Number
 def encode_int(integ):
 	if integ == 0:
 		return int32_zero
 	elif -128 <= integ <= 127:
-		return int8 + struct.pack('<b', integ)
+		return int8 + struct.pack("<b", integ)
 	elif 0 <= integ <= 255:
-		return uint8 + struct.pack('<B', integ)
+		return uint8 + struct.pack("<B", integ)
 	elif -32768 <= integ <= 32767:
-		return int16 + struct.pack('<h', integ)
+		return int16 + struct.pack("<h", integ)
 	elif 0 <= integ < 65535:
-		return uint16 + struct.pack('<H', integ)
+		return uint16 + struct.pack("<H", integ)
 	elif 0 <= integ <= 2097151:
 		return positive_int32_varint + encode_number(integ)
 	elif -2097151 <= integ <= 0:
 		return negative_int32_varint + encode_number(-integ)
 	elif -2147483648 <= integ <= 2147483647:
-		return int32 + struct.pack('<i', integ)
+		return int32 + struct.pack("<i", integ)
 	elif 0 <= integ < 4294967295:
-		return uint32 + struct.pack('<I', integ)
+		return uint32 + struct.pack("<I", integ)
 	elif 0 <= integ <= 562949953421311:
 		return positive_int64_varint + encode_number(integ)
 	elif -562949953421311 <= integ <= 0:
 		return negative_int64_varint + encode_number(-integ)
 	elif -9223372036854775808 <= integ <= 9223372036854775807:
-		return int64 + struct.pack('<q', integ)
+		return int64 + struct.pack("<q", integ)
 	elif 0 <= integ <= 18446744073709551615:
-		return uint64 + struct.pack('<Q', integ)
+		return uint64 + struct.pack("<Q", integ)
 	elif 0 <= integ:
 		return positive_int64_varint + encode_number(integ)
 	else:
 		return negative_int64_varint + encode_number(-integ)
 
-def encode_floating_point(dec):
+# Float
+def encode_float(dec):
 	if dec == 0:
-		return floating_point_zero
-	elif dec != dec or dec == struct.unpack('<f', struct.pack("<f", dec))[0]:
-		return floating_point + struct.pack("<f", dec)
+		return float32_zero
+	elif dec != dec or dec in Infinity or -340282346638528859811704183484516925440 <= dec <= 340282346638528859811704183484516925440 and dec == struct.unpack("<f", struct.pack("<f", dec))[0]:
+		return float32 + struct.pack("<f", dec)
 	else:
-		return double + struct.pack("<d", dec)
+		return float64 + struct.pack("<d", dec)
 
+# Key in object
 def encode_key(string, cached_latin_strings, cached_utf8_strings):
-	if len(string) == len(string.encode('latin-1', 'ignore')):
+	if len(string) == len(string.encode("latin-1", "ignore")):
 		if string in cached_latin_strings:
 			data = cached_latin_string_recall + encode_number(cached_latin_strings[string])
 		elif len(cached_latin_strings) < options["cachKeyLimit"]:
 			cached_latin_strings[string] = len(cached_latin_strings)
-			data = cached_latin_string + encode_number(len(string)) + string.encode('latin-1')
+			data = cached_latin_string + encode_number(len(string)) + string.encode("latin-1")
 		else:
-			data = latin_string + encode_number(len(string)) + string.encode('latin-1')
+			data = latin_string + encode_number(len(string)) + string.encode("latin-1")
 	else:
 		if string in cached_utf8_strings:
 			data = cached_utf8_string_recall + encode_number(cached_utf8_strings[string])
@@ -244,16 +269,16 @@ def encode_key(string, cached_latin_strings, cached_utf8_strings):
 	
 	return (data, cached_latin_strings, cached_utf8_strings)
 
-
+# String
 def encode_string(string, cached_latin_strings, cached_utf8_strings):
-	if len(string) == len(string.encode('latin-1', 'ignore')):
+	if len(string) == len(string.encode("latin-1", "ignore")):
 		if string in cached_latin_strings:
 			data = cached_latin_string_recall + encode_number(cached_latin_strings[string])
 		elif len(cached_latin_strings) < options["cachValueLimit"]:
 			cached_latin_strings[string] = len(cached_latin_strings)
-			data = cached_latin_string + encode_number(len(string)) + string.encode('latin-1')
+			data = cached_latin_string + encode_number(len(string)) + string.encode("latin-1")
 		else:
-			data = latin_string + encode_number(len(string)) + string.encode('latin-1')
+			data = latin_string + encode_number(len(string)) + string.encode("latin-1")
 	else:
 		if string in cached_utf8_strings:
 			data = cached_utf8_string_recall + encode_number(cached_utf8_strings[string])
@@ -265,25 +290,28 @@ def encode_string(string, cached_latin_strings, cached_utf8_strings):
 	
 	return (data, cached_latin_strings, cached_utf8_strings)
 
+# Array
 def parse_array(data, cached_latin_strings, cached_utf8_strings):
 	string = array + array_start + encode_number(len(data))
 	for v in data:
-		v, cached_latin_strings, cached_utf8_strings = parse_json(v, cached_latin_strings, cached_utf8_strings)
+		v, cached_latin_strings, cached_utf8_strings = parse_data(v, cached_latin_strings, cached_utf8_strings)
 		string += v
 	
 	return (string + array_end, cached_latin_strings, cached_utf8_strings)
 
+# Object
 def parse_object(data, cached_latin_strings, cached_utf8_strings):
 	string = object_start
 	for v in data:
 		key, value = v
 		key, cached_latin_strings, cached_utf8_strings = encode_key(key, cached_latin_strings, cached_utf8_strings)
-		value, cached_latin_strings, cached_utf8_strings = parse_json(value, cached_latin_strings, cached_utf8_strings)
+		value, cached_latin_strings, cached_utf8_strings = parse_data(value, cached_latin_strings, cached_utf8_strings)
 		string += key + value
 	
 	return (string + object_end, cached_latin_strings, cached_utf8_strings)
 
-def parse_json(data, cached_latin_strings, cached_utf8_strings):
+# Data
+def parse_data(data, cached_latin_strings, cached_utf8_strings):
 	if isinstance(data, list):
 		return parse_array(data, cached_latin_strings, cached_utf8_strings)
 	elif isinstance(data, list2):
@@ -293,9 +321,9 @@ def parse_json(data, cached_latin_strings, cached_utf8_strings):
 	elif isinstance(data, int):
 		return (encode_int(data), cached_latin_strings, cached_utf8_strings)
 	elif isinstance(data, float):
-		return (encode_floating_point(data), cached_latin_strings, cached_utf8_strings)
+		return (encode_float(data), cached_latin_strings, cached_utf8_strings)
 	elif isinstance(data, str):
-		if data == 'RTID(' + data[5:-1] + ')':
+		if data == "RTID(" + data[5:-1] + ")":
 			return (encode_rtid(data), cached_latin_strings, cached_utf8_strings)
 		else:
 			return encode_string(data, cached_latin_strings, cached_utf8_strings)
@@ -311,13 +339,12 @@ def conversion(inp, out):
 	elif os.path.isfile(inp) and inp.lower().endswith(".json") and (options["allowAllJSON"] or inp.lower().endswith(options["RTONExtensions"], 0, -5) or os.path.basename(inp).lower().startswith(options["RTONNoExtensions"])):
 		write = out.removesuffix(".json")
 		try:
-			data = json.load(open(inp, 'rb'), object_pairs_hook = encode_object_pairs).data
-		
+			data = json.load(open(inp, "rb"), object_pairs_hook = encode_object_pairs).data
 		except Exception as e:
-			error_message('%s in %s: %s' % (type(e).__name__, inp, e))
+			error_message("%s in %s: %s" % (type(e).__name__, inp, e))
 		else:
 			try:
-				encoded_data = b'RTON\x01\x00\x00\x00%sDONE' % parse_object(data, {}, {})[0][1:]
+				encoded_data = b"RTONx01\x00\x00\x00%sDONE" % parse_object(data, {}, {})[0][1:]
 				# No RTON extension
 				if "" == os.path.splitext(write)[1] and not os.path.basename(write).lower().startswith(options["RTONNoExtensions"]):
 					vals = list(values_from_keys(data, ["objects","objclass"]))
@@ -327,17 +354,20 @@ def conversion(inp, out):
 						write += ".bin"
 					else:
 						write += ".rton"
-				open(write, 'wb').write(encoded_data)
+				
+				open(write, "wb").write(encoded_data)
 				print("wrote " + os.path.relpath(write, pathout))
 			except Exception as e:
-				error_message('%s in %s: %s' % (type(e).__name__, inp, e))
+				error_message("%s in %s: %s" % (type(e).__name__, inp, e))
 
+# Object to list of tuples
 def encode_object_pairs(pairs):
 	if options["sortKeys"]:
 		pairs = sorted(pairs)
 		
 	return list2(pairs)
 
+# Search in json file
 def values_from_keys(data, keyz):
 	if keyz == []:
 		yield str(data).lower()
@@ -352,9 +382,10 @@ def values_from_keys(data, keyz):
 		if keyz[0] == key:
 			yield from values_from_keys(value, keyz[1:])
 
+# Start of the code
 try:
-	os.system('')
-	if getattr(sys, 'frozen', False):
+	os.system("")
+	if getattr(sys, "frozen", False):
 		application_path = os.path.dirname(sys.executable)
 	else:
 		application_path = sys.path[0]
@@ -377,7 +408,7 @@ try:
 	except Exception as e:
 		error_message("%s in options.json: %s" % (type(e).__name__, e))
 	
-	print("Working directory: " + os.getcwd())
+	blue_print("Working directory: " + os.getcwd())
 	pathin = path_input("Input file or directory")
 	if os.path.isfile(pathin):
 		pathout = path_input("Output file").removesuffix(".json")
@@ -387,9 +418,10 @@ try:
 	# Start conversion
 	start_time = datetime.datetime.now()
 	conversion(pathin, pathout)
-	print("\033[32mfinished converting %s in %s\033[0m" % (pathin, datetime.datetime.now() - start_time))
-	input("\033[95m\033[1mPRESS [ENTER]\033[0m")
+	green_print("finished converting %s in %s" % (pathin, datetime.datetime.now() - start_time))
+	bold_input("\033[95mPRESS [ENTER]")
 except BaseException as e:
 	error_message("%s: %s" % (type(e).__name__, e))
 
+# Close log
 fail.close()
