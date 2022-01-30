@@ -47,9 +47,10 @@ options = {
 # Print & log error
 def error_message(string):
 	if options["DEBUG_MODE"]:
-		string = traceback.format_exc()
+		string += "\n" + traceback.format_exc()
 	
 	fail.write(string + "\n")
+	fail.flush()
 	print("\033[91m%s\033[0m" % string)
 
 # Print in blue text
