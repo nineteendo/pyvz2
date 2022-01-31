@@ -45,10 +45,14 @@ options = {
 }
 
 # List of tuples to fake object
-class FakeObject(dict):
+class FakeDict(dict):
 	def __init__(self, items):
-		self["something"] = "something"
+		if items != []:
+			self["something"] = "something"
+		
 		self._items = items
+	def __repr__(self):
+		return repr(self._items)
 	def items(self):
 		return self._items
 
@@ -243,7 +247,7 @@ def parse_map(fp, cached_latin_strings, cached_utf8_strings):
 	except StopIteration:
 		pass
 	
-	return (FakeObject(result), cached_latin_strings, cached_utf8_strings)
+	return (FakeDict(result), cached_latin_strings, cached_utf8_strings)
 
 # type 86
 def parse_list(fp, cached_latin_strings, cached_utf8_strings):	
