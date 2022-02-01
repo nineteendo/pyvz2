@@ -146,16 +146,16 @@ uint64 = b"\x46"
 uint64_zero = b"\x47"
 positive_uint64_varint = b"\x48"
 negative_uint64_varint = b"\x49"
-latin_string = b"\x81"
-utf8_string = b"\x82"
+uncached_string = b"\x81"
+uncached_printable_string = b"\x82"
 RTID = b"\x83"
 RTID_empty = b"\x84"
 object_start = b"\x85"
 array = b"\x86"
-cached_latin_string = b"\x90"
-cached_latin_string_recall = b"\x91"
-cached_utf8_string = b"\x92"
-cached_utf8_string_recall = b"\x93"
+cached_string = b"\x90"
+cached_string_recall = b"\x91"
+cached_printable_string = b"\x92"
+cached_printable_string_recall = b"\x93"
 array_start = b"\xfd"
 array_end = b"\xfe"
 object_end = b"\xff"
@@ -250,93 +250,93 @@ def encode_float(dec):
 		return float64 + struct.pack("<d", dec)
 
 # Key in object
-def encode_key(string, cached_latin_strings, cached_utf8_strings):
+def encode_key(string, cached_strings, cached_printable_strings):
 	if len(string) == len(string.encode("latin-1", "ignore")):
-		if string in cached_latin_strings:
-			data = cached_latin_string_recall + encode_number(cached_latin_strings[string])
-		elif len(cached_latin_strings) < options["cachKeyLimit"]:
-			cached_latin_strings[string] = len(cached_latin_strings)
-			data = cached_latin_string + encode_number(len(string)) + string.encode("latin-1")
+		if string in cached_strings:
+			data = cached_string_recall + encode_number(cached_strings[string])
+		elif len(cached_strings) < options["cachKeyLimit"]:
+			cached_strings[string] = len(cached_strings)
+			data = cached_string + encode_number(len(string)) + string.encode("latin-1")
 		else:
-			data = latin_string + encode_number(len(string)) + string.encode("latin-1")
+			data = uncached_string + encode_number(len(string)) + string.encode("latin-1")
 	else:
-		if string in cached_utf8_strings:
-			data = cached_utf8_string_recall + encode_number(cached_utf8_strings[string])
-		elif len(cached_utf8_strings) < options["cachKeyLimit"]:
-			cached_utf8_strings[string] = len(cached_utf8_strings)
-			data = cached_utf8_string + encode_unicode(string)
+		if string in cached_printable_strings:
+			data = cached_printable_string_recall + encode_number(cached_printable_strings[string])
+		elif len(cached_printable_strings) < options["cachKeyLimit"]:
+			cached_printable_strings[string] = len(cached_printable_strings)
+			data = cached_printable_string + encode_unicode(string)
 		else:
-			data = utf8_string + encode_unicode(string)
+			data = uncached_printable_string + encode_unicode(string)
 	
-	return (data, cached_latin_strings, cached_utf8_strings)
+	return (data, cached_strings, cached_printable_strings)
 
 # String
-def encode_string(string, cached_latin_strings, cached_utf8_strings):
+def encode_string(string, cached_strings, cached_printable_strings):
 	if len(string) == len(string.encode("latin-1", "ignore")):
-		if string in cached_latin_strings:
-			data = cached_latin_string_recall + encode_number(cached_latin_strings[string])
-		elif len(cached_latin_strings) < options["cachValueLimit"]:
-			cached_latin_strings[string] = len(cached_latin_strings)
-			data = cached_latin_string + encode_number(len(string)) + string.encode("latin-1")
+		if string in cached_strings:
+			data = cached_string_recall + encode_number(cached_strings[string])
+		elif len(cached_strings) < options["cachValueLimit"]:
+			cached_strings[string] = len(cached_strings)
+			data = cached_string + encode_number(len(string)) + string.encode("latin-1")
 		else:
-			data = latin_string + encode_number(len(string)) + string.encode("latin-1")
+			data = uncached_string + encode_number(len(string)) + string.encode("latin-1")
 	else:
-		if string in cached_utf8_strings:
-			data = cached_utf8_string_recall + encode_number(cached_utf8_strings[string])
-		elif len(cached_utf8_strings) < options["cachValueLimit"]:
-			cached_utf8_strings[string] = len(cached_utf8_strings)
-			data = cached_utf8_string + encode_unicode(string)
+		if string in cached_printable_strings:
+			data = cached_printable_string_recall + encode_number(cached_printable_strings[string])
+		elif len(cached_printable_strings) < options["cachValueLimit"]:
+			cached_printable_strings[string] = len(cached_printable_strings)
+			data = cached_printable_string + encode_unicode(string)
 		else:
-			data = utf8_string + encode_unicode(string)
+			data = uncached_printable_string + encode_unicode(string)
 	
-	return (data, cached_latin_strings, cached_utf8_strings)
+	return (data, cached_strings, cached_printable_strings)
 
 # Array
-def parse_array(data, cached_latin_strings, cached_utf8_strings):
+def parse_array(data, cached_strings, cached_printable_strings):
 	string = array + array_start + encode_number(len(data))
 	for v in data:
-		v, cached_latin_strings, cached_utf8_strings = parse_data(v, cached_latin_strings, cached_utf8_strings)
+		v, cached_strings, cached_printable_strings = parse_data(v, cached_strings, cached_printable_strings)
 		string += v
 	
-	return (string + array_end, cached_latin_strings, cached_utf8_strings)
+	return (string + array_end, cached_strings, cached_printable_strings)
 
 # Object
-def parse_object(data, cached_latin_strings, cached_utf8_strings):
+def parse_object(data, cached_strings, cached_printable_strings):
 	string = object_start
 	for v in data:
 		key, value = v
-		key, cached_latin_strings, cached_utf8_strings = encode_key(key, cached_latin_strings, cached_utf8_strings)
-		value, cached_latin_strings, cached_utf8_strings = parse_data(value, cached_latin_strings, cached_utf8_strings)
+		key, cached_strings, cached_printable_strings = encode_key(key, cached_strings, cached_printable_strings)
+		value, cached_strings, cached_printable_strings = parse_data(value, cached_strings, cached_printable_strings)
 		string += key + value
 	
-	return (string + object_end, cached_latin_strings, cached_utf8_strings)
+	return (string + object_end, cached_strings, cached_printable_strings)
 
 # Data
-def parse_data(data, cached_latin_strings, cached_utf8_strings):
+def parse_data(data, cached_strings, cached_printable_strings):
 	if isinstance(data, list):
-		return parse_array(data, cached_latin_strings, cached_utf8_strings)
+		return parse_array(data, cached_strings, cached_printable_strings)
 	elif isinstance(data, list2):
-		return parse_object(data.data, cached_latin_strings, cached_utf8_strings)
+		return parse_object(data.data, cached_strings, cached_printable_strings)
 	elif isinstance(data, bool):
-		return (encode_bool(data), cached_latin_strings, cached_utf8_strings)
+		return (encode_bool(data), cached_strings, cached_printable_strings)
 	elif isinstance(data, int):
-		return (encode_int(data), cached_latin_strings, cached_utf8_strings)
+		return (encode_int(data), cached_strings, cached_printable_strings)
 	elif isinstance(data, float):
-		return (encode_float(data), cached_latin_strings, cached_utf8_strings)
+		return (encode_float(data), cached_strings, cached_printable_strings)
 	elif isinstance(data, str):
 		if data == "RTID(" + data[5:-1] + ")":
-			return (encode_rtid(data), cached_latin_strings, cached_utf8_strings)
+			return (encode_rtid(data), cached_strings, cached_printable_strings)
 		else:
-			return encode_string(data, cached_latin_strings, cached_utf8_strings)
+			return encode_string(data, cached_strings, cached_printable_strings)
 	else:
 		raise TypeError(type(data))
 
 # Convert file
-def conversion(inp, out):
+def conversion(inp, out, pathout):
 	if os.path.isdir(inp) and inp != pathout:
 		os.makedirs(out, exist_ok=True)
 		for entry in sorted(os.listdir(inp)):
-			conversion(os.path.join(inp, entry), os.path.join(out, entry))
+			conversion(os.path.join(inp, entry), os.path.join(out, entry), pathout)
 	elif os.path.isfile(inp) and inp.lower().endswith(".json") and (options["allowAllJSON"] or inp.lower().endswith(options["RTONExtensions"], 0, -5) or os.path.basename(inp).lower().startswith(options["RTONNoExtensions"])):
 		write = out.removesuffix(".json")
 		try:
@@ -345,7 +345,7 @@ def conversion(inp, out):
 			error_message("%s in %s: %s" % (type(e).__name__, inp, e))
 		else:
 			try:
-				encoded_data = b"RTONx01\x00\x00\x00%sDONE" % parse_object(data, {}, {})[0][1:]
+				encoded_data = b"RTON\x01\x00\x00\x00%sDONE" % parse_object(data, {}, {})[0][1:]
 				# No RTON extension
 				if "" == os.path.splitext(write)[1] and not os.path.basename(write).lower().startswith(options["RTONNoExtensions"]):
 					vals = list(values_from_keys(data, ["objects","objclass"]))
@@ -392,8 +392,8 @@ try:
 		application_path = sys.path[0]
 
 	fail = open(os.path.join(application_path, "fail.txt"), "w")
-	if sys.version_info[0] < 3:
-		raise RuntimeError("Must be using Python 3")
+	if sys.version_info[:2] < (3, 9):
+		raise RuntimeError("Must be using Python 3.9")
 	
 	print("\033[95m\033[1mJSON RTONEncoder v1.1.0\n(C) 2021 by Nineteendo\033[0m\n")
 	try:
@@ -418,7 +418,7 @@ try:
 	
 	# Start conversion
 	start_time = datetime.datetime.now()
-	conversion(pathin, pathout)
+	conversion(pathin, pathout, os.path.dirname(pathout))
 	green_print("finished converting %s in %s" % (pathin, datetime.datetime.now() - start_time))
 	bold_input("\033[95mPRESS [ENTER]")
 except BaseException as e:

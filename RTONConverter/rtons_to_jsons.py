@@ -182,11 +182,15 @@ def parse_uint64(fp):
 	return struct.unpack("<Q", fp.read(8))[0]
 	
 # types 81, 90
-def parse_latin_str(fp):
-	return fp.read(parse_varint(fp)).decode("latin-1")
+def parse_str(fp):
+	byte = fp.read(parse_varint(fp))
+	try:
+		return byte.decode("utf-8")
+	except Exception:
+		return byte.decode("latin-1")
 	
 # type 82, 92
-def parse_utf8_str(fp):
+def parse_printable_str(fp):
 	i1 = parse_varint(fp) # Character length
 	string = fp.read(parse_varint(fp)).decode()
 	i2 = len(string)
@@ -196,19 +200,19 @@ def parse_utf8_str(fp):
 	return string
 	
 # types 90, 91, 92, 93
-def parse_cached_str(fp, code, cached_latin_strings, cached_utf8_strings):
+def parse_cached_str(fp, code, chached_strings, chached_printable_strings):
 	if code == b"\x90":
-		result = parse_latin_str(fp)
-		cached_latin_strings.append(result)
+		result = parse_str(fp)
+		chached_strings.append(result)
 	elif code in b"\x91":
-		result = cached_latin_strings[parse_varint(fp)]
+		result = chached_strings[parse_varint(fp)]
 	elif code in b"\x92":
-		result = parse_utf8_str(fp)
-		cached_utf8_strings.append(result)
+		result = parse_printable_str(fp)
+		chached_printable_strings.append(result)
 	elif code in b"\x93":
-		result = cached_utf8_strings[parse_varint(fp)]
+		result = chached_printable_strings[parse_varint(fp)]
 	
-	return (result, cached_latin_strings, cached_utf8_strings)
+	return (result, chached_strings, chached_printable_strings)
 
 # type 83
 def parse_ref(fp):
@@ -216,10 +220,10 @@ def parse_ref(fp):
 	if ch == b"\x00":
 		return "RTID()"
 	elif ch == b"\x03":
-		p1 = parse_utf8_str(fp)
-		p2 = parse_utf8_str(fp)
+		p1 = parse_printable_str(fp)
+		p2 = parse_printable_str(fp)
 	elif ch == b"\x02":
-		p1 = parse_utf8_str(fp)
+		p1 = parse_printable_str(fp)
 		i2 = str(parse_varint(fp))
 		i1 = str(parse_varint(fp))
 		p2 = i1 + "." + i2 + "." + fp.read(4)[::-1].hex()
@@ -229,12 +233,12 @@ def parse_ref(fp):
 	return "RTID(%s@%s)" % (p2, p1)
 
 # type 85
-def parse_map(fp, cached_latin_strings, cached_utf8_strings):
+def parse_map(fp, chached_strings, chached_printable_strings):
 	result = []
 	try:
 		while True:
-			key, cached_latin_strings, cached_utf8_strings = parse(fp, cached_latin_strings, cached_utf8_strings)
-			val, cached_latin_strings, cached_utf8_strings = parse(fp, cached_latin_strings, cached_utf8_strings)
+			key, chached_strings, chached_printable_strings = parse(fp, chached_strings, chached_printable_strings)
+			val, chached_strings, chached_printable_strings = parse(fp, chached_strings, chached_printable_strings)
 			result.append((key,val))
 	except KeyError as k:
 		if str(k) == 'b""':
@@ -247,10 +251,10 @@ def parse_map(fp, cached_latin_strings, cached_utf8_strings):
 	except StopIteration:
 		pass
 	
-	return (FakeDict(result), cached_latin_strings, cached_utf8_strings)
+	return (FakeDict(result), chached_strings, chached_printable_strings)
 
 # type 86
-def parse_list(fp, cached_latin_strings, cached_utf8_strings):	
+def parse_list(fp, chached_strings, chached_printable_strings):	
 	code = fp.read(1)
 	if code != b"\xfd":
 		raise KeyError("List starts with " + code.hex())
@@ -260,7 +264,7 @@ def parse_list(fp, cached_latin_strings, cached_utf8_strings):
 	i2 = parse_varint(fp)
 	try:
 		while True:
-			val, cached_latin_strings, cached_utf8_strings = parse(fp, cached_latin_strings, cached_utf8_strings)
+			val, chached_strings, chached_printable_strings = parse(fp, chached_strings, chached_printable_strings)
 			result.append(val)
 			i1 += 1
 	except KeyError as k:
@@ -275,14 +279,14 @@ def parse_list(fp, cached_latin_strings, cached_utf8_strings):
 		if (i1 != i2):
 			warning_message("SilentError: %s pos %s: Array of length %s found, expected %s" %(fp.name, fp.tell() - 1, i1, i2))
 	
-	return (result, cached_latin_strings, cached_utf8_strings)
+	return (result, chached_strings, chached_printable_strings)
 
 # Stop reading list and object
 def end(fp):
 	raise StopIteration
 
 # Parse data type
-def parse(fp, cached_latin_strings, cached_utf8_strings):
+def parse(fp, chached_strings, chached_printable_strings):
 	# mappings
 	mappings = {	
 		b"\x00": lambda x: False,
@@ -317,8 +321,8 @@ def parse(fp, cached_latin_strings, cached_utf8_strings):
 		b"\x48": parse_varint, # positive_uint64_varint
 		b"\x49": parse_negative_varint, # negative_uint64_varint
 		
-		b"\x81": parse_latin_str, # uncached string with roman characters
-		b"\x82": parse_utf8_str, # uncached string with unicode characters
+		b"\x81": parse_str, # uncached string
+		b"\x82": parse_printable_str, # uncached printable string
 		b"\x83": parse_ref,
 		b"\x84": lambda x: "RTID()", # Empty reference?
 		b"\xfe": end, 
@@ -331,19 +335,19 @@ def parse(fp, cached_latin_strings, cached_utf8_strings):
 	code = fp.read(1)
 	# handle string types
 	if code in [b"\x90", b"\x91", b"\x92", b"\x93"]:
-		return parse_cached_str(fp, code, cached_latin_strings, cached_utf8_strings)
+		return parse_cached_str(fp, code, chached_strings, chached_printable_strings)
 	# handle cached strings
 	elif code in cached_data:
-		return cached_data[code](fp, cached_latin_strings, cached_utf8_strings)
+		return cached_data[code](fp, chached_strings, chached_printable_strings)
 	else:
-		return (mappings[code](fp), cached_latin_strings, cached_utf8_strings)
+		return (mappings[code](fp), chached_strings, chached_printable_strings)
 
 # Recursive file convert function
-def conversion(inp, out):
+def conversion(inp, out, pathout):
 	if os.path.isdir(inp) and inp != pathout:
 		os.makedirs(out, exist_ok=True)
 		for entry in sorted(os.listdir(inp)):
-			conversion(os.path.join(inp, entry), os.path.join(out, entry))
+			conversion(os.path.join(inp, entry), os.path.join(out, entry), pathout)
 	elif os.path.isfile(inp) and (inp.lower().endswith(options["RTONExtensions"]) or os.path.basename(inp).lower().startswith(options["RTONNoExtensions"])):	
 		if options["shortNames"]:
 			out = os.path.splitext(out)[0]
@@ -369,8 +373,8 @@ try:
 		application_path = sys.path[0]
 
 	fail = open(os.path.join(application_path, "fail.txt"), "w")
-	if sys.version_info[0] < 3:
-		raise RuntimeError("Must be using Python 3")
+	if sys.version_info[:2] < (3, 9):
+		raise RuntimeError("Must be using Python 3.9")
 	
 	print("\033[95m\033[1mRTONParser v1.1.0\n(C) 2021 by Nineteendo\033[0m\n")
 	try:
@@ -395,7 +399,7 @@ try:
 		
 	# Start conversion
 	start_time = datetime.datetime.now()
-	conversion(pathin, pathout)
+	conversion(pathin, pathout, os.path.dirname(pathout))
 	green_print("finished converting %s in %s" % (pathin, datetime.datetime.now() - start_time))
 	bold_input("\033[95mPRESS [ENTER]")
 except BaseException as e:
