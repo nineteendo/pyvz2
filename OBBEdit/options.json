@@ -1,7 +1,6 @@
 {
 	"confirmPath": true,
-	"DEBUG_MODE": false,
-	"dumpRsgp": false,
+	"DEBUG_MODE": true,
 	"endswith": [
 		".rton"
 	],

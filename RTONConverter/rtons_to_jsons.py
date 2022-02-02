@@ -6,7 +6,6 @@ import os, json, struct, sys, traceback, datetime
 
 # Default Options
 options = {
-	"allowNan": True,
 	"allowAllJSON": True,
 	"binObjClasses": (
 		"drapersavedata",
@@ -17,16 +16,15 @@ options = {
 	),
 	"cachKeyLimit": 1048575,
 	"cachValueLimit": 1048575,
-	"commaSeparator": "",
+	"comma": 0,
 	"confirmPath": True,
 	"datObjClasses": (
 		"playerinfo",
 	),
 	"DEBUG_MODE": False,
-	"doublePointSeparator": " ",
-	"ensureAscii": False,
+	"doublepoint": 1,
 	"enteredPath": False,
-	"indent": "\t",
+	"indent": -1,
 	"RTONExtensions": (
 		".bin",
 		".dat",
@@ -40,8 +38,9 @@ options = {
 		"_saveheader_rton"
 	),
 	"repairFiles": False,
-	"shortNames": False,
-	"sortKeys": False
+	"shortNames": True,
+	"sortKeys": False,
+	"sortValues": False
 }
 
 # List of tuples to fake object
@@ -251,6 +250,9 @@ def parse_map(fp, chached_strings, chached_printable_strings):
 	except StopIteration:
 		pass
 	
+	if options["sortKeys"]:
+		result = sorted(result)
+	
 	return (FakeDict(result), chached_strings, chached_printable_strings)
 
 # type 86
@@ -278,6 +280,9 @@ def parse_list(fp, chached_strings, chached_printable_strings):
 	except StopIteration:
 		if (i1 != i2):
 			warning_message("SilentError: %s pos %s: Array of length %s found, expected %s" %(fp.name, fp.tell() - 1, i1, i2))
+	
+	if options["sortValues"]:
+		result = sorted(result)
 	
 	return (result, chached_strings, chached_printable_strings)
 
@@ -357,7 +362,7 @@ def conversion(inp, out, pathout):
 		try:
 			if file.read(8) == b"RTON\x01\x00\x00\x00":
 				data = parse_map(file, [], [])[0]
-				json.dump(data, open(jfn, "w"), allow_nan = options["allowNan"], ensure_ascii = options["ensureAscii"], indent = options["indent"], separators = ("," + options["commaSeparator"], ":" + options["doublePointSeparator"]), sort_keys = options["sortKeys"])
+				json.dump(data, open(jfn, "w"), indent = indent, separators = separators)
 				print("wrote " + os.path.relpath(jfn, pathout))
 			else:
 				raise Warning("No RTON")
@@ -389,6 +394,23 @@ try:
 					options[key] = newoptions[key]
 	except Exception as e:
 		error_message("%s in options.json: %s" % (type(e).__name__, e))
+	
+	if options["comma"] > 0:
+		comma = "," + " " * options["comma"]
+	else:
+		comma = ","
+
+	if options["doublepoint"] > 0:
+		separators = (comma, ":" + " " * options["doublepoint"])
+	else:
+		separators = (comma, ":")
+
+	if options["indent"] == None:
+		indent = None
+	elif options["indent"] < 0:
+		indent = "\t"
+	else:
+		indent = " " * options["indent"]
 	
 	blue_print("Working directory: " + os.getcwd())
 	pathin = path_input("Input file or directory")

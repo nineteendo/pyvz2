@@ -1,5 +1,4 @@
 {
-	"allowNan": true,
 	"allowAllJSON": true,
 	"binObjClasses": [
 		"drapersavedata",
@@ -10,16 +9,15 @@
 	],
 	"cachKeyLimit": 1048575,
 	"cachValueLimit": 1048575,
-	"commaSeparator": "",
+	"comma": 0,
 	"confirmPath": true,
 	"datObjClasses": [
 		"playerinfo"
 	],
-	"DEBUG_MODE": false,
-	"doublePointSeparator": " ",
-	"ensureAscii": false,
+	"DEBUG_MODE": true,
+	"doublepoint": 1,
 	"enteredPath": false,
-	"indent": "\t",
+	"indent": -1,
 	"RTONExtensions": [
 		".bin",
 		".dat",
@@ -32,7 +30,8 @@
 		"loot",
 		"_saveheader_rton"
 	],
-	"repairFiles": false,
+	"repairFiles": true,
 	"shortNames": true,
-	"sortKeys": false
+	"sortKeys": false,
+	"sortValues": false
 }

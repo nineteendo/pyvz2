@@ -6,7 +6,6 @@ import os, json, struct, sys, traceback, datetime
 
 # Default Options
 options = {
-	"allowNan": True,
 	"allowAllJSON": True,
 	"binObjClasses": (
 		"drapersavedata",
@@ -17,16 +16,15 @@ options = {
 	),
 	"cachKeyLimit": 1048575,
 	"cachValueLimit": 1048575,
-	"commaSeparator": "",
+	"comma": 0,
 	"confirmPath": True,
 	"datObjClasses": (
 		"playerinfo",
 	),
 	"DEBUG_MODE": False,
-	"float64PointSeparator": " ",
-	"ensureAscii": False,
+	"doublepoint": 1,
 	"enteredPath": False,
-	"indent": "\t",
+	"indent": -1,
 	"RTONExtensions": (
 		".bin",
 		".dat",
@@ -41,7 +39,8 @@ options = {
 	),
 	"repairFiles": False,
 	"shortNames": False,
-	"sortKeys": False
+	"sortKeys": False,
+	"sortValues": False
 }
 
 # Print & log error
@@ -294,6 +293,9 @@ def encode_string(string, cached_strings, cached_printable_strings):
 # Array
 def parse_array(data, cached_strings, cached_printable_strings):
 	string = array + array_start + encode_number(len(data))
+	if options["sortValues"]:
+		data = sorted(data)
+	
 	for v in data:
 		v, cached_strings, cached_printable_strings = parse_data(v, cached_strings, cached_printable_strings)
 		string += v
@@ -303,8 +305,10 @@ def parse_array(data, cached_strings, cached_printable_strings):
 # Object
 def parse_object(data, cached_strings, cached_printable_strings):
 	string = object_start
-	for v in data:
-		key, value = v
+	if options["sortKeys"]:
+		data = sorted(data)
+
+	for key, value in data:
 		key, cached_strings, cached_printable_strings = encode_key(key, cached_strings, cached_printable_strings)
 		value, cached_strings, cached_printable_strings = parse_data(value, cached_strings, cached_printable_strings)
 		string += key + value
@@ -363,9 +367,6 @@ def conversion(inp, out, pathout):
 
 # Object to list of tuples
 def encode_object_pairs(pairs):
-	if options["sortKeys"]:
-		pairs = sorted(pairs)
-		
 	return list2(pairs)
 
 # Search in json file

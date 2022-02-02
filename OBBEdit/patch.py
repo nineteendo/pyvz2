@@ -8,7 +8,6 @@ import zlib, os, sys, traceback, json, struct, datetime
 options = {
 	"confirmPath": True, 
 	"DEBUG_MODE": False,
-	"dumpRsgp": False,
 	"endswith": (
 		".rton",
 	),

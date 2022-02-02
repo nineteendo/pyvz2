@@ -10,7 +10,6 @@ key | purpose
 --- | ---
 confirmPath | Confirm or change parsed path before conversion
 DEBUG_MODE | Show full error traceback
-dumpRsgp | Extract RSGPs from OBB
 endswith | Only unpack paths ending with these strings
 endswithIgnore | Ignore the end of the path
 enteredPath | Don't use hybrid paths that can be escaped
