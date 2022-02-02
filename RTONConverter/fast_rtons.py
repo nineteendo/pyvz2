@@ -258,6 +258,11 @@ def parse_object(fp, currrent_indent, chached_strings, chached_printable_strings
 			warning_message("SilentError: %s pos %s: end of file" %(fp.name, fp.tell() - 1))
 		else:
 			raise EOFError
+	except IndexError:
+		if options["repairFiles"]:
+			warning_message("SilentError: %s pos %s: end of file" %(fp.name, fp.tell() - 1))
+		else:
+			raise EOFError
 	
 	if options["sortKeys"]:
 		items = sorted(items)
@@ -297,6 +302,11 @@ def parse_list(fp, currrent_indent, chached_strings, chached_printable_strings):
 		elif k.args[0] != b'\xfe':
 			raise TypeError("unknown tag " + k.args[0].hex())
 	except struct.error:
+		if options["repairFiles"]:
+			warning_message("SilentError: %s pos %s: end of file" %(fp.name, fp.tell() - 1))
+		else:
+			raise EOFError
+	except IndexError:
 		if options["repairFiles"]:
 			warning_message("SilentError: %s pos %s: end of file" %(fp.name, fp.tell() - 1))
 		else:
