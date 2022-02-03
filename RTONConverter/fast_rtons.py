@@ -135,7 +135,7 @@ def parse_int32(fp):
 
 # type 22
 def parse_float(fp):
-	return str(struct.unpack("<f", fp.read(4))[0])
+	return str(struct.unpack("<f", fp.read(4))[0]).replace("inf", "Infinity").replace("nan", "NaN")
 
 # type 24, 28, 44 and 48
 def parse_varint(fp):
@@ -166,7 +166,7 @@ def parse_int64(fp):
 
 # type 42
 def parse_double(fp):
-	return str(struct.unpack("<d", fp.read(8))[0])
+	return str(struct.unpack("<d", fp.read(8))[0]).replace("inf", "Infinity").replace("nan", "NaN")
 
 # type 46
 def parse_uint64(fp):
