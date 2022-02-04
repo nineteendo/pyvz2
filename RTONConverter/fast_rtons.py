@@ -2,11 +2,15 @@
 # written by 1Zulu and Nineteendo
 
 # Import libraries
-import os, json, struct, sys, traceback, datetime
+import sys, datetime
+from traceback import format_exc
+from json import load
+from struct import unpack, error
+from os import makedirs, listdir, system, getcwd
+from os.path import isdir, isfile, realpath, join as osjoin, dirname, relpath, basename, splitext
 
 # Default Options
 options = {
-	"allowAllJSON": True,
 	"binObjClasses": (
 		"drapersavedata",
 		"globalsavedata",
@@ -14,14 +18,13 @@ options = {
 		"lootsavedata",
 		"savegameheader"
 	),
-	"cachKeyLimit": 1048575,
-	"cachValueLimit": 1048575,
+	"cachLimit": 1048575,
 	"comma": 0,
 	"confirmPath": True,
 	"datObjClasses": (
 		"playerinfo",
 	),
-	"DEBUG_MODE": False,
+	"DEBUG_MODE": True,
 	"doublepoint": 1,
 	"enteredPath": False,
 	"indent": -1,
@@ -46,7 +49,7 @@ options = {
 # Print & log error
 def error_message(string):
 	if options["DEBUG_MODE"]:
-		string += "\n" + traceback.format_exc()
+		string += "\n" + format_exc()
 	
 	fail.write(string + "\n")
 	fail.flush()
@@ -107,7 +110,7 @@ def path_input(text):
 			newstring = bold_input("\033[91mEnter a path")
 		else:
 			newstring = ""
-			string = os.path.realpath(string)
+			string = realpath(string)
 			if options["confirmPath"]:
 				newstring = bold_input("Confirm \033[100m" + string)
 
@@ -115,7 +118,7 @@ def path_input(text):
 
 # type 08
 def parse_int8(fp):
-	return str(struct.unpack("b", fp.read(1))[0])
+	return str(unpack("b", fp.read(1))[0])
 
 # type 0a
 def parse_uint8(fp):
@@ -123,19 +126,19 @@ def parse_uint8(fp):
 	
 # type 10
 def parse_int16(fp):
-	return str(struct.unpack("<h", fp.read(2))[0])
+	return str(unpack("<h", fp.read(2))[0])
 
 # type 12
 def parse_uint16(fp):
-	return str(struct.unpack("<H", fp.read(2))[0])
+	return str(unpack("<H", fp.read(2))[0])
 	
 # type 20
 def parse_int32(fp):
-	return str(struct.unpack("<i", fp.read(4))[0])
+	return str(unpack("<i", fp.read(4))[0])
 
 # type 22
 def parse_float(fp):
-	return str(struct.unpack("<f", fp.read(4))[0]).replace("inf", "Infinity").replace("nan", "NaN")
+	return str(unpack("<f", fp.read(4))[0]).replace("inf", "Infinity").replace("nan", "NaN")
 
 # type 24, 28, 44 and 48
 def parse_varint(fp):
@@ -158,19 +161,19 @@ def parse_number(fp):
 
 # type 26
 def parse_uint32(fp):
-	return str(struct.unpack("<I", fp.read(4))[0])
+	return str(unpack("<I", fp.read(4))[0])
 
 # type 40
 def parse_int64(fp):
-	return str(struct.unpack("<q", fp.read(8))[0])
+	return str(unpack("<q", fp.read(8))[0])
 
 # type 42
 def parse_double(fp):
-	return str(struct.unpack("<d", fp.read(8))[0]).replace("inf", "Infinity").replace("nan", "NaN")
+	return str(unpack("<d", fp.read(8))[0]).replace("inf", "Infinity").replace("nan", "NaN")
 
 # type 46
 def parse_uint64(fp):
-	return str(struct.unpack("<Q", fp.read(8))[0])
+	return str(unpack("<Q", fp.read(8))[0])
 
 # types 81, 90
 def parse_str(fp):
@@ -253,12 +256,7 @@ def parse_object(fp, currrent_indent, chached_strings, chached_printable_strings
 				raise EOFError
 		elif k.args[0] != b'\xff':
 			raise TypeError("unknown tag " + k.args[0].hex())
-	except struct.error:
-		if options["repairFiles"]:
-			warning_message("SilentError: %s pos %s: end of file" %(fp.name, fp.tell() - 1))
-		else:
-			raise EOFError
-	except IndexError:
+	except (error, IndexError):
 		if options["repairFiles"]:
 			warning_message("SilentError: %s pos %s: end of file" %(fp.name, fp.tell() - 1))
 		else:
@@ -301,12 +299,7 @@ def parse_list(fp, currrent_indent, chached_strings, chached_printable_strings):
 				raise EOFError
 		elif k.args[0] != b'\xfe':
 			raise TypeError("unknown tag " + k.args[0].hex())
-	except struct.error:
-		if options["repairFiles"]:
-			warning_message("SilentError: %s pos %s: end of file" %(fp.name, fp.tell() - 1))
-		else:
-			raise EOFError
-	except IndexError:
+	except (error, IndexError):
 		if options["repairFiles"]:
 			warning_message("SilentError: %s pos %s: end of file" %(fp.name, fp.tell() - 1))
 		else:
@@ -380,41 +373,42 @@ mappings = {
 
 # Recursive file convert function
 def conversion(inp, out, pathout):
-	if os.path.isdir(inp) and inp != pathout:
-		os.makedirs(out, exist_ok=True)
-		for entry in sorted(os.listdir(inp)):
-			conversion(os.path.join(inp, entry), os.path.join(out, entry), pathout)
-	elif os.path.isfile(inp) and (inp.lower().endswith(options["RTONExtensions"]) or os.path.basename(inp).lower().startswith(options["RTONNoExtensions"])):	
+	if isdir(inp) and inp != pathout:
+		makedirs(out, exist_ok=True)
+		for entry in sorted(listdir(inp)):
+			conversion(osjoin(inp, entry), osjoin(out, entry), pathout)
+	elif isfile(inp) and (inp.lower().endswith(options["RTONExtensions"]) or basename(inp).lower().startswith(options["RTONNoExtensions"])):	
 		if options["shortNames"]:
-			out = os.path.splitext(out)[0]
+			out = splitext(out)[0]
 			 
 		jfn = out + ".json"
 		file = open(inp, "rb")
 		try:
 			if file.read(4) == b"RTON":
-				VER = struct.unpack("<I", file.read(4))[0]
-				open(jfn, "w").write(parse_object(file, current_indent, [], [])[0])
-				print("wrote " + os.path.relpath(jfn, pathout))
+				VER = unpack("<I", file.read(4))[0]
+				data = parse_object(file, current_indent, [], [])[0]
+				open(jfn, "w").write(data)
+				print("wrote " + relpath(jfn, pathout))
 			else:
-				raise Warning("No RTON")
+				warning_message("No RTON " + inp)
 		except Exception as e:
 			error_message("%s in %s pos %s: %s" % (type(e).__name__, inp, file.tell() - 1, e))
 
 # Start code
 try:
-	os.system("")
+	system("")
 	if getattr(sys, "frozen", False):
-		application_path = os.path.dirname(sys.executable)
+		application_path = dirname(sys.executable)
 	else:
 		application_path = sys.path[0]
 
-	fail = open(os.path.join(application_path, "fail.txt"), "w")
+	fail = open(osjoin(application_path, "fail.txt"), "w")
 	if sys.version_info[:2] < (3, 9):
 		raise RuntimeError("Must be using Python 3.9")
 	
 	print("\033[95m\033[1mFast RTONParser v1.1.0\n(C) 2021 by Nineteendo\033[0m\n")
 	try:
-		newoptions = json.load(open(os.path.join(application_path, "options.json"), "rb"))
+		newoptions = load(open(osjoin(application_path, "options.json"), "rb"))
 		for key in options:
 			if key in newoptions:
 				if type(options[key]) == type(newoptions[key]):
@@ -445,16 +439,16 @@ try:
 		current_indent = "\n"
 		indent = " " * options["indent"]
 
-	blue_print("Working directory: " + os.getcwd())
+	blue_print("Working directory: " + getcwd())
 	pathin = path_input("Input file or directory")
-	if os.path.isfile(pathin):
+	if isfile(pathin):
 		pathout = path_input("Output file").removesuffix(".json")
 	else:
 		pathout = path_input("Output directory")
 		
 	# Start conversion
 	start_time = datetime.datetime.now()
-	conversion(pathin, pathout, os.path.dirname(pathout))
+	conversion(pathin, pathout, dirname(pathout))
 	green_print("finished converting %s in %s" % (pathin, datetime.datetime.now() - start_time))
 	bold_input("\033[95mPRESS [ENTER]")
 except BaseException as e:

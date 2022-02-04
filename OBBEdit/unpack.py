@@ -7,7 +7,7 @@ import os, struct, zlib, sys, traceback, json, datetime
 # Default options
 options = {
 	"confirmPath": True, 
-	"DEBUG_MODE": False,
+	"DEBUG_MODE": True,
 	"endswith": (
 		".rton",
 	),
@@ -294,20 +294,20 @@ try:
 
 	blue_print("Working directory: " + os.getcwd())
 	level_to_name = ["SPECIFY", "OBB/RSB", "PGSR/RSGP", "SECTION", "ENCODED"]
-	if options["rsbUnpackLevel"] > 1:
+	if 5 > options["rsbUnpackLevel"] > 1:
 		rsb_input = path_input("OBB/RSB Input file or directory")
 		rsb_output = path_input("OBB/RSB %s Output directory" % level_to_name[options["rsbUnpackLevel"]])
 	
-	if options["rsgpUnpackLevel"] > 2:
+	if 5 > options["rsgpUnpackLevel"] > 2:
 		rsgp_input = path_input("PGSR/RSGP Input file or directory")
 		rsgp_output = path_input("PGSR/RSGP %s Output directory" % level_to_name[options["rsgpUnpackLevel"]])
 
 	# Start file_to_folder
 	start_time = datetime.datetime.now()
-	if options["rsbUnpackLevel"] > 1:
+	if 5 > options["rsbUnpackLevel"] > 1:
 		file_to_folder(rsb_input, rsb_output, options["rsbUnpackLevel"], options["rsbExtensions"], rsb_output)
 	
-	if options["rsgpUnpackLevel"] > 2:
+	if 5 > options["rsgpUnpackLevel"] > 2:
 		file_to_folder(rsgp_input, rsgp_output, options["rsgpUnpackLevel"], options["rsgpExtensions"], rsgp_output)
 
 	green_print("finished unpacking in %s" % (datetime.datetime.now() - start_time))

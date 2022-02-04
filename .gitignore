@@ -14,6 +14,7 @@ OBBEdit/header_test.py
 RTONConverter/jsons
 RTONConverter/rtons
 RTONConverter/check
+RTONConverter/slow_jsons.py
 ShopCreator/
 
 # MISC
