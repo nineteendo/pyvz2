@@ -1,6 +1,3 @@
-# Fast RTON parser
-# written by 1Zulu and Nineteendo
-
 # Import libraries
 import sys, datetime
 from traceback import format_exc
@@ -48,7 +45,7 @@ options = {
 
 # Print & log error
 def error_message(string):
-	if options["DEBUG_MODE"]:
+	if DEBUG_MODE:
 		string += "\n" + format_exc()
 	
 	fail.write(string + "\n")
@@ -250,19 +247,19 @@ def parse_object(fp, currrent_indent, chached_strings, chached_printable_strings
 			items.append(key + doublepoint + value)
 	except KeyError as k:
 		if str(k) == 'b""':
-			if options["repairFiles"]:
+			if repairFiles:
 				warning_message("SilentError: %s pos %s: end of file" %(fp.name, fp.tell() - 1))
 			else:
 				raise EOFError
 		elif k.args[0] != b'\xff':
 			raise TypeError("unknown tag " + k.args[0].hex())
 	except (error, IndexError):
-		if options["repairFiles"]:
+		if repairFiles:
 			warning_message("SilentError: %s pos %s: end of file" %(fp.name, fp.tell() - 1))
 		else:
 			raise EOFError
 	
-	if options["sortKeys"]:
+	if sortKeys:
 		items = sorted(items)
 
 	return (string + (comma + new_indent).join(items) + end, chached_strings, chached_printable_strings)
@@ -271,7 +268,7 @@ def parse_object(fp, currrent_indent, chached_strings, chached_printable_strings
 def parse_list(fp, currrent_indent, chached_strings, chached_printable_strings):
 	code = fp.read(1)
 	if code == b"":
-		if options["repairFiles"]:
+		if repairFiles:
 			warning_message("SilentError: %s pos %s: end of file" %(fp.name, fp.tell() - 1))
 		else:
 			raise EOFError
@@ -293,14 +290,14 @@ def parse_list(fp, currrent_indent, chached_strings, chached_printable_strings):
 			items.append(value)
 	except KeyError as k:
 		if str(k) == 'b""':
-			if options["repairFiles"]:
+			if repairFiles:
 				warning_message("SilentError: %s pos %s: end of file" %(fp.name, fp.tell() - 1))
 			else:
 				raise EOFError
 		elif k.args[0] != b'\xfe':
 			raise TypeError("unknown tag " + k.args[0].hex())
 	except (error, IndexError):
-		if options["repairFiles"]:
+		if repairFiles:
 			warning_message("SilentError: %s pos %s: end of file" %(fp.name, fp.tell() - 1))
 		else:
 			raise EOFError
@@ -309,7 +306,7 @@ def parse_list(fp, currrent_indent, chached_strings, chached_printable_strings):
 	if i1 != i2:
 		warning_message("SilentError: %s pos %s: Array of length %s found, expected %s" %(fp.name, fp.tell() - 1, i1, i2))
 	
-	if options["sortValues"]:
+	if sortValues:
 		items = sorted(items)
 	
 	return (string + (comma + new_indent).join(items) + end, chached_strings, chached_printable_strings)
@@ -377,8 +374,8 @@ def conversion(inp, out, pathout):
 		makedirs(out, exist_ok=True)
 		for entry in sorted(listdir(inp)):
 			conversion(osjoin(inp, entry), osjoin(out, entry), pathout)
-	elif isfile(inp) and (inp.lower().endswith(options["RTONExtensions"]) or basename(inp).lower().startswith(options["RTONNoExtensions"])):	
-		if options["shortNames"]:
+	elif isfile(inp) and (inp.lower().endswith(RTONExtensions) or basename(inp).lower().startswith(RTONNoExtensions)):	
+		if shortNames:
 			out = splitext(out)[0]
 			 
 		jfn = out + ".json"
@@ -406,7 +403,7 @@ try:
 	if sys.version_info[:2] < (3, 9):
 		raise RuntimeError("Must be using Python 3.9")
 	
-	print("\033[95m\033[1mFast RTONParser v1.1.0\n(C) 2021 by Nineteendo\033[0m\n")
+	print("\033[95m\033[1mFast RTONParser v1.1.0\n(C) 2022 by 1Zulu & Nineteendo\033[0m\n")
 	try:
 		newoptions = load(open(osjoin(application_path, "options.json"), "rb"))
 		for key in options:
@@ -439,6 +436,13 @@ try:
 		current_indent = "\n"
 		indent = " " * options["indent"]
 
+	DEBUG_MODE = options["DEBUG_MODE"]
+	repairFiles = options["repairFiles"]
+	RTONExtensions = options["RTONExtensions"]
+	RTONNoExtensions = options["RTONNoExtensions"]
+	shortNames = options["shortNames"]
+	sortKeys = options["sortKeys"]
+	sortValues = options["sortValues"]
 	blue_print("Working directory: " + getcwd())
 	pathin = path_input("Input file or directory")
 	if isfile(pathin):

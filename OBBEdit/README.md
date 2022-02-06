@@ -1,9 +1,10 @@
 # OBBEdit
-- fail.txt: file with the latest errors
+- fail.txt: file with the last errors
 - options.json: settings for unpacking (see below)
 - patch.py a tool to patch 1bsr and pgsr
 - README.md: this file
 - unpack.py a tool to unpack 1bsr and pgsr
+- versions.cfg (old configuration file)
 
 # options.json
 key | purpose

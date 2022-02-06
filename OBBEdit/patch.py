@@ -1,8 +1,11 @@
-# OBBPatcher
-# written by Luigi Auriemma & Nineteendo
-
 # Import libraries
-import zlib, os, sys, traceback, json, struct, datetime
+import sys, datetime
+from traceback import format_exc
+from json import load
+from struct import pack, unpack
+from zlib import compress, decompress
+from os import makedirs, listdir, system, getcwd, sep
+from os.path import isdir, isfile, realpath, join as osjoin, dirname, relpath, splitext
 
 # Default options
 options = {
@@ -42,8 +45,8 @@ options = {
 
 # Print & log error
 def error_message(string):
-	if options["DEBUG_MODE"]:
-		string += "\n" + traceback.format_exc()
+	if DEBUG_MODE:
+		string += "\n" + format_exc()
 	
 	fail.write(string + "\n")
 	fail.flush()
@@ -104,7 +107,7 @@ def path_input(text):
 			newstring = bold_input("\033[91mEnter a path")
 		else:
 			newstring = ""
-			string = os.path.realpath(string)
+			string = realpath(string)
 			if options["confirmPath"]:
 				newstring = bold_input("Confirm \033[100m" + string)
 
@@ -133,7 +136,7 @@ def GET_NAME(file, OFFSET, NAME_DICT):
 	while BYTE != b"\x00":
 		NAME += BYTE
 		BYTE = file.read(1)
-		LENGTH = 4 * struct.unpack("<I", file.read(3) + b"\x00")[0]
+		LENGTH = 4 * unpack("<I", file.read(3) + b"\x00")[0]
 		if LENGTH != 0:
 			NAME_DICT[NAME] = LENGTH
 	
@@ -144,23 +147,23 @@ def rsgp_patch_data(rsgp_NAME, rsgp_OFFSET, file, pathout_data, patch, patchout,
 	if file.read(4) == b"pgsr":
 		data = None
 		if level < 4:
-			file_name = os.path.join(patch, rsgp_NAME + ".section")
+			file_name = osjoin(patch, rsgp_NAME + ".section")
 			try:
 				data = open(file_name, "rb").read()
 			except Exception:
 				pass
 		else:
 			try:
-				VER = struct.unpack("<I", file.read(4))[0]
+				VER = unpack("<I", file.read(4))[0]
 				
 				file.seek(8, 1)
-				TYPE = struct.unpack("<I", file.read(4))[0]
-				rsgp_BASE = struct.unpack("<I", file.read(4))[0]
+				TYPE = unpack("<I", file.read(4))[0]
+				rsgp_BASE = unpack("<I", file.read(4))[0]
 				
 				data = None
-				OFFSET = struct.unpack("<I", file.read(4))[0]
-				ZSIZE = struct.unpack("<I", file.read(4))[0]
-				SIZE = struct.unpack("<I", file.read(4))[0]
+				OFFSET = unpack("<I", file.read(4))[0]
+				ZSIZE = unpack("<I", file.read(4))[0]
+				SIZE = unpack("<I", file.read(4))[0]
 				if SIZE != 0:
 					file.seek(rsgp_OFFSET + OFFSET)
 					if TYPE == 0: # Encrypted files
@@ -170,14 +173,14 @@ def rsgp_patch_data(rsgp_NAME, rsgp_OFFSET, file, pathout_data, patch, patchout,
 						data = bytearray(file.read(ZSIZE))
 					elif TYPE == 3: # Compressed files
 						blue_print("Decompressing ...")
-						data = bytearray(zlib.decompress(file.read(ZSIZE)))
+						data = bytearray(decompress(file.read(ZSIZE)))
 					else: # Unknown files
 						raise TypeError(TYPE)
 				else:
 					file.seek(4, 1)
-					OFFSET = struct.unpack("<I", file.read(4))[0]
-					ZSIZE = struct.unpack("<I", file.read(4))[0]
-					SIZE = struct.unpack("<I", file.read(4))[0]
+					OFFSET = unpack("<I", file.read(4))[0]
+					ZSIZE = unpack("<I", file.read(4))[0]
+					SIZE = unpack("<I", file.read(4))[0]
 					if SIZE != 0:
 						if TYPE == 0: # Encrypted files
 							# Insert decryption here
@@ -185,17 +188,17 @@ def rsgp_patch_data(rsgp_NAME, rsgp_OFFSET, file, pathout_data, patch, patchout,
 						elif TYPE == 1: # Compressed files
 							file.seek(rsgp_OFFSET + OFFSET)
 							blue_print("Decompressing ...")
-							data = bytearray(zlib.decompress(file.read(ZSIZE)))
+							data = bytearray(decompress(file.read(ZSIZE)))
 						elif TYPE == 3: # Compressed files
 							file.seek(rsgp_OFFSET + OFFSET)
 							blue_print("Decompressing ...")
-							data = bytearray(zlib.decompress(file.read(ZSIZE)))
+							data = bytearray(decompress(file.read(ZSIZE)))
 						else: # Unknown files
 							raise TypeError(TYPE)
 
 				file.seek(rsgp_OFFSET + 72)
-				INFO_SIZE = struct.unpack("<I", file.read(4))[0]
-				INFO_OFFSET = rsgp_OFFSET + struct.unpack("<I", file.read(4))[0]
+				INFO_SIZE = unpack("<I", file.read(4))[0]
+				INFO_OFFSET = rsgp_OFFSET + unpack("<I", file.read(4))[0]
 				INFO_LIMIT = INFO_OFFSET + INFO_SIZE
 				
 				file.seek(INFO_OFFSET)
@@ -205,11 +208,11 @@ def rsgp_patch_data(rsgp_NAME, rsgp_OFFSET, file, pathout_data, patch, patchout,
 				FILE_DICT = {}
 				while DECODED_NAME != "":
 					FILE_NAME, NAME_DICT = GET_NAME(file, TMP, NAME_DICT)
-					DECODED_NAME = FILE_NAME.decode().replace("\\", os.sep)
+					DECODED_NAME = FILE_NAME.decode().replace("\\", sep)
 					if DECODED_NAME:
-						ENCODED = struct.unpack("<I", file.read(4))[0]
-						FILE_OFFSET = struct.unpack("<I", file.read(4))[0]
-						FILE_SIZE = struct.unpack("<I", file.read(4))[0]
+						ENCODED = unpack("<I", file.read(4))[0]
+						FILE_OFFSET = unpack("<I", file.read(4))[0]
+						FILE_SIZE = unpack("<I", file.read(4))[0]
 						FILE_DICT[DECODED_NAME] = {
 							"FILE_INFO": file.tell(),
 							"FILE_OFFSET": FILE_OFFSET
@@ -225,8 +228,8 @@ def rsgp_patch_data(rsgp_NAME, rsgp_OFFSET, file, pathout_data, patch, patchout,
 				for DECODED_NAME_NEW in sorted(FILE_DICT, key = lambda key: FILE_DICT[key]["FILE_OFFSET"]):
 					FILE_OFFSET_NEW = FILE_DICT[DECODED_NAME_NEW]["FILE_OFFSET"]
 					NAME_CHECK = DECODED_NAME.replace("\\", "/").lower()
-					if DECODED_NAME and (NAME_CHECK.startswith(options["startswith"]) or options["startswithIgnore"]) and (NAME_CHECK.endswith(options["endswith"]) or options["endswithIgnore"]):
-						file_name = os.path.join(patch, DECODED_NAME)
+					if DECODED_NAME and NAME_CHECK.startswith(startswith) and NAME_CHECK.endswith(endswith):
+						file_name = osjoin(patch, DECODED_NAME)
 						try:
 							patch_data = open(file_name, "rb").read()
 						except Exception:
@@ -237,8 +240,8 @@ def rsgp_patch_data(rsgp_NAME, rsgp_OFFSET, file, pathout_data, patch, patchout,
 								FILE_SIZE = len(patch_data)
 								MAX_FILE_SIZE = FILE_OFFSET_NEW - FILE_OFFSET
 								data[FILE_OFFSET: FILE_OFFSET + MAX_FILE_SIZE] = patch_data + bytes(MAX_FILE_SIZE - FILE_SIZE)
-								pathout_data[FILE_INFO - 4: FILE_INFO] = struct.pack("<I", FILE_SIZE)
-								print("patched " + os.path.relpath(file_name, patchout))
+								pathout_data[FILE_INFO - 4: FILE_INFO] = pack("<I", FILE_SIZE)
+								print("patched " + relpath(file_name, patchout))
 							except Exception as e:
 								error_message("%s while patching %s: %s" % (type(e).__name__, file_name, e))
 					
@@ -250,12 +253,12 @@ def rsgp_patch_data(rsgp_NAME, rsgp_OFFSET, file, pathout_data, patch, patchout,
 		if data != None:
 			try:
 				file.seek(rsgp_OFFSET + 16)
-				TYPE = struct.unpack("<I", file.read(4))[0]
-				rsgp_BASE = struct.unpack("<I", file.read(4))[0]
+				TYPE = unpack("<I", file.read(4))[0]
+				rsgp_BASE = unpack("<I", file.read(4))[0]
 				
-				OFFSET = struct.unpack("<I", file.read(4))[0]
-				ZSIZE = struct.unpack("<I", file.read(4))[0]
-				SIZE = struct.unpack("<I", file.read(4))[0]
+				OFFSET = unpack("<I", file.read(4))[0]
+				ZSIZE = unpack("<I", file.read(4))[0]
+				SIZE = unpack("<I", file.read(4))[0]
 				if SIZE != 0:
 					data += bytes(SIZE - len(data))
 					if TYPE == 0: # Encypted files
@@ -265,15 +268,15 @@ def rsgp_patch_data(rsgp_NAME, rsgp_OFFSET, file, pathout_data, patch, patchout,
 						pathout_data[rsgp_OFFSET + OFFSET: rsgp_OFFSET + OFFSET + ZSIZE] = data
 					elif TYPE == 3: # Compressed files
 						blue_print("Compressing ...")
-						compressed_data = zlib.compress(data, 9)
+						compressed_data = compress(data, 9)
 						pathout_data[rsgp_OFFSET + OFFSET: rsgp_OFFSET + OFFSET + ZSIZE] = compressed_data + bytes(ZSIZE - len(compressed_data))
 					else: # Unknown files
 						raise TypeError(TYPE)
 				else:
 					file.seek(4, 1)
-					OFFSET = struct.unpack("<I", file.read(4))[0]
-					ZSIZE = struct.unpack("<I", file.read(4))[0]
-					SIZE = struct.unpack("<I", file.read(4))[0]
+					OFFSET = unpack("<I", file.read(4))[0]
+					ZSIZE = unpack("<I", file.read(4))[0]
+					SIZE = unpack("<I", file.read(4))[0]
 					if SIZE != 0:
 						if TYPE == 0: # Encypted files
 							# Insert encyption here
@@ -281,18 +284,18 @@ def rsgp_patch_data(rsgp_NAME, rsgp_OFFSET, file, pathout_data, patch, patchout,
 						elif TYPE == 1: # Compressed files
 							data += bytes(SIZE - len(data))
 							blue_print("Compressing ...")
-							compressed_data = zlib.compress(data, 9)
+							compressed_data = compress(data, 9)
 							pathout_data[rsgp_OFFSET + OFFSET: rsgp_OFFSET + OFFSET + ZSIZE] = compressed_data + bytes(ZSIZE - len(compressed_data))
 						elif TYPE == 3: # Compressed files
 							data += bytes(SIZE - len(data))
 							blue_print("Compressing ...")
-							compressed_data = zlib.compress(data, 9)
+							compressed_data = compress(data, 9)
 							pathout_data[rsgp_OFFSET + OFFSET: rsgp_OFFSET + OFFSET + ZSIZE] = compressed_data + bytes(ZSIZE - len(compressed_data))
 						else: # Unknown files
 							raise TypeError(TYPE)
 
 				if level < 3:
-					print("patched " + os.path.relpath(os.path.join(patch, rsgp_NAME + ".section"), patchout))
+					print("patched " + relpath(osjoin(patch, rsgp_NAME + ".section"), patchout))
 			except Exception as e:
 				error_message("%s while patching %s.rsgp: %s" % (type(e).__name__, rsgp_NAME, e))
 			
@@ -300,18 +303,18 @@ def rsgp_patch_data(rsgp_NAME, rsgp_OFFSET, file, pathout_data, patch, patchout,
 
 # Recursive file convert function
 def file_to_folder(inp, out, patch, level, extensions, pathout, patchout):
-	if os.path.isdir(inp) and inp != pathout and inp != patchout:
-		os.makedirs(out, exist_ok = True)
-		os.makedirs(patch, exist_ok = True)
-		for entry in sorted(os.listdir(inp)):
-			input_file = os.path.join(inp, entry)
-			output_file = os.path.join(out, entry)
-			patch_file = os.path.join(patch, entry)
-			if os.path.isfile(input_file):
-				patch_file = os.path.splitext(patch_file)[0]
+	if isdir(inp) and inp != pathout and inp != patchout:
+		makedirs(out, exist_ok = True)
+		makedirs(patch, exist_ok = True)
+		for entry in sorted(listdir(inp)):
+			input_file = osjoin(inp, entry)
+			output_file = osjoin(out, entry)
+			patch_file = osjoin(patch, entry)
+			if isfile(input_file):
+				patch_file = splitext(patch_file)[0]
 			
 			file_to_folder(input_file, output_file, patch_file, level, extensions, pathout, patchout)
-	elif os.path.isfile(inp) and inp.lower().endswith(extensions):
+	elif isfile(inp) and inp.lower().endswith(extensions):
 		try:
 			file = open(inp, "rb")
 			blue_print("Preparing ...")
@@ -320,21 +323,21 @@ def file_to_folder(inp, out, patch, level, extensions, pathout, patchout):
 			SIGN = file.read(4)
 			if SIGN == b"1bsr":
 				file.seek(40)
-				FILES = struct.unpack("<I", file.read(4))[0]
-				OFFSET = struct.unpack("<I", file.read(4))[0]
+				FILES = unpack("<I", file.read(4))[0]
+				OFFSET = unpack("<I", file.read(4))[0]
 				file.seek(OFFSET)
 				for i in range(0, FILES):
 					FILE_NAME = file.read(128).strip(b"\x00").decode()
 					FILE_NAME_TESTS = FILE_NAME.lower()
-					FILE_OFFSET = struct.unpack("<I", file.read(4))[0]
-					FILE_SIZE = struct.unpack("<I", file.read(4))[0]
+					FILE_OFFSET = unpack("<I", file.read(4))[0]
+					FILE_SIZE = unpack("<I", file.read(4))[0]
 					
 					file.seek(68, 1)
-					if (FILE_NAME_TESTS.startswith(options["rsgpStartswith"]) or options["rsgpStartswithIgnore"]) and (FILE_NAME_TESTS.endswith(options["rsgpEndswith"]) or options["rsgpEndswithIgnore"]):
+					if FILE_NAME_TESTS.startswith(rsgpStartswith) and FILE_NAME_TESTS.endswith(rsgpEndswith):
 						temp = file.tell()
 						file.seek(FILE_OFFSET)
 						if level < 3:
-							file_path = os.path.join(patch, FILE_NAME + ".rsgp")
+							file_path = osjoin(patch, FILE_NAME + ".rsgp")
 							try:
 								patch_data = open(file_path, "rb").read()
 							except Exception:
@@ -342,39 +345,39 @@ def file_to_folder(inp, out, patch, level, extensions, pathout, patchout):
 							else:
 								try:
 									pathout_data[FILE_OFFSET: FILE_OFFSET + FILE_SIZE] = patch_data + bytes(FILE_SIZE - len(patch_data))
-									print("applied " + os.path.relpath(file_path, patchout))
+									print("applied " + relpath(file_path, patchout))
 								except Exception as e:
-									error_message("%s while patching %s: %s" % (type(e).__name__, os.path.relpath(file_path, patchout), e))
+									error_message("%s while patching %s: %s" % (type(e).__name__, relpath(file_path, patchout), e))
 						else:
 							pathout_data = rsgp_patch_data(FILE_NAME, FILE_OFFSET, file, pathout_data, patch, patchout, level)
 						
 						file.seek(temp)
 				open(out, "wb").write(pathout_data)
-				print("patched " + os.path.relpath(out, pathout))
+				print("patched " + relpath(out, pathout))
 			elif SIGN == b"pgsr":
 				file.seek(0)
 				pathout_data = rsgp_patch_data("data", 0, file, pathout_data, patch, patchout, level)
 				open(out, "wb").write(pathout_data)
-				print("patched " + os.path.relpath(out, pathout))
+				print("patched " + relpath(out, pathout))
 
 		except Exception as e:
 			error_message("Failed OBBUnpatch: %s in %s pos %s: %s" % (type(e).__name__, inp, file.tell() - 1, e))
 
 # Start of the code
 try:
-	os.system("")
+	system("")
 	if getattr(sys, "frozen", False):
-		application_path = os.path.dirname(sys.executable)
+		application_path = dirname(sys.executable)
 	else:
 		application_path = sys.path[0]
 
-	fail = open(os.path.join(application_path, "fail.txt"), "w")
+	fail = open(osjoin(application_path, "fail.txt"), "w")
 	if sys.version_info[0] < 3:
 		raise RuntimeError("Must be using Python 3")
 	
-	print("\033[95m\033[1mOBBUnpatcher v1.1.0\n(C) 2021 by Nineteendo\033[0m\n")
+	print("\033[95m\033[1mOBBUnpatcher v1.1.0\n(C) 2022 by Luigi Auriemma & Nineteendo\033[0m\n")
 	try:
-		newoptions = json.load(open(os.path.join(application_path, "options.json"), "rb"))
+		newoptions = load(open(osjoin(application_path, "options.json"), "rb"))
 		for key in options:
 			if key in newoptions and newoptions[key] != options[key]:
 				if type(options[key]) == type(newoptions[key]):
@@ -390,11 +393,32 @@ try:
 	if options["rsbUnpackLevel"] < 1:
 		options["rsbUnpackLevel"] = input_level("OBB/RSB Unpack Level", 1, 4)
 
-	blue_print("Working directory: " + os.getcwd())
+	DEBUG_MODE = options["DEBUG_MODE"]
+	if options["endswithIgnore"]:
+		endswith = ""
+	else:
+		endswith = options["endswith"]
+	
+	if options["rsgpStartswithIgnore"]:
+		rsgpStartswith = ""
+	else:
+		rsgpStartswith = options["rsgpStartswith"]
+	
+	if options["rsgpEndswithIgnore"]:
+		rsgpEndswith = ""
+	else:
+		rsgpEndswith = options["rsgpEndswith"]
+
+	if options["startswithIgnore"]:
+		startswith = ""
+	else:
+		startswith = options["startswith"]
+
+	blue_print("Working directory: " + getcwd())
 	level_to_name = ["SPECIFY", "OBB/RSB", "PGSR/RSGP", "SECTION", "ENCODED"]
 	if 5 > options["rsgpUnpackLevel"] > 2:
 		rsgp_input = path_input("PGSR/RSGP Input file or directory")
-		if os.path.isfile(rsgp_input):
+		if isfile(rsgp_input):
 			rsgp_output = path_input("PGSR/RSGP Modded file")
 		else:
 			rsgp_output = path_input("PGSR/RSGP Modded directory")
@@ -403,7 +427,7 @@ try:
 
 	if 5 > options["rsbUnpackLevel"] > 1:
 		rsb_input = path_input("OBB/RSB Input file or directory")
-		if os.path.isfile(rsb_input):
+		if isfile(rsb_input):
 			rsb_output = path_input("OBB/RSB Modded file")
 		else:
 			rsb_output = path_input("OBB/RSB Modded directory")
@@ -413,10 +437,10 @@ try:
 	# Start file_to_folder
 	start_time = datetime.datetime.now()
 	if 5 > options["rsgpUnpackLevel"] > 2:
-		file_to_folder(rsgp_input, rsgp_output, rsgp_patch, options["rsgpUnpackLevel"], options["rsgpExtensions"], rsgp_output, rsgp_patch)
+		file_to_folder(rsgp_input, rsgp_output, rsgp_patch, options["rsgpUnpackLevel"], options["rsgpExtensions"], dirname(rsgp_output), rsgp_patch)
 	
 	if 5 > options["rsbUnpackLevel"] > 1:
-		file_to_folder(rsb_input, rsb_output, rsb_patch, options["rsbUnpackLevel"], options["rsbExtensions"], rsb_output, rsb_patch)
+		file_to_folder(rsb_input, rsb_output, rsb_patch, options["rsbUnpackLevel"], options["rsbExtensions"], dirname(rsb_output), rsb_patch)
 
 	green_print("finished patching in %s" % (datetime.datetime.now() - start_time))
 	bold_input("\033[95mPRESS [ENTER]")

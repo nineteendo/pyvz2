@@ -1,9 +1,11 @@
-# OBBUnpacker
-# written by Luigi Auriemma & Nineteendo
-
 # Import libraries
-import os, struct, zlib, sys, traceback, json, datetime
-
+import sys, datetime
+from traceback import format_exc
+from json import load
+from struct import unpack
+from zlib import decompress
+from os import makedirs, listdir, system, getcwd, sep
+from os.path import isdir, isfile, realpath, join as osjoin, dirname, relpath, splitext
 # Default options
 options = {
 	"confirmPath": True, 
@@ -42,8 +44,8 @@ options = {
 
 # Print & log error
 def error_message(string):
-	if options["DEBUG_MODE"]:
-		string += "\n" + traceback.format_exc()
+	if DEBUG_MODE:
+		string += "\n" + format_exc()
 	
 	fail.write(string + "\n")
 	fail.flush()
@@ -104,7 +106,7 @@ def path_input(text):
 			newstring = bold_input("\033[91mEnter a path")
 		else:
 			newstring = ""
-			string = os.path.realpath(string)
+			string = realpath(string)
 			if options["confirmPath"]:
 				newstring = bold_input("Confirm \033[100m" + string)
 
@@ -133,7 +135,7 @@ def GET_NAME(file, OFFSET, NAME_DICT):
 	while BYTE != b"\x00":
 		NAME += BYTE
 		BYTE = file.read(1)
-		LENGTH = 4 * struct.unpack("<I", file.read(3) + b"\x00")[0]
+		LENGTH = 4 * unpack("<I", file.read(3) + b"\x00")[0]
 		if LENGTH != 0:
 			NAME_DICT[NAME] = LENGTH
 	
@@ -143,16 +145,16 @@ def GET_NAME(file, OFFSET, NAME_DICT):
 def rsgp_extract(rsgp_NAME, rsgp_OFFSET, file, out, pathout, level):
 	if file.read(4) == b"pgsr":
 		try:
-			VER = struct.unpack("<I", file.read(4))[0]
+			VER = unpack("<I", file.read(4))[0]
 			
 			file.seek(8, 1)
-			TYPE = struct.unpack("<I", file.read(4))[0]
-			rsgp_BASE = struct.unpack("<I", file.read(4))[0]
+			TYPE = unpack("<I", file.read(4))[0]
+			rsgp_BASE = unpack("<I", file.read(4))[0]
 
 			data = None
-			OFFSET = struct.unpack("<I", file.read(4))[0]
-			ZSIZE = struct.unpack("<I", file.read(4))[0]
-			SIZE = struct.unpack("<I", file.read(4))[0]
+			OFFSET = unpack("<I", file.read(4))[0]
+			ZSIZE = unpack("<I", file.read(4))[0]
+			SIZE = unpack("<I", file.read(4))[0]
 			if SIZE != 0:
 				file.seek(rsgp_OFFSET + OFFSET)
 				if TYPE == 0: # Encypted files
@@ -162,14 +164,14 @@ def rsgp_extract(rsgp_NAME, rsgp_OFFSET, file, out, pathout, level):
 					data = file.read(ZSIZE)
 				elif TYPE == 3: # Compressed files
 					blue_print("Decompressing ...")
-					data = zlib.decompress(file.read(ZSIZE))
+					data = decompress(file.read(ZSIZE))
 				else: # Unknown files
 					raise TypeError(TYPE)
 			else:
 				file.seek(4, 1)
-				OFFSET = struct.unpack("<I", file.read(4))[0]
-				ZSIZE = struct.unpack("<I", file.read(4))[0]
-				SIZE = struct.unpack("<I", file.read(4))[0]
+				OFFSET = unpack("<I", file.read(4))[0]
+				ZSIZE = unpack("<I", file.read(4))[0]
+				SIZE = unpack("<I", file.read(4))[0]
 				if SIZE != 0:
 					file.seek(rsgp_OFFSET + OFFSET)
 					if TYPE == 0: # Encypted files
@@ -177,22 +179,22 @@ def rsgp_extract(rsgp_NAME, rsgp_OFFSET, file, out, pathout, level):
 						data = file.read(ZSIZE)
 					elif TYPE == 1: # Compressed files
 						blue_print("Decompressing ...")
-						data = zlib.decompress(file.read(ZSIZE))
+						data = decompress(file.read(ZSIZE))
 					elif TYPE == 3: # Compressed files
 						blue_print("Decompressing ...")
-						data = zlib.decompress(file.read(ZSIZE))
+						data = decompress(file.read(ZSIZE))
 					else: # Unknown files
 						raise TypeError(TYPE)
 			
 			if level < 4:
-				file_path = os.path.join(out, rsgp_NAME + ".section")
-				os.makedirs(out, exist_ok = True)
+				file_path = osjoin(out, rsgp_NAME + ".section")
+				makedirs(out, exist_ok = True)
 				open(file_path, "wb").write(data)
-				print("wrote " + os.path.relpath(file_path, pathout))
+				print("wrote " + relpath(file_path, pathout))
 			else:
 				file.seek(rsgp_OFFSET + 72)
-				INFO_SIZE = struct.unpack("<I", file.read(4))[0]
-				INFO_OFFSET = rsgp_OFFSET + struct.unpack("<I", file.read(4))[0]
+				INFO_SIZE = unpack("<I", file.read(4))[0]
+				INFO_OFFSET = rsgp_OFFSET + unpack("<I", file.read(4))[0]
 				INFO_LIMIT = INFO_OFFSET + INFO_SIZE
 				
 				file.seek(INFO_OFFSET)
@@ -201,56 +203,56 @@ def rsgp_extract(rsgp_NAME, rsgp_OFFSET, file, out, pathout, level):
 				NAME_DICT = {}
 				while DECODED_NAME != "":
 					NAME, NAME_DICT = GET_NAME(file, TMP, NAME_DICT)
-					DECODED_NAME = NAME.decode().replace("\\", os.sep)
+					DECODED_NAME = NAME.decode().replace("\\", sep)
 					NAME_CHECK = DECODED_NAME.replace("\\", "/").lower()
-					ENCODED = struct.unpack("<I", file.read(4))[0]
-					FILE_OFFSET = struct.unpack("<I", file.read(4))[0]
-					FILE_SIZE = struct.unpack("<I", file.read(4))[0]
+					ENCODED = unpack("<I", file.read(4))[0]
+					FILE_OFFSET = unpack("<I", file.read(4))[0]
+					FILE_SIZE = unpack("<I", file.read(4))[0]
 					if ENCODED != 0:
 						file.seek(20, 1)
 					
-					if DECODED_NAME != "" and (NAME_CHECK.startswith(options["startswith"]) or options["startswithIgnore"]) and (NAME_CHECK.endswith(options["endswith"]) or options["endswithIgnore"]):
-						file_path = os.path.join(out, DECODED_NAME)
-						os.makedirs(os.path.dirname(file_path), exist_ok = True)
+					if DECODED_NAME and NAME_CHECK.startswith(startswith) and NAME_CHECK.endswith(endswith):
+						file_path = osjoin(out, DECODED_NAME)
+						makedirs(dirname(file_path), exist_ok = True)
 						open(file_path, "wb").write(data[FILE_OFFSET: FILE_OFFSET + FILE_SIZE])
-						print("wrote " + os.path.relpath(file_path, pathout))
+						print("wrote " + relpath(file_path, pathout))
 		except Exception as e:
 			error_message("%s while extracting %s.rsgp: %s" % (type(e).__name__, rsgp_NAME, e))
 
 # Recursive file convert function
 def file_to_folder(inp, out, level, extensions, pathout):
-	if os.path.isdir(inp) and inp != pathout:
-		os.makedirs(out, exist_ok = True)
-		for entry in sorted(os.listdir(inp)):
-			input_file = os.path.join(inp, entry)
-			output_file = os.path.join(out, entry)
-			if os.path.isfile(input_file):
-				output_file = os.path.splitext(output_file)[0]
+	if isdir(inp) and inp != pathout:
+		makedirs(out, exist_ok = True)
+		for entry in sorted(listdir(inp)):
+			input_file = osjoin(inp, entry)
+			output_file = osjoin(out, entry)
+			if isfile(input_file):
+				output_file = splitext(output_file)[0]
 			
 			file_to_folder(input_file, output_file, level, extensions, pathout)
-	elif os.path.isfile(inp) and inp.lower().endswith(extensions):
+	elif isfile(inp) and inp.lower().endswith(extensions):
 		try:
 			file = open(inp, "rb")
 			SIGN = file.read(4)
 			if SIGN == b"1bsr":
 				file.seek(40)
-				FILES = struct.unpack("<I", file.read(4))[0]
-				OFFSET = struct.unpack("<I", file.read(4))[0]
+				FILES = unpack("<I", file.read(4))[0]
+				OFFSET = unpack("<I", file.read(4))[0]
 				file.seek(OFFSET)
 				for i in range(0, FILES):
 					FILE_NAME = file.read(128).strip(b"\x00").decode()
 					FILE_CHECK = FILE_NAME.lower()
-					FILE_OFFSET = struct.unpack("<I", file.read(4))[0]
-					FILE_SIZE = struct.unpack("<I", file.read(4))[0]
+					FILE_OFFSET = unpack("<I", file.read(4))[0]
+					FILE_SIZE = unpack("<I", file.read(4))[0]
 					
 					file.seek(68, 1)
-					if (FILE_CHECK.startswith(options["rsgpStartswith"]) or options["rsgpStartswithIgnore"]) and (FILE_CHECK.endswith(options["rsgpEndswith"]) or options["rsgpEndswithIgnore"]):
+					if FILE_CHECK.startswith(rsgpStartswith) and FILE_CHECK.endswith(rsgpEndswith):
 						temp = file.tell()
 						file.seek(FILE_OFFSET)
 						if level < 3:
-							os.makedirs(out, exist_ok = True)
-							open(os.path.join(out, FILE_NAME + ".rsgp"), "wb").write(file.read(FILE_SIZE))
-							print("wrote " + os.path.relpath(os.path.join(out, FILE_NAME + ".rsgp"), pathout))
+							makedirs(out, exist_ok = True)
+							open(osjoin(out, FILE_NAME + ".rsgp"), "wb").write(file.read(FILE_SIZE))
+							print("wrote " + relpath(osjoin(out, FILE_NAME + ".rsgp"), pathout))
 						else:
 							rsgp_extract(FILE_NAME, FILE_OFFSET, file, out, pathout, level)
 						
@@ -264,19 +266,19 @@ def file_to_folder(inp, out, level, extensions, pathout):
 
 # Start of the code
 try:
-	os.system("")
+	system("")
 	if getattr(sys, "frozen", False):
-		application_path = os.path.dirname(sys.executable)
+		application_path = dirname(sys.executable)
 	else:
 		application_path = sys.path[0]
 
-	fail = open(os.path.join(application_path, "fail.txt"), "w")
+	fail = open(osjoin(application_path, "fail.txt"), "w")
 	if sys.version_info[0] < 3:
 		raise RuntimeError("Must be using Python 3")
 	
-	print("\033[95m\033[1mOBBUnpacker v1.1.0\n(C) 2021 by Nineteendo\033[0m\n")
+	print("\033[95m\033[1mOBBUnpacker v1.1.0\n(C) 2022 by Luigi Auriemma & Nineteendo\033[0m\n")
 	try:
-		newoptions = json.load(open(os.path.join(application_path, "options.json"), "rb"))
+		newoptions = load(open(osjoin(application_path, "options.json"), "rb"))
 		for key in options:
 			if key in newoptions and newoptions[key] != options[key]:
 				if type(options[key]) == type(newoptions[key]):
@@ -292,7 +294,28 @@ try:
 	if options["rsgpUnpackLevel"] < 1:
 		options["rsgpUnpackLevel"] = input_level("PGSR/RSGP Unpack Level", 2, 4)
 
-	blue_print("Working directory: " + os.getcwd())
+	DEBUG_MODE = options["DEBUG_MODE"]
+	if options["endswithIgnore"]:
+		endswith = ""
+	else:
+		endswith = options["endswith"]
+	
+	if options["rsgpStartswithIgnore"]:
+		rsgpStartswith = ""
+	else:
+		rsgpStartswith = options["rsgpStartswith"]
+	
+	if options["rsgpEndswithIgnore"]:
+		rsgpEndswith = ""
+	else:
+		rsgpEndswith = options["rsgpEndswith"]
+
+	if options["startswithIgnore"]:
+		startswith = ""
+	else:
+		startswith = options["startswith"]
+
+	blue_print("Working directory: " + getcwd())
 	level_to_name = ["SPECIFY", "OBB/RSB", "PGSR/RSGP", "SECTION", "ENCODED"]
 	if 5 > options["rsbUnpackLevel"] > 1:
 		rsb_input = path_input("OBB/RSB Input file or directory")

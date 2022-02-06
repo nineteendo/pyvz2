@@ -11,10 +11,10 @@ OBBEdit/5a_obb_decoded_patches
 OBBEdit/5b_rsgp_decoded_patches
 OBBEdit/1bsr_pgsr.bms
 OBBEdit/header_test.py
-RTONConverter/jsons
-RTONConverter/rtons
-RTONConverter/check
-RTONConverter/slow_jsons.py
+RTON-OFF/jsons
+RTON-OFF/rtons
+RTON-OFF/check
+RTON-OFF/slow_jsons.py
 ShopCreator/
 
 # MISC

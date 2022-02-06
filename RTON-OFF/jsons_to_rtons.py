@@ -1,6 +1,3 @@
-# JSON parser
-# written by Nineteendo
-
 # Import libraries
 import sys, datetime
 from traceback import format_exc
@@ -48,7 +45,7 @@ options = {
 
 # Print & log error
 def error_message(string):
-	if options["DEBUG_MODE"]:
+	if DEBUG_MODE:
 		string += "\n" + format_exc()
 	
 	fail.write(string + "\n")
@@ -288,11 +285,11 @@ def conversion(inp, out, pathout):
 			try:
 				encoded_data = parse_json(data)
 				# No RTON extension
-				if "" == splitext(write)[1] and not basename(write).lower().startswith(options["RTONNoExtensions"]):
+				if "" == splitext(write)[1] and not basename(write).lower().startswith(RTONNoExtensions):
 					vals = list(values_from_keys(data, ["objects","objclass"]))
-					if any(value in vals for value in options["datObjClasses"]):
+					if any(value in vals for value in datObjClasses):
 						write += ".dat"
-					elif any(value in vals for value in options["binObjClasses"]):
+					elif any(value in vals for value in binObjClasses):
 						write += ".bin"
 					else:
 						write += ".rton"
@@ -333,7 +330,7 @@ try:
 	if sys.version_info[:2] < (3, 9):
 		raise RuntimeError("Must be using Python 3.9")
 	
-	print("\033[95m\033[1mJSON RTONEncoder v1.1.0\n(C) 2021 by Nineteendo\033[0m\n")
+	print("\033[95m\033[1mJSON RTONEncoder v1.1.0\n(C) 2022 by Nineteendo\033[0m\n")
 	try:
 		newoptions = load(open(osjoin(application_path, "options.json"), "rb"))
 		for key in options:
@@ -347,7 +344,11 @@ try:
 	except Exception as e:
 		error_message("%s in options.json: %s" % (type(e).__name__, e))
 	
+	binObjClasses = options["binObjClasses"]
 	cachLimit = options["cachLimit"]
+	datObjClasses = options["datObjClasses"]
+	DEBUG_MODE = options["DEBUG_MODE"]
+	RTONNoExtensions = options["RTONNoExtensions"]
 	blue_print("Working directory: " + getcwd())
 	pathin = path_input("Input file or directory")
 	if isfile(pathin):
