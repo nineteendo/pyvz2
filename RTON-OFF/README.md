@@ -1,4 +1,4 @@
-# RTONConverter
+# RTON/OFF
 - fail.txt: file with the latest errors
 - fast_rtons.py: simplify RTON as JSON
 - jsons_to_rtons.py: convert JSON to RTON
