@@ -384,7 +384,7 @@ def conversion(inp, out, pathout):
 			if file.read(4) == b"RTON":
 				VER = unpack("<I", file.read(4))[0]
 				data = parse_object(file, current_indent, [], [])[0]
-				open(jfn, "w").write(data)
+				open(jfn, "w", encoding="utf-8").write(data)
 				print("wrote " + relpath(jfn, pathout))
 			else:
 				warning_message("No RTON " + inp)
