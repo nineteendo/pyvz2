@@ -456,7 +456,7 @@ try:
 	green_print("finished converting %s in %s" % (pathin, datetime.datetime.now() - start_time))
 	bold_input("\033[95mPRESS [ENTER]")
 except BaseException as e:
-	error_message("%s: %s" % (type(e).__name__, e))
+	warning_message("%s: %s" % (type(e).__name__, e))
 
 # Close log
 fail.close()

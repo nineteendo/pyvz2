@@ -52,6 +52,13 @@ def error_message(string):
 	fail.flush()
 	print("\033[91m%s\033[0m" % string)
 
+# Print & log warning
+def warning_message(string):
+	fail.write("\t" + string + "\n")
+	fail.flush()
+	print("\33[93m%s\33[0m" % string)
+
+
 # Print in blue text
 def blue_print(text):
 	print("\033[94m%s\033[0m" % text)
@@ -362,7 +369,7 @@ try:
 	green_print("finished converting %s in %s" % (pathin, datetime.datetime.now() - start_time))
 	bold_input("\033[95mPRESS [ENTER]")
 except BaseException as e:
-	error_message("%s: %s" % (type(e).__name__, e))
+	warning_message("%s: %s" % (type(e).__name__, e))
 
 # Close log
 fail.close()

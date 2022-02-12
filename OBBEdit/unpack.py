@@ -6,6 +6,11 @@ from struct import unpack
 from zlib import decompress
 from os import makedirs, listdir, system, getcwd, sep
 from os.path import isdir, isfile, realpath, join as osjoin, dirname, relpath, splitext
+from PIL import Image
+
+COLORS = "RGBA"
+#Alt for iPad: COLORS = "BGRA"
+
 # Default options
 options = {
 	"confirmPath": True, 
@@ -23,7 +28,7 @@ options = {
 		".rsb.smf",
 		".obb"
 	),
-	"rsbUnpackLevel": 4,
+	"rsbUnpackLevel": 5,
 	"rsgpExtensions": (
 		".pgsr",
 		".rsgp"
@@ -205,17 +210,30 @@ def rsgp_extract(rsgp_NAME, rsgp_OFFSET, file, out, pathout, level):
 					NAME, NAME_DICT = GET_NAME(file, TMP, NAME_DICT)
 					DECODED_NAME = NAME.decode().replace("\\", sep)
 					NAME_CHECK = DECODED_NAME.replace("\\", "/").lower()
-					ENCODED = unpack("<I", file.read(4))[0]
+					PTX = unpack("<I", file.read(4))[0]
 					FILE_OFFSET = unpack("<I", file.read(4))[0]
 					FILE_SIZE = unpack("<I", file.read(4))[0]
-					if ENCODED != 0:
-						file.seek(20, 1)
+					if PTX:
+						FORMAT = unpack("<I", file.read(4))[0]
+						B = unpack("<I", file.read(4))[0]
+						C = unpack("<I", file.read(4))[0]
+						WIDHT = unpack("<I", file.read(4))[0]
+						HEIGHT = unpack("<I", file.read(4))[0]
 					
 					if DECODED_NAME and NAME_CHECK.startswith(startswith) and NAME_CHECK.endswith(endswith):
-						file_path = osjoin(out, DECODED_NAME)
-						makedirs(dirname(file_path), exist_ok = True)
-						open(file_path, "wb").write(data[FILE_OFFSET: FILE_OFFSET + FILE_SIZE])
-						print("wrote " + relpath(file_path, pathout))
+						if level < 5:
+							file_path = osjoin(out, DECODED_NAME)
+							makedirs(dirname(file_path), exist_ok = True)
+							open(file_path, "wb").write(data[FILE_OFFSET: FILE_OFFSET + FILE_SIZE])
+							print("wrote " + relpath(file_path, pathout))
+						elif PTX:
+							if FILE_SIZE == 4 * WIDHT * HEIGHT:
+								file_path = osjoin(out, splitext(DECODED_NAME)[0] + ".PNG")
+								makedirs(dirname(file_path), exist_ok = True)
+								blue_print("Decoding ...")
+								Image.frombuffer("RGBA", (WIDHT, HEIGHT), data[FILE_OFFSET: FILE_OFFSET + FILE_SIZE], "raw", COLORS, 0, 1).save("/Users/wannes/Documents/GitHub/PVZ2tools/PTXTests/ALWAYSLOADED_384_00.PNG")
+								print("wrote " + relpath(file_path, pathout))
+
 		except Exception as e:
 			error_message("%s while extracting %s.rsgp: %s" % (type(e).__name__, rsgp_NAME, e))
 
@@ -316,27 +334,27 @@ try:
 		startswith = options["startswith"]
 
 	blue_print("Working directory: " + getcwd())
-	level_to_name = ["SPECIFY", "OBB/RSB", "PGSR/RSGP", "SECTION", "ENCODED"]
-	if 5 > options["rsbUnpackLevel"] > 1:
+	level_to_name = ["SPECIFY", "OBB/RSB", "PGSR/RSGP", "SECTION", "PTX", "DECODED (under construction)"]
+	if 6 > options["rsbUnpackLevel"] > 1:
 		rsb_input = path_input("OBB/RSB Input file or directory")
 		rsb_output = path_input("OBB/RSB %s Output directory" % level_to_name[options["rsbUnpackLevel"]])
 	
-	if 5 > options["rsgpUnpackLevel"] > 2:
+	if 6 > options["rsgpUnpackLevel"] > 2:
 		rsgp_input = path_input("PGSR/RSGP Input file or directory")
 		rsgp_output = path_input("PGSR/RSGP %s Output directory" % level_to_name[options["rsgpUnpackLevel"]])
 
 	# Start file_to_folder
 	start_time = datetime.datetime.now()
-	if 5 > options["rsbUnpackLevel"] > 1:
+	if 6 > options["rsbUnpackLevel"] > 1:
 		file_to_folder(rsb_input, rsb_output, options["rsbUnpackLevel"], options["rsbExtensions"], rsb_output)
 	
-	if 5 > options["rsgpUnpackLevel"] > 2:
+	if 6 > options["rsgpUnpackLevel"] > 2:
 		file_to_folder(rsgp_input, rsgp_output, options["rsgpUnpackLevel"], options["rsgpExtensions"], rsgp_output)
 
 	green_print("finished unpacking in %s" % (datetime.datetime.now() - start_time))
 	bold_input("\033[95mPRESS [ENTER]")
 except BaseException as e:
-	error_message("%s: %s" % (type(e).__name__, e))
+	warning_message("%s: %s" % (type(e).__name__, e))
 
 # Close log
 fail.close()
