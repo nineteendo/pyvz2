@@ -278,10 +278,12 @@ def parse_data(data, cached_strings, cached_printable_strings):
 
 # Convert file
 def conversion(inp, out, pathout):
-	if isdir(inp) and inp != pathout:
+	if isdir(inp):
 		makedirs(out, exist_ok = True)
 		for entry in sorted(listdir(inp)):
-			conversion(osjoin(inp, entry), osjoin(out, entry), pathout)
+			input_file = osjoin(inp, entry)
+			if isfile(input_file) or input_file != pathout:
+				conversion(input_file, osjoin(out, entry), pathout)
 	elif isfile(inp) and inp.lower().endswith(".json"):
 		write = out.removesuffix(".json")
 		try:

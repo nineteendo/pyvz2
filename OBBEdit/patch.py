@@ -303,7 +303,7 @@ def rsgp_patch_data(rsgp_NAME, rsgp_OFFSET, file, pathout_data, patch, patchout,
 
 # Recursive file convert function
 def file_to_folder(inp, out, patch, level, extensions, pathout, patchout):
-	if isdir(inp) and inp != pathout and inp != patchout:
+	if isdir(inp):
 		makedirs(out, exist_ok = True)
 		makedirs(patch, exist_ok = True)
 		for entry in sorted(listdir(inp)):
@@ -311,9 +311,9 @@ def file_to_folder(inp, out, patch, level, extensions, pathout, patchout):
 			output_file = osjoin(out, entry)
 			patch_file = osjoin(patch, entry)
 			if isfile(input_file):
-				patch_file = splitext(patch_file)[0]
-			
-			file_to_folder(input_file, output_file, patch_file, level, extensions, pathout, patchout)
+				file_to_folder(input_file, output_file, splitext(patch_file)[0], level, extensions, pathout, patchout)
+			elif input_file != pathout and inp != patchout:
+				file_to_folder(input_file, output_file, patch_file, level, extensions, pathout, patchout)
 	elif isfile(inp) and inp.lower().endswith(extensions):
 		try:
 			file = open(inp, "rb")

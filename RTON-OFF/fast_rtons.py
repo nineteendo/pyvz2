@@ -370,10 +370,12 @@ mappings = {
 
 # Recursive file convert function
 def conversion(inp, out, pathout):
-	if isdir(inp) and inp != pathout:
-		makedirs(out, exist_ok=True)
+	if isdir(inp):
+		makedirs(out, exist_ok = True)
 		for entry in sorted(listdir(inp)):
-			conversion(osjoin(inp, entry), osjoin(out, entry), pathout)
+			input_file = osjoin(inp, entry)
+			if isfile(input_file) or input_file != pathout:
+				conversion(input_file, osjoin(out, entry), pathout)
 	elif isfile(inp) and (inp.lower().endswith(RTONExtensions) or basename(inp).lower().startswith(RTONNoExtensions)):	
 		if shortNames:
 			out = splitext(out)[0]

@@ -239,15 +239,15 @@ def rsgp_extract(rsgp_NAME, rsgp_OFFSET, file, out, pathout, level):
 
 # Recursive file convert function
 def file_to_folder(inp, out, level, extensions, pathout):
-	if isdir(inp) and inp != pathout:
+	if isdir(inp):
 		makedirs(out, exist_ok = True)
 		for entry in sorted(listdir(inp)):
 			input_file = osjoin(inp, entry)
 			output_file = osjoin(out, entry)
 			if isfile(input_file):
-				output_file = splitext(output_file)[0]
-			
-			file_to_folder(input_file, output_file, level, extensions, pathout)
+				file_to_folder(input_file, splitext(output_file)[0], level, extensions, pathout)
+			elif input_file != pathout:
+				file_to_folder(input_file, output_file, level, extensions, pathout)
 	elif isfile(inp) and inp.lower().endswith(extensions):
 		try:
 			file = open(inp, "rb")
