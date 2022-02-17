@@ -269,7 +269,7 @@ def parse_data(data, cached_strings, cached_printable_strings):
 	elif isinstance(data, float):
 		return (encode_float(data), cached_strings, cached_printable_strings)
 	elif isinstance(data, str):
-		if "RTID()" == data[:5] + data[-1]:
+		if "RTID()" == data[:5] + data[-1:]:
 			return (encode_rtid(data), cached_strings, cached_printable_strings)
 		else:
 			return encode_string(data, cached_strings, cached_printable_strings)
