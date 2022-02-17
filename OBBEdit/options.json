@@ -4,7 +4,7 @@
 	"endswith": [
 		".rton"
 	],
-	"endswithIgnore": true,
+	"endswithIgnore": false,
 	"enteredPath": false,
 	"rsbExtensions": [
 		".1bsr",
@@ -14,7 +14,7 @@
 		".rsb.smf",
 		".obb"
 	],
-	"rsbUnpackLevel": 5,
+	"rsbUnpackLevel": 4,
 	"rsgpExtensions": [
 		".pgsr",
 		".rsgp"
@@ -25,10 +25,10 @@
 		"packages",
 		"worldpackages_"
 	],
-	"rsgpStartswithIgnore": true,
+	"rsgpStartswithIgnore": false,
 	"rsgpUnpackLevel": 2,
 	"startswith": [
 		"packages/"
 	],
-	"startswithIgnore": true
+	"startswithIgnore": false
 }

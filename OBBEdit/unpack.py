@@ -334,7 +334,7 @@ try:
 		startswith = options["startswith"]
 
 	blue_print("Working directory: " + getcwd())
-	level_to_name = ["SPECIFY", "OBB/RSB", "PGSR/RSGP", "SECTION", "PTX", "DECODED (under construction)"]
+	level_to_name = ["SPECIFY", "OBB/RSB", "PGSR/RSGP", "SECTION", "ENCODED", "DECODED (under construction)"]
 	if 6 > options["rsbUnpackLevel"] > 1:
 		rsb_input = path_input("OBB/RSB Input file or directory")
 		rsb_output = path_input("OBB/RSB %s Output directory" % level_to_name[options["rsbUnpackLevel"]])

@@ -269,7 +269,7 @@ def parse_data(data, cached_strings, cached_printable_strings):
 	elif isinstance(data, float):
 		return (encode_float(data), cached_strings, cached_printable_strings)
 	elif isinstance(data, str):
-		if data.startswith("RTID(") and data.startswith(")"):
+		if "RTID()" == data[:5] + data[-1]:
 			return (encode_rtid(data), cached_strings, cached_printable_strings)
 		else:
 			return encode_string(data, cached_strings, cached_printable_strings)
@@ -284,7 +284,7 @@ def conversion(inp, out, pathout):
 			input_file = osjoin(inp, entry)
 			if isfile(input_file) or input_file != pathout:
 				conversion(input_file, osjoin(out, entry), pathout)
-	elif isfile(inp) and inp.lower().endswith(".json"):
+	elif isfile(inp) and inp.lower()[-5:] == ".json":
 		write = out.removesuffix(".json")
 		try:
 			data = load(open(inp, "rb"), object_pairs_hook = encode_object_pairs).data
