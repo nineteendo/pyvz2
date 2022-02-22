@@ -9,7 +9,7 @@ from os.path import isdir, isfile, realpath, join as osjoin, dirname, relpath, s
 
 # Default options
 options = {
-	"confirmPath": True, 
+	"confirmPath": True,
 	"DEBUG_MODE": True,
 	"endswith": (
 		".rton",
@@ -45,30 +45,30 @@ options = {
 
 # Print & log error
 def error_message(string):
-	if DEBUG_MODE:
+	if options["DEBUG_MODE"]:
 		string += "\n" + format_exc()
 	
 	fail.write(string + "\n")
 	fail.flush()
-	print("\033[91m%s\033[0m" % string)
+	print("\033[91m" + string + "\033[0m")
 
 # Print & log warning
 def warning_message(string):
 	fail.write("\t" + string + "\n")
 	fail.flush()
-	print("\33[93m%s\33[0m" % string)
+	print("\33[93m" + string + "\33[0m")
 
 # Print in blue text
 def blue_print(text):
-	print("\033[94m%s\033[0m" % text)
+	print("\033[94m"+ text + "\033[0m")
 
 # Print in green text
 def green_print(text):
-	print("\033[32m%s\033[0m" % text)
+	print("\033[32m"+ text + "\033[0m")
 
 # Input in bold text
 def bold_input(text):
-	return input("\033[1m%s\033[0m: " % text)
+	return input("\033[1m"+ text + "\033[0m: ")
 
 # Input hybrid path
 def path_input(text):
@@ -116,10 +116,10 @@ def path_input(text):
 # Set input level for conversion
 def input_level(text, minimum, maximum):
 	try:
-		return max(minimum, min(maximum, int(bold_input(text + "(%s-%s)" % (minimum, maximum)))))
+		return max(minimum, min(maximum, int(bold_input(text + "(" + str(minimum) + "-" + str(maximum) + ")"))))
 	except Exception as e:
-		error_message("%s: %s" % (type(e).__name__, e))
-		warning_message("Defaulting to %s" % minimum)
+		error_message(type(e).__name__ + " : " + str(e))
+		warning_message("Defaulting to " + str(minimum))
 		return minimum
 
 # Get cached file name
@@ -242,7 +242,7 @@ def rsgp_patch_data(rsgp_NAME, rsgp_OFFSET, file, pathout_data, patch, patchout,
 							pathout_data[FILE_INFO - 4: FILE_INFO] = pack("<I", FILE_SIZE)
 							print("patched " + relpath(file_name, patchout))
 						except Exception as e:
-							error_message("%s while patching %s: %s" % (type(e).__name__, file_name, e))
+							error_message(type(e).__name__ + " while patching " + file_name + ": " + str(e))
 				
 				FILE_OFFSET = FILE_OFFSET_NEW
 				DECODED_NAME = DECODED_NAME_NEW
@@ -343,7 +343,7 @@ def file_to_folder(inp, out, patch, level, extensions, pathout, patchout):
 							else:
 								pathout_data = rsgp_patch_data(FILE_NAME, FILE_OFFSET, file, pathout_data, patch, patchout, level)
 						except Exception as e:
-							error_message("%s while patching %s: %s" % (type(e).__name__, relpath(file_path, patchout), e))
+							error_message(type(e).__name__ + " while patching " + relpath(file_path, patchout) + ".rsgp: " + str(e))
 						
 						file.seek(temp)
 				open(out, "wb").write(pathout_data)
@@ -355,10 +355,10 @@ def file_to_folder(inp, out, patch, level, extensions, pathout, patchout):
 					open(out, "wb").write(pathout_data)
 					print("patched " + relpath(out, pathout))
 				except Exception as e:
-					error_message("%s while patching %s: %s" % (type(e).__name__, relpath(file_path, patchout), e))
+					error_message(type(e).__name__ + " while patching " + relpath(file_path, patchout) + ".rsgp: " + str(e))
 
 		except Exception as e:
-			error_message("Failed OBBUnpatch: %s in %s pos %s: %s" % (type(e).__name__, inp, file.tell() - 1, e))
+			error_message("Failed OBBPatch " + type(e).__name__ + " in " + inp + " pos " + str(file.tell()) + ": " + str(e))
 
 # Start of the code
 try:
@@ -382,7 +382,7 @@ try:
 				elif isinstance(options[key], tuple) and isinstance(newoptions[key], list):
 					options[key] = tuple([str(i).lower() for i in newoptions[key]])
 	except Exception as e:
-		error_message("%s in options.json: %s" % (type(e).__name__, e))
+		error_message(type(e).__name__ + " in options.json: " + str(e))
 	
 	if options["rsgpUnpackLevel"] < 1:
 		options["rsgpUnpackLevel"] = input_level("PGSR/RSGP Unpack Level", 2, 4)
@@ -390,7 +390,6 @@ try:
 	if options["rsbUnpackLevel"] < 1:
 		options["rsbUnpackLevel"] = input_level("OBB/RSB Unpack Level", 1, 4)
 
-	DEBUG_MODE = options["DEBUG_MODE"]
 	if options["endswithIgnore"]:
 		endswith = ""
 	else:
@@ -420,7 +419,7 @@ try:
 		else:
 			rsgp_output = path_input("PGSR/RSGP Modded directory")
 		
-		rsgp_patch = path_input("PGSR/RSGP %s Patch directory" % level_to_name[options["rsgpUnpackLevel"]])
+		rsgp_patch = path_input("PGSR/RSGP " + level_to_name[options["rsgpUnpackLevel"]] + " Patch directory")
 
 	if 5 > options["rsbUnpackLevel"] > 1:
 		rsb_input = path_input("OBB/RSB Input file or directory")
@@ -429,7 +428,7 @@ try:
 		else:
 			rsb_output = path_input("OBB/RSB Modded directory")
 		
-		rsb_patch = path_input("OBB/RSB %s Patch directory" % level_to_name[options["rsbUnpackLevel"]])
+		rsb_patch = path_input("OBB/RSB " + level_to_name[options["rsbUnpackLevel"]] + " Patch directory")
 
 	# Start file_to_folder
 	start_time = datetime.datetime.now()
@@ -439,10 +438,10 @@ try:
 	if 5 > options["rsbUnpackLevel"] > 1:
 		file_to_folder(rsb_input, rsb_output, rsb_patch, options["rsbUnpackLevel"], options["rsbExtensions"], dirname(rsb_output), rsb_patch)
 
-	green_print("finished patching in %s" % (datetime.datetime.now() - start_time))
+	green_print("finished patching in " + str(datetime.datetime.now() - start_time))
 	bold_input("\033[95mPRESS [ENTER]")
 except BaseException as e:
-	warning_message("%s: %s" % (type(e).__name__, e))
+	error_message(type(e).__name__ + " : " + str(e))
 
 # Close log
 fail.close()

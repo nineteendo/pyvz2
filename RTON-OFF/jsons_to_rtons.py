@@ -45,31 +45,31 @@ options = {
 
 # Print & log error
 def error_message(string):
-	if DEBUG_MODE:
+	if options["DEBUG_MODE"]:
 		string += "\n" + format_exc()
 	
 	fail.write(string + "\n")
 	fail.flush()
-	print("\033[91m%s\033[0m" % string)
+	print("\033[91m" + string + "\033[0m")
 
 # Print & log warning
 def warning_message(string):
 	fail.write("\t" + string + "\n")
 	fail.flush()
-	print("\33[93m%s\33[0m" % string)
+	print("\33[93m" + string + "\33[0m")
 
 
 # Print in blue text
 def blue_print(text):
-	print("\033[94m%s\033[0m" % text)
+	print("\033[94m"+ text + "\033[0m")
 
 # Print in green text
 def green_print(text):
-	print("\033[32m%s\033[0m" % text)
+	print("\033[32m"+ text + "\033[0m")
 
 # Input in bold text
 def bold_input(text):
-	return input("\033[1m%s\033[0m: " % text)
+	return input("\033[1m"+ text + "\033[0m: ")
 
 # Input hybrid path
 def path_input(text):
@@ -124,10 +124,10 @@ Infinity = [float("Infinity"), float("-Infinity")]
 
 # Boolian
 def encode_bool(boolean):
-	if boolean == False:
-		return b"\x00"
-	else:
+	if boolean:
 		return b"\x01"
+	else:
+		return b"\x00"
 
 # Number with variable length
 def encode_number(integ):
@@ -166,14 +166,6 @@ def encode_rtid(string):
 def encode_int(integ):
 	if integ == 0:
 		return b"\x21"
-	elif -128 <= integ <= 127:
-		return b"\x08" + pack("b", integ)
-	elif 0 <= integ <= 255:
-		return b"\x0a" + pack("B", integ)
-	elif -32768 <= integ <= 32767:
-		return b"\x10" + pack("<h", integ)
-	elif 0 <= integ < 65535:
-		return b"\x12" + pack("<H", integ)
 	elif 0 <= integ <= 2097151:
 		return b"\x24" + encode_number(integ)
 	elif -2097151 <= integ <= 0:
@@ -258,21 +250,23 @@ def parse_json(data):
 
 # Data
 def parse_data(data, cached_strings, cached_printable_strings):
-	if isinstance(data, list):
-		return parse_array(data, cached_strings, cached_printable_strings)
-	elif isinstance(data, list2):
-		return parse_object(data.data, cached_strings, cached_printable_strings)
+	if isinstance(data, str):
+		if "RTID()" == data[:5] + data[-1:]:
+			return (encode_rtid(data), cached_strings, cached_printable_strings)
+		else:
+			return encode_string(data, cached_strings, cached_printable_strings)
 	elif isinstance(data, bool):
 		return (encode_bool(data), cached_strings, cached_printable_strings)
 	elif isinstance(data, int):
 		return (encode_int(data), cached_strings, cached_printable_strings)
 	elif isinstance(data, float):
 		return (encode_float(data), cached_strings, cached_printable_strings)
-	elif isinstance(data, str):
-		if "RTID()" == data[:5] + data[-1:]:
-			return (encode_rtid(data), cached_strings, cached_printable_strings)
-		else:
-			return encode_string(data, cached_strings, cached_printable_strings)
+	elif data == None:
+		return (b"\x84", cached_strings, cached_printable_strings)
+	elif isinstance(data, list):
+		return parse_array(data, cached_strings, cached_printable_strings)
+	elif isinstance(data, list2):
+		return parse_object(data.data, cached_strings, cached_printable_strings)
 	else:
 		raise TypeError(type(data))
 
@@ -289,7 +283,7 @@ def conversion(inp, out, pathout):
 		try:
 			data = load(open(inp, "rb"), object_pairs_hook = encode_object_pairs).data
 		except Exception as e:
-			error_message("%s in %s: %s" % (type(e).__name__, inp, e))
+			error_message(type(e).__name__ + " in " + inp + ": " + str(e))
 		else:
 			try:
 				encoded_data = parse_json(data)
@@ -306,7 +300,7 @@ def conversion(inp, out, pathout):
 				open(write, "wb").write(encoded_data)
 				print("wrote " + relpath(write, pathout))
 			except Exception as e:
-				error_message("%s in %s: %s" % (type(e).__name__, inp, e))
+				error_message(type(e).__name__ + " in " + inp + ": " + str(e))
 
 # Object to list of tuples
 def encode_object_pairs(pairs):
@@ -351,12 +345,11 @@ try:
 				elif key == "Indent" and type(newoptions[key]) in [int, type(None)]:
 					options[key] = newoptions[key]
 	except Exception as e:
-		error_message("%s in options.json: %s" % (type(e).__name__, e))
+		error_message(type(e).__name__ + " in options.json: " + str(e))
 	
 	binObjClasses = options["binObjClasses"]
 	cachLimit = options["cachLimit"]
 	datObjClasses = options["datObjClasses"]
-	DEBUG_MODE = options["DEBUG_MODE"]
 	RTONNoExtensions = options["RTONNoExtensions"]
 	blue_print("Working directory: " + getcwd())
 	pathin = path_input("Input file or directory")
@@ -368,10 +361,10 @@ try:
 	# Start conversion
 	start_time = datetime.datetime.now()
 	conversion(pathin, pathout, dirname(pathout))
-	green_print("finished converting %s in %s" % (pathin, datetime.datetime.now() - start_time))
+	green_print("finished converting " + pathin + " in " + str(datetime.datetime.now() - start_time))
 	bold_input("\033[95mPRESS [ENTER]")
 except BaseException as e:
-	warning_message("%s: %s" % (type(e).__name__, e))
+	warning_message(type(e).__name__ + " : " + str(e))
 
 # Close log
 fail.close()

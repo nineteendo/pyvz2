@@ -45,30 +45,31 @@ options = {
 
 # Print & log error
 def error_message(string):
-	if DEBUG_MODE:
+	if options["DEBUG_MODE"]:
 		string += "\n" + format_exc()
 	
 	fail.write(string + "\n")
 	fail.flush()
-	print("\033[91m%s\033[0m" % string)
+	print("\033[91m" + string + "\033[0m")
 
 # Print & log warning
 def warning_message(string):
 	fail.write("\t" + string + "\n")
 	fail.flush()
-	print("\33[93m%s\33[0m" % string)
+	print("\33[93m" + string + "\33[0m")
+
 
 # Print in blue text
 def blue_print(text):
-	print("\033[94m%s\033[0m" % text)
+	print("\033[94m"+ text + "\033[0m")
 
 # Print in green text
 def green_print(text):
-	print("\033[32m%s\033[0m" % text)
+	print("\033[32m"+ text + "\033[0m")
 
 # Input in bold text
 def bold_input(text):
-	return input("\033[1m%s\033[0m: " % text)
+	return input("\033[1m"+ text + "\033[0m: ")
 
 # Input hybrid path
 def path_input(text):
@@ -189,7 +190,7 @@ def parse_utf8_str(fp):
 	string = fp.read(parse_number(fp)).decode()
 	i2 = len(string)
 	if i1 != i2:
-		warning_message("SilentError: %s pos %s: Unicode string of character length %s found, expected %s" % (fp.name, fp.tell() - 1, i2, i1))
+		warning_message("SilentError: " + fp.name + " pos " + str(fp.tell() - 1) + ": Unicode string of character length " + str(i2) + " found, expected " + str(i1))
 	
 	return escape_str(string)
 
@@ -220,14 +221,12 @@ def parse_ref(fp):
 		p1 = parse_utf8_str(fp)
 		i2 = parse_varint(fp)
 		i1 = parse_varint(fp)
-		p2 = i1 + "." + i2 + "." + fp.read(4)[::-1].hex()
+		return '"RTID(' + i1 + '.' + i2 + '.' + fp.read(4)[::-1].hex() + '@' + p1 + ')"'
 	elif ch == b"\x03":
 		p1 = parse_utf8_str(fp)
-		p2 = parse_utf8_str(fp)
+		return '"RTID(' + parse_utf8_str(fp) + '@' + p1 + ')"'
 	else:
 		raise TypeError("unexpected subtype for type 83, found: " + ch.hex())
-	
-	return '"RTID(%s@%s)"' % (p2, p1)
 
 # type 85
 def parse_object(fp, currrent_indent, chached_strings, chached_printable_strings):
@@ -248,14 +247,14 @@ def parse_object(fp, currrent_indent, chached_strings, chached_printable_strings
 	except KeyError as k:
 		if str(k) == 'b""':
 			if repairFiles:
-				warning_message("SilentError: %s pos %s: end of file" %(fp.name, fp.tell() - 1))
+				warning_message("SilentError: " + fp.name + " pos " + str(fp.tell() - 1) + ": end of file")
 			else:
 				raise EOFError
 		elif k.args[0] != b'\xff':
 			raise TypeError("unknown tag " + k.args[0].hex())
 	except (error, IndexError):
 		if repairFiles:
-			warning_message("SilentError: %s pos %s: end of file" %(fp.name, fp.tell() - 1))
+			warning_message("SilentError: " + fp.name + " pos " + str(fp.tell() - 1) + ": end of file")
 		else:
 			raise EOFError
 	
@@ -269,7 +268,7 @@ def parse_list(fp, currrent_indent, chached_strings, chached_printable_strings):
 	code = fp.read(1)
 	if code == b"":
 		if repairFiles:
-			warning_message("SilentError: %s pos %s: end of file" %(fp.name, fp.tell() - 1))
+			warning_message("SilentError: " + fp.name + " pos " + str(fp.tell() - 1) + ": end of file")
 		else:
 			raise EOFError
 	elif code != b"\xfd":
@@ -291,20 +290,20 @@ def parse_list(fp, currrent_indent, chached_strings, chached_printable_strings):
 	except KeyError as k:
 		if str(k) == 'b""':
 			if repairFiles:
-				warning_message("SilentError: %s pos %s: end of file" %(fp.name, fp.tell() - 1))
+				warning_message("SilentError: " + fp.name + " pos " + str(fp.tell() - 1) + ": end of file")
 			else:
 				raise EOFError
 		elif k.args[0] != b'\xfe':
 			raise TypeError("unknown tag " + k.args[0].hex())
 	except (error, IndexError):
 		if repairFiles:
-			warning_message("SilentError: %s pos %s: end of file" %(fp.name, fp.tell() - 1))
+			warning_message("SilentError: " + fp.name + " pos " + str(fp.tell() - 1) + ": end of file")
 		else:
 			raise EOFError
 	
 	i2 = len(items)
 	if i1 != i2:
-		warning_message("SilentError: %s pos %s: Array of length %s found, expected %s" %(fp.name, fp.tell() - 1, i1, i2))
+		warning_message("SilentError: " + fp.name + " pos " + str(fp.tell() -1) + ": Array of length " + str(i1) + " found, expected " + str(i2))
 	
 	if sortValues:
 		items = sorted(items)
@@ -365,7 +364,7 @@ mappings = {
 	b"\x81": parse_str, # uncached string
 	b"\x82": parse_printable_str, # uncached printable string
 	b"\x83": parse_ref,
-	b"\x84": lambda x: '"RTID()"', # Empty reference?
+	b"\x84": lambda x: "null" # null reference
 }
 
 # Recursive file convert function
@@ -391,7 +390,7 @@ def conversion(inp, out, pathout):
 			else:
 				warning_message("No RTON " + inp)
 		except Exception as e:
-			error_message("%s in %s pos %s: %s" % (type(e).__name__, inp, file.tell() - 1, e))
+			error_message(type(e).__name__ + " in " + inp + " pos " + str(file.tell() -1) + ": " + str(e))
 
 # Start code
 try:
@@ -417,7 +416,7 @@ try:
 				elif key == "Indent" and newoptions[key] == None:
 					options[key] = newoptions[key]
 	except Exception as e:
-		error_message("%s in options.json: %s" % (type(e).__name__, e))
+		error_message(type(e).__name__ + " in options.json: " + str(e))
 	
 	if options["comma"] > 0:
 		comma = "," + " " * options["comma"]
@@ -438,7 +437,6 @@ try:
 		current_indent = "\n"
 		indent = " " * options["indent"]
 
-	DEBUG_MODE = options["DEBUG_MODE"]
 	repairFiles = options["repairFiles"]
 	RTONExtensions = options["RTONExtensions"]
 	RTONNoExtensions = options["RTONNoExtensions"]
@@ -455,10 +453,10 @@ try:
 	# Start conversion
 	start_time = datetime.datetime.now()
 	conversion(pathin, pathout, dirname(pathout))
-	green_print("finished converting %s in %s" % (pathin, datetime.datetime.now() - start_time))
+	green_print("finished converting " + pathin + " in " + str(datetime.datetime.now() - start_time))
 	bold_input("\033[95mPRESS [ENTER]")
 except BaseException as e:
-	warning_message("%s: %s" % (type(e).__name__, e))
+	error_message(type(e).__name__ + " : " + str(e))
 
 # Close log
 fail.close()
