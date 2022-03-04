@@ -6,11 +6,8 @@ from struct import unpack
 from zlib import decompress
 from os import makedirs, listdir, system, getcwd, sep
 from os.path import isdir, isfile, realpath, join as osjoin, dirname, relpath, splitext
-try:
-	from PIL import Image
-except Exception:
-	pass
-COLORS = "RGBA"
+#from PIL import Image
+#COLORS = "RGBA"
 #Alt for iPad: COLORS = "BGRA"
 
 # Default options
@@ -217,25 +214,26 @@ def rsgp_extract(rsgp_NAME, rsgp_OFFSET, file, out, pathout, level):
 					FILE_OFFSET = unpack("<I", file.read(4))[0]
 					FILE_SIZE = unpack("<I", file.read(4))[0]
 					if PTX:
-						FORMAT = unpack("<I", file.read(4))[0]
-						B = unpack("<I", file.read(4))[0]
-						C = unpack("<I", file.read(4))[0]
-						WIDHT = unpack("<I", file.read(4))[0]
-						HEIGHT = unpack("<I", file.read(4))[0]
+						file.seek(20, 1)
+						#A = unpack("<I", file.read(4))[0]
+						#B = unpack("<I", file.read(4))[0]
+						#C = unpack("<I", file.read(4))[0]
+						#WIDHT = unpack("<I", file.read(4))[0]
+						#HEIGHT = unpack("<I", file.read(4))[0]
 					
 					if DECODED_NAME and NAME_CHECK.startswith(startswith) and NAME_CHECK.endswith(endswith):
-						if level < 5:
-							file_path = osjoin(out, DECODED_NAME)
-							makedirs(dirname(file_path), exist_ok = True)
-							open(file_path, "wb").write(data[FILE_OFFSET: FILE_OFFSET + FILE_SIZE])
-							print("wrote " + relpath(file_path, pathout))
-						elif PTX:
-							if FILE_SIZE == 4 * WIDHT * HEIGHT:
-								file_path = osjoin(out, splitext(DECODED_NAME)[0] + ".PNG")
-								makedirs(dirname(file_path), exist_ok = True)
-								blue_print("Decoding ...")
-								Image.frombuffer("RGBA", (WIDHT, HEIGHT), data[FILE_OFFSET: FILE_OFFSET + FILE_SIZE], "raw", COLORS, 0, 1).save("/Users/wannes/Documents/GitHub/PVZ2tools/PTXTests/ALWAYSLOADED_384_00.PNG")
-								print("wrote " + relpath(file_path, pathout))
+						#if level < 5:
+						file_path = osjoin(out, DECODED_NAME)
+						makedirs(dirname(file_path), exist_ok = True)
+						open(file_path, "wb").write(data[FILE_OFFSET: FILE_OFFSET + FILE_SIZE])
+						print("wrote " + relpath(file_path, pathout))
+						#elif PTX:
+						#	if FILE_SIZE == 4 * WIDHT * HEIGHT:
+						#		file_path = osjoin(out, splitext(DECODED_NAME)[0] + ".PNG")
+						#		makedirs(dirname(file_path), exist_ok = True)
+						#		blue_print("Decoding ...")
+						#		Image.frombuffer("RGBA", (WIDHT, HEIGHT), data[FILE_OFFSET: FILE_OFFSET + FILE_SIZE], "raw", COLORS, 0, 1).save("/Users/wannes/Documents/GitHub/PVZ2tools/PTXTests/ALWAYSLOADED_384_00.PNG")
+						#		print("wrote " + relpath(file_path, pathout))
 
 		except Exception as e:
 			error_message(type(e).__name__ + " while extracting " + rsgp_NAME + ".rsgp: " + str(e))
@@ -337,26 +335,32 @@ try:
 
 	blue_print("Working directory: " + getcwd())
 	level_to_name = ["SPECIFY", "OBB/RSB", "PGSR/RSGP", "SECTION", "ENCODED", "DECODED (under construction)"]
-	if 6 > options["rsbUnpackLevel"] > 1:
+	if 5 > options["rsbUnpackLevel"] > 1:
 		rsb_input = path_input("OBB/RSB Input file or directory")
 		rsb_output = path_input("OBB/RSB " + level_to_name[options["rsbUnpackLevel"]] + " Output directory")
 	
-	if 6 > options["rsgpUnpackLevel"] > 2:
+	if 5 > options["rsgpUnpackLevel"] > 2:
 		rsgp_input = path_input("PGSR/RSGP Input file or directory")
 		rsgp_output = path_input("PGSR/RSGP " + level_to_name[options["rsgpUnpackLevel"]] + " Output directory")
 
 	# Start file_to_folder
 	start_time = datetime.datetime.now()
-	if 6 > options["rsbUnpackLevel"] > 1:
+	if 5 > options["rsbUnpackLevel"] > 1:
 		file_to_folder(rsb_input, rsb_output, options["rsbUnpackLevel"], options["rsbExtensions"], rsb_output)
 	
-	if 6 > options["rsgpUnpackLevel"] > 2:
+	if 5 > options["rsgpUnpackLevel"] > 2:
 		file_to_folder(rsgp_input, rsgp_output, options["rsgpUnpackLevel"], options["rsgpExtensions"], rsgp_output)
 
 	green_print("finished unpacking in " + str(datetime.datetime.now() - start_time))
+	if fail.tell() > 0:
+		print("\33[93m" + "Errors occured, check: " + fail.name + "\33[0m")
+
 	bold_input("\033[95mPRESS [ENTER]")
-except BaseException as e:
+except Exception as e:
 	error_message(type(e).__name__ + " : " + str(e))
+except BaseException as e:
+	warning_message(type(e).__name__ + " : " + str(e))
+
 
 # Close log
 fail.close()

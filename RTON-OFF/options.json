@@ -15,6 +15,7 @@
 	],
 	"DEBUG_MODE": true,
 	"doublepoint": 1,
+	"ensureAscii": false,
 	"enteredPath": false,
 	"indent": -1,
 	"RTONExtensions": [

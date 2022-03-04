@@ -439,9 +439,15 @@ try:
 		file_to_folder(rsb_input, rsb_output, rsb_patch, options["rsbUnpackLevel"], options["rsbExtensions"], dirname(rsb_output), rsb_patch)
 
 	green_print("finished patching in " + str(datetime.datetime.now() - start_time))
+	if fail.tell() > 0:
+		print("\33[93m" + "Errors occured, check: " + fail.name + "\33[0m")
+
 	bold_input("\033[95mPRESS [ENTER]")
-except BaseException as e:
+except Exception as e:
 	error_message(type(e).__name__ + " : " + str(e))
+except BaseException as e:
+	warning_message(type(e).__name__ + " : " + str(e))
+
 
 # Close log
 fail.close()

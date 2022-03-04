@@ -1,7 +1,7 @@
 # Import libraries
 import sys, datetime
 from traceback import format_exc
-from json import load
+from json import load, dumps
 from struct import unpack, error
 from os import makedirs, listdir, system, getcwd
 from os.path import isdir, isfile, realpath, join as osjoin, dirname, relpath, basename, splitext
@@ -23,6 +23,7 @@ options = {
 	),
 	"DEBUG_MODE": True,
 	"doublepoint": 1,
+	"ensureAscii": False,
 	"enteredPath": False,
 	"indent": -1,
 	"RTONExtensions": (
@@ -57,7 +58,6 @@ def warning_message(string):
 	fail.write("\t" + string + "\n")
 	fail.flush()
 	print("\33[93m" + string + "\33[0m")
-
 
 # Print in blue text
 def blue_print(text):
@@ -116,35 +116,39 @@ def path_input(text):
 
 # type 08
 def parse_int8(fp):
-	return str(unpack("b", fp.read(1))[0])
+	return repr(unpack("b", fp.read(1))[0])
 
 # type 0a
 def parse_uint8(fp):
-	return str(fp.read(1)[0])
+	return repr(fp.read(1)[0])
 	
 # type 10
 def parse_int16(fp):
-	return str(unpack("<h", fp.read(2))[0])
+	return repr(unpack("<h", fp.read(2))[0])
 
 # type 12
 def parse_uint16(fp):
-	return str(unpack("<H", fp.read(2))[0])
+	return repr(unpack("<H", fp.read(2))[0])
 	
 # type 20
 def parse_int32(fp):
-	return str(unpack("<i", fp.read(4))[0])
+	return repr(unpack("<i", fp.read(4))[0])
 
 # type 22
 def parse_float(fp):
-	return str(unpack("<f", fp.read(4))[0]).replace("inf", "Infinity").replace("nan", "NaN")
+	return repr(unpack("<f", fp.read(4))[0]).replace("inf", "Infinity").replace("nan", "NaN")
 
 # type 24, 28, 44 and 48
-def parse_varint(fp):
-	return str(parse_number(fp))
+def parse_uvarint(fp):
+	return repr(parse_number(fp))
 
 # type 25, 29, 45 and 49
-def parse_negative_varint(fp):
-	return str(-parse_number(fp))
+def parse_varint(fp):
+	num = parse_number(fp)
+	if num % 2:
+		num = -num -1
+
+	return repr(num // 2)
 
 def parse_number(fp):
 	num = fp.read(1)[0]
@@ -159,31 +163,31 @@ def parse_number(fp):
 
 # type 26
 def parse_uint32(fp):
-	return str(unpack("<I", fp.read(4))[0])
+	return repr(unpack("<I", fp.read(4))[0])
 
 # type 40
 def parse_int64(fp):
-	return str(unpack("<q", fp.read(8))[0])
+	return repr(unpack("<q", fp.read(8))[0])
 
 # type 42
 def parse_double(fp):
-	return str(unpack("<d", fp.read(8))[0]).replace("inf", "Infinity").replace("nan", "NaN")
+	return repr(unpack("<d", fp.read(8))[0]).replace("inf", "Infinity").replace("nan", "NaN")
 
 # type 46
 def parse_uint64(fp):
-	return str(unpack("<Q", fp.read(8))[0])
+	return repr(unpack("<Q", fp.read(8))[0])
 
 # types 81, 90
 def parse_str(fp):
 	byte = fp.read(parse_number(fp))
 	try:
-		return '"' + escape_str(byte.decode('utf-8')) + '"'
+		return dumps(byte.decode('utf-8'), ensure_ascii = ensureAscii)
 	except Exception:
-		return '"' + escape_str(byte.decode('latin-1')) + '"'
+		return dumps(byte.decode('latin-1'), ensure_ascii = ensureAscii)
 
 # type 82, 92
 def parse_printable_str(fp):
-	return '"' + parse_utf8_str(fp) + '"'
+	return dumps(parse_utf8_str(fp), ensure_ascii = ensureAscii)
 
 def parse_utf8_str(fp):
 	i1 = parse_number(fp) # Character length
@@ -192,10 +196,7 @@ def parse_utf8_str(fp):
 	if i1 != i2:
 		warning_message("SilentError: " + fp.name + " pos " + str(fp.tell() - 1) + ": Unicode string of character length " + str(i2) + " found, expected " + str(i1))
 	
-	return escape_str(string)
-
-def escape_str(string):
-	return string.replace("\\", "\\\\").replace('"', '\\"').replace("\b", "\\b").replace("\f", "\\f").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+	return string
 
 # types 90, 91, 92, 93
 def parse_cached_str(fp, code, chached_strings, chached_printable_strings):
@@ -219,14 +220,50 @@ def parse_ref(fp):
 		return '"RTID()"'
 	elif ch == b"\x02":
 		p1 = parse_utf8_str(fp)
-		i2 = parse_varint(fp)
-		i1 = parse_varint(fp)
-		return '"RTID(' + i1 + '.' + i2 + '.' + fp.read(4)[::-1].hex() + '@' + p1 + ')"'
+		i2 = parse_uvarint(fp)
+		i1 = parse_uvarint(fp)
+		return dumps("RTID(" + i1 + "." + i2 + "." + fp.read(4)[::-1].hex() + "@" + p1 + ")", ensure_ascii = ensureAscii)
 	elif ch == b"\x03":
 		p1 = parse_utf8_str(fp)
-		return '"RTID(' + parse_utf8_str(fp) + '@' + p1 + ')"'
+		return dumps("RTID(" + parse_utf8_str(fp) + "@" + p1 + ")", ensure_ascii = ensureAscii)
 	else:
 		raise TypeError("unexpected subtype for type 83, found: " + ch.hex())
+
+# root object
+def root_object(fp, currrent_indent):
+	VER = unpack("<I", fp.read(4))[0]
+	string = "{"
+	new_indent = currrent_indent + indent
+	items = []
+	end = "}"
+	try:
+		key, chached_strings, chached_printable_strings = parse(fp, new_indent, [], [])
+		value, chached_strings, chached_printable_strings = parse(fp, new_indent, chached_strings, chached_printable_strings)
+		string += new_indent 
+		items = [key + doublepoint + value]
+		end = currrent_indent + end
+		while True:
+			key, chached_strings, chached_printable_strings = parse(fp, new_indent, chached_strings, chached_printable_strings)
+			value, chached_strings, chached_printable_strings = parse(fp, new_indent, chached_strings, chached_printable_strings)
+			items.append(key + doublepoint + value)
+	except KeyError as k:
+		if str(k) == 'b""':
+			if repairFiles:
+				warning_message("SilentError: " + fp.name + " pos " + str(fp.tell() - 1) + ": end of file")
+			else:
+				raise EOFError
+		elif k.args[0] != b'\xff':
+			raise TypeError("unknown tag " + k.args[0].hex())
+	except (error, IndexError):
+		if repairFiles:
+			warning_message("SilentError: " + fp.name + " pos " + str(fp.tell() - 1) + ": end of file")
+		else:
+			raise EOFError
+	
+	if sortKeys:
+		items = sorted(items)
+
+	return string + (comma + new_indent).join(items) + end
 
 # type 85
 def parse_object(fp, currrent_indent, chached_strings, chached_printable_strings):
@@ -306,7 +343,7 @@ def parse_list(fp, currrent_indent, chached_strings, chached_printable_strings):
 		warning_message("SilentError: " + fp.name + " pos " + str(fp.tell() -1) + ": Array of length " + str(i1) + " found, expected " + str(i2))
 	
 	if sortValues:
-		items = sorted(items)
+		items = sorted(sorted(items), key = lambda key : len(key))
 	
 	return (string + (comma + new_indent).join(items) + end, chached_strings, chached_printable_strings)
 
@@ -343,23 +380,23 @@ mappings = {
 	b"\x21": lambda x: "0", # int32_zero
 	b"\x22": parse_float,
 	b"\x23": lambda x: "0.0", # float_zero
-	b"\x24": parse_varint, # positive_int32_varint
-	b"\x25": parse_negative_varint, # negative_int32_varint
+	b"\x24": parse_uvarint, # int32_uvarint
+	b"\x25": parse_varint, # int32_varint
 	# # only in NoBackup RTONs
 	b"\x26": parse_uint32,
 	b"\x27": lambda x: "0", #uint_32_zero
-	b"\x28": parse_varint, # positive_uint32_varint
-	b"\x29": parse_negative_varint, #negative_int32_varint
+	b"\x28": parse_uvarint, # uint32_uvarint
+	b"\x29": parse_varint, # uint32_varint?
 	b"\x40": parse_int64,
 	b"\x41": lambda x: "0", #int64_zero
 	b"\x42": parse_double,
 	b"\x43": lambda x: "0.0", # double_zero
-	b"\x44": parse_varint, # positive_int64_varint
-	b"\x45": parse_negative_varint, # negative_int64_varint
+	b"\x44": parse_uvarint, # int64_uvarint
+	b"\x45": parse_varint, # int64_varint
 	b"\x46": parse_uint64,
 	b"\x47": lambda x: "0", # uint64_zero
-	b"\x48": parse_varint, # positive_uint64_varint
-	b"\x49": parse_negative_varint, # negative_uint64_varint
+	b"\x48": parse_uvarint, # uint64_uvarint
+	b"\x49": parse_varint, # uint64_varint
 	
 	b"\x81": parse_str, # uncached string
 	b"\x82": parse_printable_str, # uncached printable string
@@ -369,13 +406,7 @@ mappings = {
 
 # Recursive file convert function
 def conversion(inp, out, pathout):
-	if isdir(inp):
-		makedirs(out, exist_ok = True)
-		for entry in sorted(listdir(inp)):
-			input_file = osjoin(inp, entry)
-			if isfile(input_file) or input_file != pathout:
-				conversion(input_file, osjoin(out, entry), pathout)
-	elif isfile(inp) and (inp.lower().endswith(RTONExtensions) or basename(inp).lower().startswith(RTONNoExtensions)):	
+	if isfile(inp) and (inp.lower().endswith(RTONExtensions) or basename(inp).lower().startswith(RTONNoExtensions)):	
 		if shortNames:
 			out = splitext(out)[0]
 			 
@@ -383,14 +414,19 @@ def conversion(inp, out, pathout):
 		file = open(inp, "rb")
 		try:
 			if file.read(4) == b"RTON":
-				VER = unpack("<I", file.read(4))[0]
-				data = parse_object(file, current_indent, [], [])[0]
+				data = root_object(file, current_indent)
 				open(jfn, "w", encoding = "utf-8").write(data)
 				print("wrote " + relpath(jfn, pathout))
 			else:
 				warning_message("No RTON " + inp)
 		except Exception as e:
 			error_message(type(e).__name__ + " in " + inp + " pos " + str(file.tell() -1) + ": " + str(e))
+	elif isdir(inp):
+		makedirs(out, exist_ok = True)
+		for entry in listdir(inp):
+			input_file = osjoin(inp, entry)
+			if isfile(input_file) or input_file != pathout:
+				conversion(input_file, osjoin(out, entry), pathout)
 
 # Start code
 try:
@@ -437,6 +473,7 @@ try:
 		current_indent = "\n"
 		indent = " " * options["indent"]
 
+	ensureAscii = options["ensureAscii"]
 	repairFiles = options["repairFiles"]
 	RTONExtensions = options["RTONExtensions"]
 	RTONNoExtensions = options["RTONNoExtensions"]
@@ -454,9 +491,14 @@ try:
 	start_time = datetime.datetime.now()
 	conversion(pathin, pathout, dirname(pathout))
 	green_print("finished converting " + pathin + " in " + str(datetime.datetime.now() - start_time))
+	if fail.tell() > 0:
+		print("\33[93m" + "Errors occured, check: " + fail.name + "\33[0m")
+
 	bold_input("\033[95mPRESS [ENTER]")
-except BaseException as e:
+except Exception as e:
 	error_message(type(e).__name__ + " : " + str(e))
+except BaseException as e:
+	warning_message(type(e).__name__ + " : " + str(e))
 
 # Close log
 fail.close()

@@ -23,6 +23,7 @@ options = {
 	),
 	"DEBUG_MODE": True,
 	"doublepoint": 1,
+	"ensureAscii": False,
 	"enteredPath": False,
 	"indent": -1,
 	"RTONExtensions": (
@@ -168,16 +169,16 @@ def encode_int(integ):
 		return b"\x21"
 	elif 0 <= integ <= 2097151:
 		return b"\x24" + encode_number(integ)
-	elif -2097151 <= integ <= 0:
-		return b"\x25" + encode_number(-integ)
+	elif -1048576 <= integ <= 0:
+		return b"\x25" + encode_number(1 - 2 * integ)
 	elif -2147483648 <= integ <= 2147483647:
 		return b"\x20" + pack("<i", integ)
 	elif 0 <= integ < 4294967295:
 		return b"\x26" + pack("<I", integ)
 	elif 0 <= integ <= 562949953421311:
 		return b"\x44" + encode_number(integ)
-	elif -562949953421311 <= integ <= 0:
-		return b"\x45" + encode_number(-integ)
+	elif -281474976710656 <= integ <= 0:
+		return b"\x45" + encode_number(1 - 2 * integ)
 	elif -9223372036854775808 <= integ <= 9223372036854775807:
 		return b"\x40" + pack("<q", integ)
 	elif 0 <= integ <= 18446744073709551615:
@@ -185,7 +186,7 @@ def encode_int(integ):
 	elif 0 <= integ:
 		return b"\x44" + encode_number(integ)
 	else:
-		return b"\x45" + encode_number(-integ)
+		return b"\x45" + encode_number(1 - 2 * integ)
 
 # Float
 def encode_float(dec):
@@ -362,9 +363,15 @@ try:
 	start_time = datetime.datetime.now()
 	conversion(pathin, pathout, dirname(pathout))
 	green_print("finished converting " + pathin + " in " + str(datetime.datetime.now() - start_time))
+	if fail.tell() > 0:
+		print("\33[93m" + "Errors occured, check: " + fail.name + "\33[0m")
+
 	bold_input("\033[95mPRESS [ENTER]")
+except Exception as e:
+	error_message(type(e).__name__ + " : " + str(e))
 except BaseException as e:
 	warning_message(type(e).__name__ + " : " + str(e))
+
 
 # Close log
 fail.close()
