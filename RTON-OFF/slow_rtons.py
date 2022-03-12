@@ -11,7 +11,6 @@ from os.path import isdir, isfile, realpath, join as osjoin, dirname, relpath, b
 
 # Default Options
 options = {
-	"allowAllJSON": True,
 	"binObjClasses": (
 		"drapersavedata",
 		"globalsavedata",
@@ -19,8 +18,6 @@ options = {
 		"lootsavedata",
 		"savegameheader"
 	),
-	"cachKeyLimit": 1048575,
-	"cachValueLimit": 1048575,
 	"comma": 0,
 	"confirmPath": True,
 	"datObjClasses": (

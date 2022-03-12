@@ -15,7 +15,6 @@ options = {
 		"lootsavedata",
 		"savegameheader"
 	),
-	"cachLimit": 1048575,
 	"comma": 0,
 	"confirmPath": True,
 	"datObjClasses": (
@@ -202,19 +201,15 @@ def encode_string(string, cached_strings, cached_printable_strings):
 	if len(string) == len(string.encode("latin-1", "ignore")):
 		if string in cached_strings:
 			data = b"\x91" + encode_number(cached_strings[string])
-		elif len(cached_strings) < cachLimit:
+		else:
 			cached_strings[string] = len(cached_strings)
 			data = b"\x90" + encode_number(len(string)) + string.encode("latin-1")
-		else:
-			data = b"\x81" + encode_number(len(string)) + string.encode("latin-1")
 	else:
 		if string in cached_printable_strings:
 			data = b"\x93" + encode_number(cached_printable_strings[string])
-		elif len(cached_printable_strings) < cachLimit:
+		else:
 			cached_printable_strings[string] = len(cached_printable_strings)
 			data = b"\x92" + encode_unicode(string)
-		else:
-			data = b"\x82" + encode_unicode(string)
 	
 	return (data, cached_strings, cached_printable_strings)
 
@@ -275,7 +270,7 @@ def parse_data(data, cached_strings, cached_printable_strings):
 def conversion(inp, out, pathout):
 	if isdir(inp):
 		makedirs(out, exist_ok = True)
-		for entry in sorted(listdir(inp)):
+		for entry in listdir(inp):
 			input_file = osjoin(inp, entry)
 			if isfile(input_file) or input_file != pathout:
 				conversion(input_file, osjoin(out, entry), pathout)
@@ -309,18 +304,15 @@ def encode_object_pairs(pairs):
 
 # Search in json file
 def values_from_keys(data, keyz):
-	if keyz == []:
-		yield str(data).lower()
+	if isinstance(data, list2):
+		for key, value in data.data:
+			if keyz[0] == key:
+				yield from values_from_keys(value, keyz[1:])
 	elif isinstance(data, list):
 		for val in data:
 			yield from values_from_keys(val, keyz)
-	elif isinstance(data, list2):
-		for val in data.data:
-			yield from values_from_keys(val, keyz)
-	elif isinstance(data, tuple):
-		key, value = data
-		if keyz[0] == key:
-			yield from values_from_keys(value, keyz[1:])
+	elif keyz == []:
+		yield str(data).lower()
 
 # Start of the code
 try:
@@ -349,7 +341,6 @@ try:
 		error_message(type(e).__name__ + " in options.json: " + str(e))
 	
 	binObjClasses = options["binObjClasses"]
-	cachLimit = options["cachLimit"]
 	datObjClasses = options["datObjClasses"]
 	RTONNoExtensions = options["RTONNoExtensions"]
 	blue_print("Working directory: " + getcwd())

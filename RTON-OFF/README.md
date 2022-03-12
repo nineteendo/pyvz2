@@ -14,10 +14,7 @@
 # Options.json
 key | purpose
 --- | ---
-allowAllJSON | Encode every file ending in JSON
 binObjClasses | Objclasses for files that have the .bin extension
-cachKeyLimit | Cached keys cap (make negative for manual editing)
-cachValueLimit | Cached values cap (make negative for manual editing)
 comma | Spaces between values in JSON (make negative to disable)
 confirmPath | Confirm or change parsed path before conversion
 datObjClasses | Objclasses for files that have the .dat extension
