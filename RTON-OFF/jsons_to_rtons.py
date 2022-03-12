@@ -268,22 +268,15 @@ def parse_data(data, cached_strings, cached_printable_strings):
 
 # Convert file
 def conversion(inp, out, pathout):
-	if isdir(inp):
-		makedirs(out, exist_ok = True)
-		for entry in listdir(inp):
-			input_file = osjoin(inp, entry)
-			if isfile(input_file) or input_file != pathout:
-				conversion(input_file, osjoin(out, entry), pathout)
-	elif isfile(inp) and inp.lower()[-5:] == ".json":
+	if isfile(inp) and inp.lower()[-5:] == ".json":
 		write = out.removesuffix(".json")
 		try:
-			data = load(open(inp, "rb"), object_pairs_hook = encode_object_pairs).data
-		except Exception as e:
-			error_message(type(e).__name__ + " in " + inp + ": " + str(e))
-		else:
-			try:
+			file = open(inp, "rb")
+			if file.read(4) != b"RTON": # Ignore CDN files
+				file.seek(0)
+				data = load(file, object_pairs_hook = encode_object_pairs).data
 				encoded_data = parse_json(data)
-				# No RTON extension
+				# No extension
 				if "" == splitext(write)[1] and not basename(write).lower().startswith(RTONNoExtensions):
 					vals = list(values_from_keys(data, ["objects","objclass"]))
 					if any(value in vals for value in datObjClasses):
@@ -295,8 +288,14 @@ def conversion(inp, out, pathout):
 				
 				open(write, "wb").write(encoded_data)
 				print("wrote " + relpath(write, pathout))
-			except Exception as e:
-				error_message(type(e).__name__ + " in " + inp + ": " + str(e))
+		except Exception as e:
+			error_message(type(e).__name__ + " in " + inp + ": " + str(e))
+	elif isdir(inp):
+		makedirs(out, exist_ok = True)
+		for entry in listdir(inp):
+			input_file = osjoin(inp, entry)
+			if isfile(input_file) or input_file != pathout:
+				conversion(input_file, osjoin(out, entry), pathout)
 
 # Object to list of tuples
 def encode_object_pairs(pairs):

@@ -28,6 +28,7 @@ options = {
 	"RTONExtensions": (
 		".bin",
 		".dat",
+		".json",
 		".rton",
 		".section"
 	),
@@ -405,8 +406,10 @@ mappings = {
 
 # Recursive file convert function
 def conversion(inp, out, pathout):
-	if isfile(inp) and (inp.lower().endswith(RTONExtensions) or basename(inp).lower().startswith(RTONNoExtensions)):	
-		if shortNames:
+	check = inp.lower()
+	if isfile(inp) and (check.endswith(RTONExtensions) or basename(check).startswith(RTONNoExtensions)):
+		noCDN = check[-5:] != ".json"
+		if shortNames and noCDN:
 			out = splitext(out)[0]
 			 
 		jfn = out + ".json"
@@ -416,7 +419,7 @@ def conversion(inp, out, pathout):
 				data = root_object(file, current_indent)
 				open(jfn, "w", encoding = "utf-8").write(data)
 				print("wrote " + relpath(jfn, pathout))
-			else:
+			elif noCDN:
 				warning_message("No RTON " + inp)
 		except Exception as e:
 			error_message(type(e).__name__ + " in " + inp + " pos " + str(file.tell() -1) + ": " + str(e))

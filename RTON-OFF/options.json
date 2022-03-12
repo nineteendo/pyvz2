@@ -20,6 +20,7 @@
 	"RTONExtensions": [
 		".bin",
 		".dat",
+		".json",
 		".rton",
 		".section"
 	],
