@@ -12,7 +12,7 @@
 		".rsb.smf",
 		".obb"
 	],
-	"rsbUnpackLevel": 5,
+	"rsbUnpackLevel": 4,
 	"rsgpEndswith": [],
 	"rsgpEndswithIgnore": true,
 	"rsgpStartswith": [
