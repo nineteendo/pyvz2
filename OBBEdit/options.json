@@ -1,11 +1,9 @@
 {
+	
 	"confirmPath": true,
 	"DEBUG_MODE": true,
-	"endswith": [
-		".rton"
-	],
-	"endswithIgnore": false,
 	"enteredPath": false,
+
 	"rsbExtensions": [
 		".1bsr",
 		".rsb1",
@@ -15,10 +13,6 @@
 		".obb"
 	],
 	"rsbUnpackLevel": 4,
-	"rsgpExtensions": [
-		".pgsr",
-		".rsgp"
-	],
 	"rsgpEndswith": [],
 	"rsgpEndswithIgnore": true,
 	"rsgpStartswith": [
@@ -26,9 +20,40 @@
 		"worldpackages_"
 	],
 	"rsgpStartswithIgnore": false,
+
+	"endswith": [
+		".rton"
+	],
+	"endswithIgnore": false,
+	"rsgpExtensions": [
+		".pgsr",
+		".rsgp"
+	],
 	"rsgpUnpackLevel": 2,
 	"startswith": [
 		"packages/"
 	],
-	"startswithIgnore": false
+	"startswithIgnore": false,
+
+	"comma": 0,
+	"doublepoint": 1,
+	"encodedUnpackLevel": 4,
+	"ensureAscii": false,
+	"indent": -1,
+	"repairFiles": false,
+	"RTONExtensions": [
+		".bin",
+		".dat",
+		".json",
+		".rton",
+		".section"
+	],
+	"RTONNoExtensions": [
+		"draper_",
+		"local_profiles",
+		"loot",
+		"_saveheader_rton"
+	],
+	"sortKeys": false,
+	"sortValues": false
 }
