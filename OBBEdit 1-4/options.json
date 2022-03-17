@@ -39,7 +39,7 @@
 	"doublepoint": 1,
 	"encodedUnpackLevel": 4,
 	"ensureAscii": false,
-	"indent": -1,
+	"indent": 4,
 	"repairFiles": false,
 	"RTONExtensions": [
 		".bin",

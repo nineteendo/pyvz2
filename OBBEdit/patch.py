@@ -253,7 +253,7 @@ def rsgp_patch_data(rsgp_NAME, rsgp_OFFSET, file, pathout_data, patch, patchout,
 							error_message(type(e).__name__ + " while patching " + file_name + ": " + str(e))
 					elif NAME_CHECK[-5:] == ".rton":
 						try:
-							file_name = osjoin(patch, DECODED_NAME[:-5] + ".json")
+							file_name = osjoin(patch, DECODED_NAME[:-5] + ".JSON")
 							source = load(open(file_name, "rb"), object_pairs_hook = encode_object_pairs).data
 							patch_data = parse_json(source)
 							FILE_INFO = FILE_DICT[DECODED_NAME]["FILE_INFO"]
@@ -351,15 +351,13 @@ def file_to_folder(inp, out, patch, level, extensions, pathout, patchout):
 						try:
 							if level < 3:
 								file_path = osjoin(patch, FILE_NAME + ".rsgp")
-								try:
-									patch_data = open(file_path, "rb").read()
-								except Exception:
-									pass
-								else:
-									pathout_data[FILE_OFFSET: FILE_OFFSET + FILE_SIZE] = patch_data + bytes(FILE_SIZE - len(patch_data))
-									print("applied " + relpath(file_path, patchout))
+								patch_data = open(file_path, "rb").read()
+								pathout_data[FILE_OFFSET: FILE_OFFSET + FILE_SIZE] = patch_data + bytes(FILE_SIZE - len(patch_data))
+								print("applied " + relpath(file_path, patchout))
 							else:
 								pathout_data = rsgp_patch_data(FILE_NAME, FILE_OFFSET, file, pathout_data, patch, patchout, level)
+						except FileNotFoundError:
+							pass
 						except Exception as e:
 							error_message(type(e).__name__ + " while patching " + relpath(file_path, patchout) + ".rsgp: " + str(e))
 						file.seek(temp)
@@ -413,7 +411,7 @@ def encode_rtid(string):
 		else:
 			return b"\x83\x03" + encode_unicode(type) + encode_unicode(name)
 	else:
-		return b"\x83\x00"
+		return b"\x84"
 def encode_int(integ):
 # Number
 	if integ == 0:
@@ -492,12 +490,12 @@ def parse_data(data, cached_strings):
 		return (encode_int(data), cached_strings)
 	elif isinstance(data, float):
 		return (encode_float(data), cached_strings)
-	elif data == None:
-		return (b"\x84", cached_strings)
 	elif isinstance(data, list):
 		return parse_array(data, cached_strings)
 	elif isinstance(data, list2):
 		return parse_object(data.data, cached_strings)
+	elif data == None:
+		return (b"\x84", cached_strings)
 	else:
 		raise TypeError(type(data))
 def conversion(inp, out, pathout):
@@ -546,6 +544,8 @@ try:
 					options[key] = newoptions[key]
 				elif isinstance(options[key], tuple) and isinstance(newoptions[key], list):
 					options[key] = tuple([str(i).lower() for i in newoptions[key]])
+				elif key == "indent" and newoptions[key] == None:
+					options[key] = newoptions[key]
 	except Exception as e:
 		error_message(type(e).__name__ + " in options.json: " + str(e))
 	

@@ -240,7 +240,7 @@ def rsgp_extract(rsgp_NAME, rsgp_OFFSET, file, out, pathout, level):
 							print("wrote " + relpath(file_path, pathout))
 						elif NAME_CHECK[-5:] == ".rton":
 							try:
-								jfn = osjoin(out, DECODED_NAME[:-5] + ".json")
+								jfn = osjoin(out, DECODED_NAME[:-5] + ".JSON")
 								makedirs(dirname(jfn), exist_ok = True)
 								source = BytesIO(data[FILE_OFFSET: FILE_OFFSET + FILE_SIZE])
 								source.name = file.name + ": " + DECODED_NAME
@@ -386,7 +386,7 @@ def parse_ref(fp):
 # type 83
 	ch = fp.read(1)
 	if ch == b"\x00":
-		return '"RTID()"'
+		return '"RTID(0)"'
 	elif ch == b"\x02":
 		p1 = parse_utf8_str(fp)
 		i2 = parse_uvarint(fp)
@@ -554,7 +554,7 @@ mappings = {
 	b"\x81": parse_str, # uncached string
 	b"\x82": parse_printable_str, # uncached printable string
 	b"\x83": parse_ref,
-	b"\x84": lambda x: "null" # null reference
+	b"\x84": lambda x: '"RTID(0)"' # zero reference
 }
 def conversion(inp, out, pathout):
 # Recursive file convert function
@@ -599,6 +599,8 @@ try:
 					options[key] = newoptions[key]
 				elif isinstance(options[key], tuple) and isinstance(newoptions[key], list):
 					options[key] = tuple([str(i).lower() for i in newoptions[key]])
+				elif key == "indent" and newoptions[key] == None:
+					options[key] = newoptions[key]
 	except Exception as e:
 		error_message(type(e).__name__ + " in options.json: " + str(e))
 	
@@ -638,10 +640,10 @@ try:
 	if options["indent"] == None:
 		indent = current_indent = ""
 	elif options["indent"] < 0:
-		current_indent = "\n"
+		current_indent = "\r\n"
 		indent = "\t"
 	else:
-		current_indent = "\n"
+		current_indent = "\r\n"
 		indent = " " * options["indent"]
 	ensureAscii = options["ensureAscii"]
 	repairFiles = options["repairFiles"]

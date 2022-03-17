@@ -11,9 +11,8 @@ key | purpose
 --- | ---
 confirmPath | Confirm or change parsed path before conversion
 DEBUG_MODE | Show full error traceback
-endswith | Only unpack paths ending with these strings
-endswithIgnore | Ignore the end of the path
 enteredPath | Don't use hybrid paths that can be escaped
+|
 rsbExtensions | Only unpack from OBBs with these extensions
 rsbUnpackLevel | Level to unpack OBBs to (make negative for manual input)
 rsgpExtensions | Only unpack from RSGPs with these extensions
@@ -21,9 +20,22 @@ rsgpEndswith | Only unpack RSGPs ending with these strings
 rsgpEndswithIgnore | Ignore the end of RSGPs
 rsgpStartswith | Only unpack RSGPs starting with these strings
 rsgpStartswithIgnore | Ignore the start of RSGPs
+|
+endswith | Only unpack paths ending with these strings
+endswithIgnore | Ignore the end of the path
 rsgpUnpackLevel | Level to unpack RSGPs to (make negative for manual input)
 startswith | Only unpack paths starting with these strings
 startswithIgnore | Ignore the start of the path
+|
+comma | Spaces between values in JSON (make negative to disable)
+doublepoint | Spaces between key & value in JSON (make negative to disable)
+indent | Spaces as indent, negative for tab, *null:* no indent
+RTONExtensions | Extensions of RTON files
+RTONNoExtensions | Start of RTON files with no extension
+repairFiles | Repair RTON files that end abruptly
+shortNames | Remove RTON extensions for JSON files
+sortKeys | Sort keys in object
+sortValues | Sort values in array
 
 # Data Formats
 Please help me finishing this documentation and correcting errors.
