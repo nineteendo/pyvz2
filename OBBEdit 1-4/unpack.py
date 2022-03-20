@@ -246,7 +246,7 @@ def rsgp_extract(rsgp_NAME, rsgp_OFFSET, file, out, pathout, level):
 								source.name = file.name + ": " + DECODED_NAME
 								if source.read(4) == b"RTON":
 									json_data = root_object(source, current_indent)
-									open(jfn, "w", encoding = "utf-8").write(json_data)
+									open(jfn, "wb").write(json_data)
 									print("wrote " + relpath(jfn, pathout))
 								else:
 									warning_message("No RTON " + source.name)
@@ -306,31 +306,31 @@ def file_to_folder(inp, out, level, extensions, pathout):
 # RTON Decode functions
 def parse_int8(fp):
 # type 08
-	return repr(unpack("b", fp.read(1))[0])
+	return repr(unpack("b", fp.read(1))[0]).encode()
 def parse_uint8(fp):
 # type 0a
-	return repr(fp.read(1)[0])
+	return repr(fp.read(1)[0]).encode()
 def parse_int16(fp):
 # type 10
-	return repr(unpack("<h", fp.read(2))[0])
+	return repr(unpack("<h", fp.read(2))[0]).encode()
 def parse_uint16(fp):
 # type 12
-	return repr(unpack("<H", fp.read(2))[0])
+	return repr(unpack("<H", fp.read(2))[0]).encode()
 def parse_int32(fp):
 # type 20
-	return repr(unpack("<i", fp.read(4))[0])
+	return repr(unpack("<i", fp.read(4))[0]).encode()
 def parse_float(fp):
 # type 22
-	return repr(unpack("<f", fp.read(4))[0]).replace("inf", "Infinity").replace("nan", "NaN")
+	return repr(unpack("<f", fp.read(4))[0]).replace("inf", "Infinity").replace("nan", "NaN").encode()
 def parse_uvarint(fp):
 # type 24, 28, 44 and 48
-	return repr(parse_number(fp))
+	return repr(parse_number(fp)).encode()
 def parse_varint(fp):
 # type 25, 29, 45 and 49
 	num = parse_number(fp)
 	if num % 2:
 		num = -num -1
-	return repr(num // 2)
+	return repr(num // 2).encode()
 def parse_number(fp):
 	num = fp.read(1)[0]
 	result = num & 0x7f
@@ -342,26 +342,26 @@ def parse_number(fp):
 	return result
 def parse_uint32(fp):
 # type 26
-	return repr(unpack("<I", fp.read(4))[0])
+	return repr(unpack("<I", fp.read(4))[0]).encode()
 def parse_int64(fp):
 # type 40
-	return repr(unpack("<q", fp.read(8))[0])
+	return repr(unpack("<q", fp.read(8))[0]).encode()
 def parse_double(fp):
 # type 42
-	return repr(unpack("<d", fp.read(8))[0]).replace("inf", "Infinity").replace("nan", "NaN")
+	return repr(unpack("<d", fp.read(8))[0]).replace("inf", "Infinity").replace("nan", "NaN").encode()
 def parse_uint64(fp):
 # type 46
-	return repr(unpack("<Q", fp.read(8))[0])
+	return repr(unpack("<Q", fp.read(8))[0]).encode()
 def parse_str(fp):
 # types 81, 90
 	byte = fp.read(parse_number(fp))
 	try:
-		return dumps(byte.decode('utf-8'), ensure_ascii = ensureAscii)
+		return dumps(byte.decode('utf-8'), ensure_ascii = ensureAscii).encode()
 	except Exception:
-		return dumps(byte.decode('latin-1'), ensure_ascii = ensureAscii)
+		return dumps(byte.decode('latin-1'), ensure_ascii = ensureAscii).encode()
 def parse_printable_str(fp):
 # type 82, 92
-	return dumps(parse_utf8_str(fp), ensure_ascii = ensureAscii)
+	return dumps(parse_utf8_str(fp), ensure_ascii = ensureAscii).encode()
 def parse_utf8_str(fp):
 	i1 = parse_number(fp) # Character length
 	string = fp.read(parse_number(fp)).decode()
@@ -386,24 +386,24 @@ def parse_ref(fp):
 # type 83
 	ch = fp.read(1)
 	if ch == b"\x00":
-		return '"RTID(0)"'
+		return b'"RTID(0)"'
 	elif ch == b"\x02":
 		p1 = parse_utf8_str(fp)
 		i2 = parse_uvarint(fp)
 		i1 = parse_uvarint(fp)
-		return dumps("RTID(" + i1 + "." + i2 + "." + fp.read(4)[::-1].hex() + "@" + p1 + ")", ensure_ascii = ensureAscii)
+		return dumps("RTID(" + i1 + "." + i2 + "." + fp.read(4)[::-1].hex() + "@" + p1 + ")", ensure_ascii = ensureAscii).encode()
 	elif ch == b"\x03":
 		p1 = parse_utf8_str(fp)
-		return dumps("RTID(" + parse_utf8_str(fp) + "@" + p1 + ")", ensure_ascii = ensureAscii)
+		return dumps("RTID(" + parse_utf8_str(fp) + "@" + p1 + ")", ensure_ascii = ensureAscii).encode()
 	else:
 		raise TypeError("unexpected subtype for type 83, found: " + ch.hex())
 def root_object(fp, currrent_indent):
 # root object
 	VER = unpack("<I", fp.read(4))[0]
-	string = "{"
+	string = b"{"
 	new_indent = currrent_indent + indent
 	items = []
-	end = "}"
+	end = b"}"
 	try:
 		key, chached_strings, chached_printable_strings = parse(fp, new_indent, [], [])
 		value, chached_strings, chached_printable_strings = parse(fp, new_indent, chached_strings, chached_printable_strings)
@@ -432,10 +432,10 @@ def root_object(fp, currrent_indent):
 	return string + (comma + new_indent).join(items) + end
 def parse_object(fp, currrent_indent, chached_strings, chached_printable_strings):
 # type 85
-	string = "{"
+	string = b"{"
 	new_indent = currrent_indent + indent
 	items = []
-	end = "}"
+	end = b"}"
 	try:
 		key, chached_strings, chached_printable_strings = parse(fp, new_indent, chached_strings, chached_printable_strings)
 		value, chached_strings, chached_printable_strings = parse(fp, new_indent, chached_strings, chached_printable_strings)
@@ -472,10 +472,10 @@ def parse_list(fp, currrent_indent, chached_strings, chached_printable_strings):
 			raise EOFError
 	elif code != b"\xfd":
 		raise TypeError("List starts with " + code.hex())
-	string = "["
+	string = b"["
 	new_indent = currrent_indent + indent
 	items = []
-	end = "]"
+	end = b"]"
 	i1 = parse_number(fp)
 	try:
 		value, chached_strings, chached_printable_strings = parse(fp, new_indent, chached_strings, chached_printable_strings)
@@ -521,40 +521,40 @@ cached_codes = [
 	b"\x93"
 ]
 mappings = {	
-	b"\x00": lambda x: "false",
-	b"\x01": lambda x: "true",
+	b"\x00": lambda x: b"false",
+	b"\x01": lambda x: b"true",
 	b"\x08": parse_int8,  
-	b"\x09": lambda x: "0", # int8_zero
+	b"\x09": lambda x: b"0", # int8_zero
 	b"\x0a": parse_uint8,
-	b"\x0b": lambda x: "0", # uint8_zero
+	b"\x0b": lambda x: b"0", # uint8_zero
 	b"\x10": parse_int16,
-	b"\x11": lambda x: "0",  # int16_zero
+	b"\x11": lambda x: b"0",  # int16_zero
 	b"\x12": parse_uint16,
-	b"\x13": lambda x: "0", # uint16_zero
+	b"\x13": lambda x: b"0", # uint16_zero
 	b"\x20": parse_int32,
-	b"\x21": lambda x: "0", # int32_zero
+	b"\x21": lambda x: b"0", # int32_zero
 	b"\x22": parse_float,
-	b"\x23": lambda x: "0.0", # float_zero
+	b"\x23": lambda x: b"0.0", # float_zero
 	b"\x24": parse_uvarint, # int32_uvarint
 	b"\x25": parse_varint, # int32_varint
 	b"\x26": parse_uint32,
-	b"\x27": lambda x: "0", #uint_32_zero
+	b"\x27": lambda x: b"0", #uint_32_zero
 	b"\x28": parse_uvarint, # uint32_uvarint
 	b"\x29": parse_varint, # uint32_varint?
 	b"\x40": parse_int64,
-	b"\x41": lambda x: "0", #int64_zero
+	b"\x41": lambda x: b"0", #int64_zero
 	b"\x42": parse_double,
-	b"\x43": lambda x: "0.0", # double_zero
+	b"\x43": lambda x: b"0.0", # double_zero
 	b"\x44": parse_uvarint, # int64_uvarint
 	b"\x45": parse_varint, # int64_varint
 	b"\x46": parse_uint64,
-	b"\x47": lambda x: "0", # uint64_zero
+	b"\x47": lambda x: b"0", # uint64_zero
 	b"\x48": parse_uvarint, # uint64_uvarint
 	b"\x49": parse_varint, # uint64_varint
 	b"\x81": parse_str, # uncached string
 	b"\x82": parse_printable_str, # uncached printable string
 	b"\x83": parse_ref,
-	b"\x84": lambda x: '"RTID(0)"' # zero reference
+	b"\x84": lambda x: b'"RTID(0)"' # zero reference
 }
 def conversion(inp, out, pathout):
 # Recursive file convert function
@@ -567,7 +567,7 @@ def conversion(inp, out, pathout):
 			file = open(inp, "rb")
 			if file.read(4) == b"RTON":
 				data = root_object(file, current_indent)
-				open(jfn, "w", encoding = "utf-8").write(data)
+				open(jfn, "wb").write(data)
 				print("wrote " + relpath(jfn, pathout))
 			elif check[-5:] != ".json":
 				warning_message("No RTON " + inp)
@@ -630,21 +630,21 @@ try:
 		startswith = options["startswith"]
 
 	if options["comma"] > 0:
-		comma = "," + " " * options["comma"]
+		comma = b"," + b" " * options["comma"]
 	else:
-		comma = ","
+		comma = b","
 	if options["doublepoint"] > 0:
-		doublepoint = ":" + " " * options["doublepoint"]
+		doublepoint = b":" + b" " * options["doublepoint"]
 	else:
-		doublepoint = ":"
+		doublepoint = b":"
 	if options["indent"] == None:
-		indent = current_indent = ""
+		indent = current_indent = b""
 	elif options["indent"] < 0:
-		current_indent = "\r\n"
-		indent = "\t"
+		current_indent = b"\r\n"
+		indent = b"\t"
 	else:
-		current_indent = "\r\n"
-		indent = " " * options["indent"]
+		current_indent = b"\r\n"
+		indent = b" " * options["indent"]
 	ensureAscii = options["ensureAscii"]
 	repairFiles = options["repairFiles"]
 	RTONExtensions = options["RTONExtensions"]
