@@ -6,8 +6,9 @@ Python3 scripts for modifying Plants VS Zombies 2:
 - RTON/OFF, a tool to convert rton to json and back
 
 Credits to these people:
-- 1Zulu for starting RTONParser in Python3
 - h3x4n1um for the excellent documentation of RETON
+- 1Zulu for starting RTONParser in Python3
 - Luigi Auriemma for starting 1bsr Pgsr in Quickbms
+- Small Pea for starting RTONCrypto in Python3
 
 PS In case of issues report them here: https://github.com/Nineteendo/PVZ2tools

@@ -136,73 +136,55 @@ def input_level(text, minimum, maximum):
 		warning_message("Defaulting to " + str(minimum))
 		return minimum
 # RSGP Patch functions
-def GET_NAME(file, OFFSET, NAME_DICT):
-# Get cached file name
-	NAME = b""
-	temp = file.tell()
-	for key in list(NAME_DICT.keys()):
-		if NAME_DICT[key] + OFFSET < temp:
-			NAME_DICT.pop(key)
-		else:
-			NAME = key	
-	BYTE = b""
-	while BYTE != b"\x00":
-		NAME += BYTE
-		BYTE = file.read(1)
-		LENGTH = 4 * unpack("<I", file.read(3) + b"\x00")[0]
-		if LENGTH != 0:
-			NAME_DICT[NAME] = LENGTH
-	return (NAME, NAME_DICT)
 def rsgp_patch_data(rsgp_NAME, rsgp_OFFSET, file, pathout_data, patch, patchout, level):
 # Patch RGSP file
 	if file.read(4) == b"pgsr":
 		data = None
 		if level < 4:
-			file_name = osjoin(patch, rsgp_NAME + ".section")
 			try:
-				data = open(file_name, "rb").read()
+				data = open(osjoin(patch, rsgp_NAME + ".section"), "rb").read()
 			except FileNotFoundError:
 				pass
 		else:
-			VER = unpack("<I", file.read(4))[0]
+			rsgp_VERSION = unpack("<I", file.read(4))[0]
 			
 			file.seek(8, 1)
-			TYPE = unpack("<I", file.read(4))[0]
+			rsgp_TYPE = unpack("<I", file.read(4))[0]
 			rsgp_BASE = unpack("<I", file.read(4))[0]
 			
 			data = None
-			OFFSET = unpack("<I", file.read(4))[0]
-			ZSIZE = unpack("<I", file.read(4))[0]
-			SIZE = unpack("<I", file.read(4))[0]
-			if SIZE != 0:
-				file.seek(rsgp_OFFSET + OFFSET)
-				if TYPE == 0: # Encrypted files
+			DATA_OFFSET = unpack("<I", file.read(4))[0]
+			COMPRESSED_SIZE = unpack("<I", file.read(4))[0]
+			UNCOMPRESSED_SIZE = unpack("<I", file.read(4))[0]
+			if UNCOMPRESSED_SIZE != 0:
+				file.seek(rsgp_OFFSET + DATA_OFFSET)
+				if rsgp_TYPE == 0: # Encrypted files
 					# Insert decryption here
-					data = bytearray(file.read(ZSIZE))
-				elif TYPE == 1: # Uncompressed files
-					data = bytearray(file.read(ZSIZE))
-				elif TYPE == 3: # Compressed files
+					data = bytearray(file.read(COMPRESSED_SIZE))
+				elif rsgp_TYPE == 1: # Uncompressed files
+					data = bytearray(file.read(COMPRESSED_SIZE))
+				elif rsgp_TYPE == 3: # Compressed files
 					blue_print("Decompressing ...")
-					data = bytearray(decompress(file.read(ZSIZE)))
+					data = bytearray(decompress(file.read(COMPRESSED_SIZE)))
 				else: # Unknown files
 					raise TypeError(TYPE)
 			else:
 				file.seek(4, 1)
-				OFFSET = unpack("<I", file.read(4))[0]
-				ZSIZE = unpack("<I", file.read(4))[0]
-				SIZE = unpack("<I", file.read(4))[0]
-				if SIZE != 0:
-					if TYPE == 0: # Encrypted files
+				DATA_OFFSET = unpack("<I", file.read(4))[0]
+				COMPRESSED_SIZE = unpack("<I", file.read(4))[0]
+				UNCOMPRESSED_SIZE = unpack("<I", file.read(4))[0]
+				if UNCOMPRESSED_SIZE != 0:
+					if rsgp_TYPE == 0: # Encrypted files
 						# Insert decryption here
-						data = bytearray(file.read(ZSIZE))
-					elif TYPE == 1: # Compressed files
-						file.seek(rsgp_OFFSET + OFFSET)
+						data = bytearray(file.read(COMPRESSED_SIZE))
+					elif rsgp_TYPE == 1: # Compressed files
+						file.seek(rsgp_OFFSET + DATA_OFFSET)
 						blue_print("Decompressing ...")
-						data = bytearray(decompress(file.read(ZSIZE)))
-					elif TYPE == 3: # Compressed files
-						file.seek(rsgp_OFFSET + OFFSET)
+						data = bytearray(decompress(file.read(COMPRESSED_SIZE)))
+					elif rsgp_TYPE == 3: # Compressed files
+						file.seek(rsgp_OFFSET + DATA_OFFSET)
 						blue_print("Decompressing ...")
-						data = bytearray(decompress(file.read(ZSIZE)))
+						data = bytearray(decompress(file.read(COMPRESSED_SIZE)))
 					else: # Unknown files
 						raise TypeError(TYPE)
 			file.seek(rsgp_OFFSET + 72)
@@ -211,22 +193,35 @@ def rsgp_patch_data(rsgp_NAME, rsgp_OFFSET, file, pathout_data, patch, patchout,
 			INFO_LIMIT = INFO_OFFSET + INFO_SIZE
 			
 			file.seek(INFO_OFFSET)
-			TMP = file.tell()
 			DECODED_NAME = None
 			NAME_DICT = {}
 			FILE_DICT = {}
 			while DECODED_NAME != "":
-				FILE_NAME, NAME_DICT = GET_NAME(file, TMP, NAME_DICT)
+				FILE_NAME = b""
+				temp = file.tell()
+				for key in list(NAME_DICT.keys()):
+					if NAME_DICT[key] + INFO_OFFSET < temp:
+						NAME_DICT.pop(key)
+					else:
+						FILE_NAME = key
+				BYTE = b""
+				while BYTE != b"\x00":
+					FILE_NAME += BYTE
+					BYTE = file.read(1)
+					LENGTH = 4 * unpack("<I", file.read(3) + b"\x00")[0]
+					if LENGTH != 0:
+						NAME_DICT[FILE_NAME] = LENGTH
+
 				DECODED_NAME = FILE_NAME.decode().replace("\\", sep)
 				if DECODED_NAME:
-					ENCODED = unpack("<I", file.read(4))[0]
+					PTX = unpack("<I", file.read(4))[0] != 0
 					FILE_OFFSET = unpack("<I", file.read(4))[0]
 					FILE_SIZE = unpack("<I", file.read(4))[0]
 					FILE_DICT[DECODED_NAME] = {
 						"FILE_INFO": file.tell(),
 						"FILE_OFFSET": FILE_OFFSET
 					}
-					if ENCODED != 0:
+					if PTX != 0:
 						file.seek(20, 1)
 				else:
 					FILE_DICT[""] = {
@@ -273,41 +268,41 @@ def rsgp_patch_data(rsgp_NAME, rsgp_OFFSET, file, pathout_data, patch, patchout,
 			TYPE = unpack("<I", file.read(4))[0]
 			rsgp_BASE = unpack("<I", file.read(4))[0]
 			
-			OFFSET = unpack("<I", file.read(4))[0]
-			ZSIZE = unpack("<I", file.read(4))[0]
-			SIZE = unpack("<I", file.read(4))[0]
-			if SIZE != 0:
-				data += bytes(SIZE - len(data))
+			DATA_OFFSET = unpack("<I", file.read(4))[0]
+			COMPRESSED_SIZE = unpack("<I", file.read(4))[0]
+			UNCOMPRESSED_SIZE = unpack("<I", file.read(4))[0]
+			if UNCOMPRESSED_SIZE != 0:
+				data += bytes(UNCOMPRESSED_SIZE - len(data))
 				if TYPE == 0: # Encypted files
 					# Insert encyption here
-					pathout_data[rsgp_OFFSET + OFFSET: rsgp_OFFSET + OFFSET + ZSIZE] = data
+					pathout_data[rsgp_OFFSET + DATA_OFFSET: rsgp_OFFSET + DATA_OFFSET + COMPRESSED_SIZE] = data
 				elif TYPE == 1: # Uncompressed files
-					pathout_data[rsgp_OFFSET + OFFSET: rsgp_OFFSET + OFFSET + ZSIZE] = data
+					pathout_data[rsgp_OFFSET + DATA_OFFSET: rsgp_OFFSET + DATA_OFFSET + COMPRESSED_SIZE] = data
 				elif TYPE == 3: # Compressed files
 					blue_print("Compressing ...")
 					compressed_data = compress(data, 9)
-					pathout_data[rsgp_OFFSET + OFFSET: rsgp_OFFSET + OFFSET + ZSIZE] = compressed_data + bytes(ZSIZE - len(compressed_data))
+					pathout_data[rsgp_OFFSET + DATA_OFFSET: rsgp_OFFSET + DATA_OFFSET + COMPRESSED_SIZE] = compressed_data + bytes(COMPRESSED_SIZE - len(compressed_data))
 				else: # Unknown files
 					raise TypeError(TYPE)
 			else:
 				file.seek(4, 1)
-				OFFSET = unpack("<I", file.read(4))[0]
-				ZSIZE = unpack("<I", file.read(4))[0]
-				SIZE = unpack("<I", file.read(4))[0]
-				if SIZE != 0:
+				DATA_OFFSET = unpack("<I", file.read(4))[0]
+				COMPRESSED_SIZE = unpack("<I", file.read(4))[0]
+				UNCOMPRESSED_SIZE = unpack("<I", file.read(4))[0]
+				if UNCOMPRESSED_SIZE != 0:
 					if TYPE == 0: # Encypted files
 						# Insert encyption here
-						pathout_data[rsgp_OFFSET + OFFSET: rsgp_OFFSET + OFFSET + ZSIZE] = data
+						pathout_data[rsgp_OFFSET + DATA_OFFSET: rsgp_OFFSET + DATA_OFFSET + COMPRESSED_SIZE] = data
 					elif TYPE == 1: # Compressed files
-						data += bytes(SIZE - len(data))
+						data += bytes(UNCOMPRESSED_SIZE - len(data))
 						blue_print("Compressing ...")
 						compressed_data = compress(data, 9)
-						pathout_data[rsgp_OFFSET + OFFSET: rsgp_OFFSET + OFFSET + ZSIZE] = compressed_data + bytes(ZSIZE - len(compressed_data))
+						pathout_data[rsgp_OFFSET + DATA_OFFSET: rsgp_OFFSET + DATA_OFFSET + COMPRESSED_SIZE] = compressed_data + bytes(COMPRESSED_SIZE - len(compressed_data))
 					elif TYPE == 3: # Compressed files
-						data += bytes(SIZE - len(data))
+						data += bytes(UNCOMPRESSED_SIZE - len(data))
 						blue_print("Compressing ...")
 						compressed_data = compress(data, 9)
-						pathout_data[rsgp_OFFSET + OFFSET: rsgp_OFFSET + OFFSET + ZSIZE] = compressed_data + bytes(ZSIZE - len(compressed_data))
+						pathout_data[rsgp_OFFSET + DATA_OFFSET: rsgp_OFFSET + DATA_OFFSET + COMPRESSED_SIZE] = compressed_data + bytes(COMPRESSED_SIZE - len(compressed_data))
 					else: # Unknown files
 						raise TypeError(TYPE)
 			if level < 3:
@@ -332,8 +327,8 @@ def file_to_folder(inp, out, patch, level, extensions, pathout, patchout):
 			blue_print("Preparing ...")
 			pathout_data = bytearray(file.read())
 			file.seek(0)
-			SIGN = file.read(4)
-			if SIGN == b"1bsr":
+			HEADER = file.read(4)
+			if HEADER == b"1bsr":
 				file.seek(40)
 				FILES = unpack("<I", file.read(4))[0]
 				OFFSET = unpack("<I", file.read(4))[0]
@@ -363,7 +358,7 @@ def file_to_folder(inp, out, patch, level, extensions, pathout, patchout):
 						file.seek(temp)
 				open(out, "wb").write(pathout_data)
 				print("patched " + relpath(out, pathout))
-			elif SIGN == b"pgsr":
+			elif HEADER == b"pgsr":
 				file.seek(0)
 				try:
 					pathout_data = rsgp_patch_data("data", 0, file, pathout_data, patch, patchout, level)

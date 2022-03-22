@@ -7,9 +7,6 @@ from struct import unpack, error
 from zlib import decompress
 from os import makedirs, listdir, system, getcwd, sep
 from os.path import isdir, isfile, realpath, join as osjoin, dirname, relpath, basename, splitext
-#from PIL import Image
-#COLORS = "RGBA"
-#Alt for iPad: COLORS = "BGRA"
 
 options = {
 # Default options
@@ -142,67 +139,49 @@ def input_level(text, minimum, maximum):
 		warning_message("Defaulting to " + str(minimum))
 		return minimum
 # RSGP Unpack functions
-def GET_NAME(file, OFFSET, NAME_DICT):
-# Get cached file name
-	NAME = b""
-	temp = file.tell()
-	for key in list(NAME_DICT.keys()):
-		if NAME_DICT[key] + OFFSET < temp:
-			NAME_DICT.pop(key)
-		else:
-			NAME = key
-	BYTE = b""
-	while BYTE != b"\x00":
-		NAME += BYTE
-		BYTE = file.read(1)
-		LENGTH = 4 * unpack("<I", file.read(3) + b"\x00")[0]
-		if LENGTH != 0:
-			NAME_DICT[NAME] = LENGTH
-	return (NAME, NAME_DICT)
 def rsgp_extract(rsgp_NAME, rsgp_OFFSET, file, out, pathout, level):
 # Extract data from RGSP file
 	if file.read(4) == b"pgsr":
 		try:
-			VER = unpack("<I", file.read(4))[0]
+			rsgp_VERSION = unpack("<I", file.read(4))[0]
 			
 			file.seek(8, 1)
-			TYPE = unpack("<I", file.read(4))[0]
+			rsgp_TYPE = unpack("<I", file.read(4))[0]
 			rsgp_BASE = unpack("<I", file.read(4))[0]
 
-			data = None
-			OFFSET = unpack("<I", file.read(4))[0]
-			ZSIZE = unpack("<I", file.read(4))[0]
-			SIZE = unpack("<I", file.read(4))[0]
-			if SIZE != 0:
-				file.seek(rsgp_OFFSET + OFFSET)
-				if TYPE == 0: # Encypted files
+			DATA_OFFSET = unpack("<I", file.read(4))[0]
+			COMPRESSED_SIZE = unpack("<I", file.read(4))[0]
+			UNCOMPRESSED_SIZE = unpack("<I", file.read(4))[0]
+			if UNCOMPRESSED_SIZE != 0:
+				file.seek(rsgp_OFFSET + DATA_OFFSET)
+				if rsgp_TYPE == 0: # Encypted files
 					# Insert encyption here
-					data = file.read(ZSIZE)
-				elif TYPE == 1: # Uncompressed files
-					data = file.read(ZSIZE)
-				elif TYPE == 3: # Compressed files
+					data = file.read(COMPRESSED_SIZE)
+				elif rsgp_TYPE == 1: # Uncompressed files
+					data = file.read(COMPRESSED_SIZE)
+				elif rsgp_TYPE == 3: # Compressed files
 					blue_print("Decompressing ...")
-					data = decompress(file.read(ZSIZE))
+					data = decompress(file.read(COMPRESSED_SIZE))
 				else: # Unknown files
-					raise TypeError(TYPE)
+					raise TypeError(rsgp_TYPE)
 			else:
 				file.seek(4, 1)
-				OFFSET = unpack("<I", file.read(4))[0]
-				ZSIZE = unpack("<I", file.read(4))[0]
-				SIZE = unpack("<I", file.read(4))[0]
-				if SIZE != 0:
-					file.seek(rsgp_OFFSET + OFFSET)
-					if TYPE == 0: # Encypted files
+				DATA_OFFSET = unpack("<I", file.read(4))[0]
+				COMPRESSED_SIZE = unpack("<I", file.read(4))[0]
+				UNCOMPRESSED_SIZE = unpack("<I", file.read(4))[0]
+				if UNCOMPRESSED_SIZE != 0:
+					file.seek(rsgp_OFFSET + DATA_OFFSET)
+					if rsgp_TYPE == 0: # Encypted files
 						# Insert encyption here
-						data = file.read(ZSIZE)
-					elif TYPE == 1: # Compressed files
+						data = file.read(COMPRESSED_SIZE)
+					elif rsgp_TYPE == 1: # Compressed files
 						blue_print("Decompressing ...")
-						data = decompress(file.read(ZSIZE))
-					elif TYPE == 3: # Compressed files
+						data = decompress(file.read(COMPRESSED_SIZE))
+					elif rsgp_TYPE == 3: # Compressed files
 						blue_print("Decompressing ...")
-						data = decompress(file.read(ZSIZE))
+						data = decompress(file.read(COMPRESSED_SIZE))
 					else: # Unknown files
-						raise TypeError(TYPE)
+						raise TypeError(rsgp_TYPE)
 			if level < 4:
 				file_path = osjoin(out, rsgp_NAME + ".section")
 				makedirs(out, exist_ok = True)
@@ -215,17 +194,30 @@ def rsgp_extract(rsgp_NAME, rsgp_OFFSET, file, out, pathout, level):
 				INFO_LIMIT = INFO_OFFSET + INFO_SIZE
 				
 				file.seek(INFO_OFFSET)
-				TMP = file.tell()
 				DECODED_NAME = None
 				NAME_DICT = {}
 				while DECODED_NAME != "":
-					NAME, NAME_DICT = GET_NAME(file, TMP, NAME_DICT)
-					DECODED_NAME = NAME.decode().replace("\\", sep)
+					FILE_NAME = b""
+					temp = file.tell()
+					for key in list(NAME_DICT.keys()):
+						if NAME_DICT[key] + INFO_OFFSET < temp:
+							NAME_DICT.pop(key)
+						else:
+							FILE_NAME = key
+					BYTE = b""
+					while BYTE != b"\x00":
+						FILE_NAME += BYTE
+						BYTE = file.read(1)
+						LENGTH = 4 * unpack("<I", file.read(3) + b"\x00")[0]
+						if LENGTH != 0:
+							NAME_DICT[FILE_NAME] = LENGTH
+					
+					DECODED_NAME = FILE_NAME.decode().replace("\\", sep)
 					NAME_CHECK = DECODED_NAME.replace("\\", "/").lower()
 					PTX = unpack("<I", file.read(4))[0]
 					FILE_OFFSET = unpack("<I", file.read(4))[0]
 					FILE_SIZE = unpack("<I", file.read(4))[0]
-					if PTX:
+					if PTX != 0:
 						file.seek(20, 1)
 						#A = unpack("<I", file.read(4))[0]
 						#B = unpack("<I", file.read(4))[0]
@@ -275,12 +267,18 @@ def file_to_folder(inp, out, level, extensions, pathout):
 	elif isfile(inp) and inp.lower().endswith(extensions):
 		try:
 			file = open(inp, "rb")
-			SIGN = file.read(4)
-			if SIGN == b"1bsr":
+			HEADER = file.read(4)
+			if HEADER == b"\xD4\xFE\xAD\xDE":
+				UNCOMPRESSED_SIZE = unpack("<I", file.read(4))[0]
+				blue_print("Decompressing ...")
+				file = BytesIO(decompress(file.read()))
+				file.name = inp
+				HEADER = file.read(4)
+			if HEADER == b"1bsr":
 				file.seek(40)
 				FILES = unpack("<I", file.read(4))[0]
-				OFFSET = unpack("<I", file.read(4))[0]
-				file.seek(OFFSET)
+				DATA_OFFSET = unpack("<I", file.read(4))[0]
+				file.seek(DATA_OFFSET)
 				for i in range(0, FILES):
 					FILE_NAME = file.read(128).strip(b"\x00").decode()
 					FILE_CHECK = FILE_NAME.lower()
@@ -298,7 +296,7 @@ def file_to_folder(inp, out, level, extensions, pathout):
 						else:
 							rsgp_extract(FILE_NAME, FILE_OFFSET, file, out, pathout, level)
 						file.seek(temp)
-			elif SIGN == b"pgsr":
+			elif HEADER == b"pgsr":
 				file.seek(0)
 				rsgp_extract("data", 0, file, out, pathout, level)
 		except Exception as e:
