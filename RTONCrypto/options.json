@@ -1,7 +1,3 @@
 {
-	"confirmPath": true,
-	"DEBUG_MODE": true,
-	"enteredPath": false,
-
 	"encryption_key": "00000000000000000000000000000000"
 }

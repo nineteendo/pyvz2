@@ -4,17 +4,11 @@ from os import listdir, makedirs, system
 from os.path import dirname, isdir, isfile, join as osjoin, realpath, relpath
 from traceback import format_exc
 options = {
-	"confirmPath": True,
-	"DEBUG_MODE": True,
-	"enteredPath": False,
-
 	"encryption_key": "00000000000000000000000000000000"
 }
 def error_message(string):
 # Print & log error
-	if options["DEBUG_MODE"]:
-		string += "\n" + format_exc()
-	
+	string += "\n" + format_exc()
 	fail.write(string + "\n")
 	fail.flush()
 	print("\033[91m" + string + "\033[0m")
@@ -37,39 +31,39 @@ def path_input(text):
 	string = ""
 	newstring = bold_input(text)
 	while newstring or string == "":
-		if options["enteredPath"]:
-			string = newstring
-		else:
-			string = ""
-			quoted = 0
-			escaped = False
-			tempstring = ""
-			for char in newstring:
-				if escaped:
-					if quoted != 1 and char == "'" or quoted != 2 and char == '"' or quoted == 0 and char in "\\ ":
-						string += tempstring + char
-					else:
-						string += tempstring + "\\" + char
-					
-					tempstring = ""
-					escaped = False
-				elif char == "\\":
-					escaped = True
-				elif quoted != 2 and char == "'":
-					quoted = 1 - quoted
-				elif quoted != 1 and char == '"':
-					quoted = 2 - quoted
-				elif quoted != 0 or char != " ":
+		string = ""
+		quoted = 0
+		escaped = False
+		tempstring = ""
+		confirm = False
+		for char in newstring:
+			if escaped:
+				if quoted != 1 and char == "'" or quoted != 2 and char == '"' or quoted == 0 and char in "\\ ":
 					string += tempstring + char
-					tempstring = ""
+					confirm = True
 				else:
-					tempstring += " "
+					string += tempstring + "\\" + char
+				
+				tempstring = ""
+				escaped = False
+			elif char == "\\":
+				escaped = True
+			elif quoted != 2 and char == "'":
+				quoted = 1 - quoted
+			elif quoted != 1 and char == '"':
+				quoted = 2 - quoted
+			elif quoted != 0 or char != " ":
+				string += tempstring + char
+				tempstring = ""
+			else:
+				tempstring += " "
+		
 		if string == "":
 			newstring = bold_input("\033[91mEnter a path")
 		else:
 			newstring = ""
 			string = realpath(string)
-			if options["confirmPath"]:
+			if confirm:
 				newstring = bold_input("Confirm \033[100m" + string)
 	return string
 
@@ -377,16 +371,13 @@ class RijndaelCBC:
 
 def conversion(inp, out, pathout):
 # Recursive file convert function
-	if isfile(inp) and inp.lower()[-8:] != ".decrypt":
+	if isfile(inp) and inp.lower()[-5:] == ".rton":
 		try:
-			out += ".decrypt"
 			file=open(inp,"rb")
-			# skip magic value
-			file.seek(2,0)
-			cipher = rijndael_cbc.decrypt(file.read())
+			if file.read(2) == b"\x10\x00":
+				open(out,"wb").write(rijndael_cbc.decrypt(file.read()))
+				print("wrote " + relpath(out, pathout))
 			file.close()
-			open(out,"wb").write(cipher)
-			print("wrote " + relpath(out, pathout))
 		except Exception as e:
 			error_message(type(e).__name__ + " in " + inp + ": " + str(e))
 	elif isdir(inp):
@@ -406,7 +397,7 @@ try:
 	if sys.version_info[0] < 3:
 		raise RuntimeError("Must be using Python 3")
 	
-	print("\033[95m\033[1mRTONDecryptor v1.1.2\n(C) 2022 by Nineteendo & SmallPea\033[0m\n")
+	print("\033[95m\033[1mRTONDecryptor v1.1.3\n(C) 2022 by Nineteendo & SmallPea\033[0m\n")
 	try:
 		newoptions = load(open(osjoin(application_path, "options.json"), "rb"))
 		for key in options:

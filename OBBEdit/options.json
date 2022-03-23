@@ -1,9 +1,4 @@
 {
-	
-	"confirmPath": true,
-	"DEBUG_MODE": true,
-	"enteredPath": false,
-
 	"rsbExtensions": [
 		".1bsr",
 		".rsb1",
@@ -21,6 +16,7 @@
 	],
 	"rsgpStartswithIgnore": false,
 
+	"encryption_key": "00000000000000000000000000000000",
 	"endswith": [
 		".rton"
 	],
