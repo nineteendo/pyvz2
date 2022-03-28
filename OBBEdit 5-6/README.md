@@ -9,30 +9,35 @@
 # options.json
 key | purpose
 --- | ---
-confirmPath | Confirm or change parsed path before conversion
-DEBUG_MODE | Show full error traceback
-enteredPath | Don't use hybrid paths that can be escaped
-|
-rsbExtensions | Only unpack from OBBs with these extensions
-rsbUnpackLevel | Level to unpack OBBs to (make negative for manual input)
-rsgpExtensions | Only unpack from RSGPs with these extensions
-rsgpEndswith | Only unpack RSGPs ending with these strings
-rsgpEndswithIgnore | Ignore the end of RSGPs
-rsgpStartswith | Only unpack RSGPs starting with these strings
-rsgpStartswithIgnore | Ignore the start of RSGPs
-|
-endswith | Only unpack paths ending with these strings
-endswithIgnore | Ignore the end of the path
-rsgpUnpackLevel | Level to unpack RSGPs to (make negative for manual input)
-startswith | Only unpack paths starting with these strings
-startswithIgnore | Ignore the start of the path
-|
+smfExtensions | Only unpack SMFs with these extensions
+smfUnpackLevel | Level to unpack SMFs to (make negative for manual input)
+ | 
+rsbExtensions | Only unpack RSBs/OBBs/SMFs with these extensions
+rsbUnpackLevel | Level to unpack RSBs/OBBs/SMFs to (make negative for manual input)
+rsgpEndsWith | Only unpack RSGPs ending with these strings
+rsgpEndsWithIgnore | Ignore the end of RSGPs
+rsgpStartsWith | Only unpack RSGPs starting with these strings
+rsgpStartsWithIgnore | Ignore the start of RSGPs
+ | 
+endsWith | Only unpack paths ending with these strings
+endsWithIgnore | Ignore the end of the path
+rsgpExtensions | Only unpack RSGPs/RSBs/OBBs/SMFs with these extensions
+rsgpUnpackLevel | Level to unpack RSGPs/RSBs/OBBs/SMFs to (make negative for manual input)
+startsWith | Only unpack paths starting with these strings
+startsWithIgnore | Ignore the start of the path
+ | 
+encryptedExtensions | Only encrypt ENCRYPTED with these extensions
+encryptedUnpackLevel | Level to unpack ENCRYPTED to (make negative for manual input)
+encryptionKey | Key used for encrypting, the default is not right, search it if you want to decrypt
+ | 
 comma | Spaces between values in JSON (make negative to disable)
-doublepoint | Spaces between key & value in JSON (make negative to disable)
+doublePoint | Spaces between key & value in JSON (make negative to disable)
+encodedUnpackLevel | Level to unpack ENCODED to (make negative for manual input)
+ensureAscii | escape non-ASCII characters with \uXXXX sequences
 indent | Spaces as indent, negative for tab, *null:* no indent
+repairFiles | Repair RTON files that end abruptly
 RTONExtensions | Extensions of RTON files
 RTONNoExtensions | Start of RTON files with no extension
-repairFiles | Repair RTON files that end abruptly
 shortNames | Remove RTON extensions for JSON files
 sortKeys | Sort keys in object
 sortValues | Sort values in array

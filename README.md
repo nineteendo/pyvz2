@@ -1,8 +1,10 @@
 # Python VS. Zombies 2 (PyVZ2)
 Python3 scripts for modifying Plants VS Zombies 2:
 - LICENCE, this tool is licenced under GPL-3.0, for more information read it.
-- OBBEdit, a tool to unpack and edit OBBs and RSGPs
-- RTONCrypto, a tool to encrypt and decrypt RTONs
+- OBBEdit, a tool to unpack and decode OBBs and RSGPs
+- OBBEdit 3-6, a tool to unpack OBBs and RSGPs
+- OBBEdit 5-6, a tool to decrypt RTONs
+- OBBEdit 6-7, a tool to decode RTONs
 - README.md, this file
 
 Credits to these people:

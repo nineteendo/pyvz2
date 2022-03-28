@@ -35,7 +35,7 @@
 		".pgsr",
 		".rsgp"
 	],
-	"rsgpUnpackLevel": 7,
+	"rsgpUnpackLevel": 3,
 	"startsWith": [
 		"packages/"
 	],
@@ -44,7 +44,7 @@
 	"encryptedExtensions": [
 		".rton"
 	],
-	"encryptedUnpackLevel": 5,
+	"encryptedUnpackLevel": 6,
 	"encryptionKey": "00000000000000000000000000000000",
 
 	"comma": 0,

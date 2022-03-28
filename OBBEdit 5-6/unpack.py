@@ -10,6 +10,11 @@ from os.path import isdir, isfile, realpath, join as osjoin, dirname, relpath, b
 
 options = {
 # Default options
+	# SMF options
+	"smfExtensions": (
+		".rsb.smf",
+	),
+	"smfUnpackLevel": 1,
 	# RSB options
 	"rsbExtensions": (
 		".1bsr",
@@ -19,33 +24,44 @@ options = {
 		".rsb.smf",
 		".obb"
 	),
-	"rsbUnpackLevel": 4,
-	"rsgpEndswith": (),
-	"rsgpEndswithIgnore": True,
-	"rsgpStartswith": (
+	"rsbUnpackLevel": 2,
+	"rsgpendsWith": (),
+	"rsgpendsWithIgnore": True,
+	"rsgpstartsWith": (
 		"packages",
 		"worldpackages_"
 	),
-	"rsgpStartswithIgnore": False,
+	"rsgpstartsWithIgnore": False,
 	# RSGP options
-	"encryption_key": "00000000000000000000000000000000",
-	"endswith": (
+	"endsWith": (
 		".rton",
 	),
-	"endswithIgnore": False,
+	"endsWithIgnore": False,
 	"rsgpExtensions": (
+		".1bsr",
+		".rsb1",
+		".bsr",
+		".rsb",
+		".rsb.smf",
+		".obb",
 		".pgsr",
 		".rsgp"
 	),
-	"rsgpUnpackLevel": 2,
-	"startswith": (
+	"rsgpUnpackLevel": 7,
+	"startsWith": (
 		"packages/",
 	),
-	"startswithIgnore": False,
+	"startsWithIgnore": False,
+	# Encryption
+	"encryptedExtensions": (
+		".rton",
+	),
+	"encryptedUnpackLevel": 5,
+	"encryptionKey": "00000000000000000000000000000000",
 	# RTON options
 	"comma": 0,
-	"doublepoint": 1,
-	"encodedUnpackLevel": 4,
+	"doublePoint": 1,
+	"encodedUnpackLevel": 6,
 	"ensureAscii": False,
 	"indent": -1,
 	"repairFiles": False,
@@ -134,6 +150,112 @@ def input_level(text, minimum, maximum):
 		warning_message("Defaulting to " + str(minimum))
 		return minimum
 # RSGP Unpack functions
+def rsgp_extract(rsgp_NAME, rsgp_OFFSET, file, out, pathout, level):
+# Extract data from RGSP file
+	if file.read(4) == b"pgsr":
+		try:
+			rsgp_VERSION = unpack("<I", file.read(4))[0]
+			
+			file.seek(8, 1)
+			rsgp_TYPE = unpack("<I", file.read(4))[0]
+			rsgp_BASE = unpack("<I", file.read(4))[0]
+
+			DATA_OFFSET = unpack("<I", file.read(4))[0]
+			COMPRESSED_SIZE = unpack("<I", file.read(4))[0]
+			UNCOMPRESSED_SIZE = unpack("<I", file.read(4))[0]
+			if UNCOMPRESSED_SIZE != 0:
+				file.seek(rsgp_OFFSET + DATA_OFFSET)
+				if rsgp_TYPE == 3: # Compressed files
+					blue_print("Decompressing ...")
+					data = decompress(file.read(COMPRESSED_SIZE))
+				else: # Uncompressed files
+					data = file.read(COMPRESSED_SIZE)
+			else:
+				file.seek(4, 1)
+				DATA_OFFSET = unpack("<I", file.read(4))[0]
+				COMPRESSED_SIZE = unpack("<I", file.read(4))[0]
+				UNCOMPRESSED_SIZE = unpack("<I", file.read(4))[0]
+				if UNCOMPRESSED_SIZE != 0:
+					file.seek(rsgp_OFFSET + DATA_OFFSET)
+					if rsgp_TYPE == 0: # Uncompressed files
+						data = file.read(COMPRESSED_SIZE)
+					else: # Compressed files
+						blue_print("Decompressing ...")
+						data = decompress(file.read(COMPRESSED_SIZE))
+			if level < 5:
+				file_path = osjoin(out, rsgp_NAME + ".section")
+				makedirs(out, exist_ok = True)
+				open(file_path, "wb").write(data)
+				print("wrote " + relpath(file_path, pathout))
+			else:
+				file.seek(rsgp_OFFSET + 72)
+				INFO_SIZE = unpack("<I", file.read(4))[0]
+				INFO_OFFSET = rsgp_OFFSET + unpack("<I", file.read(4))[0]
+				INFO_LIMIT = INFO_OFFSET + INFO_SIZE
+				
+				file.seek(INFO_OFFSET)
+				DECODED_NAME = None
+				NAME_DICT = {}
+				while DECODED_NAME != "":
+					FILE_NAME = b""
+					temp = file.tell()
+					for key in list(NAME_DICT.keys()):
+						if NAME_DICT[key] + INFO_OFFSET < temp:
+							NAME_DICT.pop(key)
+						else:
+							FILE_NAME = key
+					BYTE = b""
+					while BYTE != b"\x00":
+						FILE_NAME += BYTE
+						BYTE = file.read(1)
+						LENGTH = 4 * unpack("<I", file.read(3) + b"\x00")[0]
+						if LENGTH != 0:
+							NAME_DICT[FILE_NAME] = LENGTH
+					
+					DECODED_NAME = FILE_NAME.decode().replace("\\", sep)
+					NAME_CHECK = DECODED_NAME.replace("\\", "/").lower()
+					PTX = unpack("<I", file.read(4))[0]
+					FILE_OFFSET = unpack("<I", file.read(4))[0]
+					FILE_SIZE = unpack("<I", file.read(4))[0]
+					if PTX != 0:
+						file.seek(20, 1)
+						#A = unpack("<I", file.read(4))[0]
+						#B = unpack("<I", file.read(4))[0]
+						#C = unpack("<I", file.read(4))[0]
+						#WIDHT = unpack("<I", file.read(4))[0]
+						#HEIGHT = unpack("<I", file.read(4))[0]
+					if DECODED_NAME and NAME_CHECK.startswith(startsWith) and NAME_CHECK.endswith(endsWith):
+						file_data = data[FILE_OFFSET: FILE_OFFSET + FILE_SIZE]
+						if NAME_CHECK[-5:] == ".rton" and file_data[:2] == b"\x10\x00" and 5 < level:
+							file_data = rijndael_cbc.decrypt(file_data[2:])
+						if level < 7:
+							file_path = osjoin(out, DECODED_NAME)
+							makedirs(dirname(file_path), exist_ok = True)
+							open(file_path, "wb").write(file_data)
+							print("wrote " + relpath(file_path, pathout))
+						elif NAME_CHECK[-5:] == ".rton":
+							try:
+								jfn = osjoin(out, DECODED_NAME[:-5] + ".JSON")
+								makedirs(dirname(jfn), exist_ok = True)
+								source = BytesIO(file_data)
+								source.name = file.name + ": " + DECODED_NAME
+								if source.read(4) == b"RTON":
+									json_data = root_object(source, current_indent)
+									open(jfn, "wb").write(json_data)
+									print("wrote " + relpath(jfn, pathout))
+								else:
+									warning_message("No RTON " + source.name)
+							except Exception as e:
+								error_message(type(e).__name__ + " in " + file.name + ": " + DECODED_NAME + " pos " + str(source.tell() - 1) + ": " + str(e))
+						#elif PTX:
+						#	if FILE_SIZE == 4 * WIDHT * HEIGHT:
+						#		file_path = osjoin(out, splitext(DECODED_NAME)[0] + ".PNG")
+						#		makedirs(dirname(file_path), exist_ok = True)
+						#		blue_print("Decoding ...")
+						#		Image.frombuffer("RGBA", (WIDHT, HEIGHT), data[FILE_OFFSET: FILE_OFFSET + FILE_SIZE], "raw", COLORS, 0, 1).save("/Users/wannes/Documents/GitHub/PVZ2tools/PTXTests/ALWAYSLOADED_384_00.PNG")
+						#		print("wrote " + relpath(file_path, pathout))
+		except Exception as e:
+			error_message(type(e).__name__ + " while extracting " + rsgp_NAME + ".rsgp: " + str(e))
 # decryption algorithm based on https://en.m.wikipedia.org/wiki/Advanced_Encryption_Standard
 shifts = [
 	[[0, 0], [1, 3], [2, 2], [3, 1]],
@@ -141,7 +263,7 @@ shifts = [
 	[[0, 0], [1, 7], [3, 5], [4, 4]]
 ]
 num_rounds = {
-# [encryption_key_size][block_size] number of rounds
+# [encryptionKeySize][block_size] number of rounds
 	16: {16: 10, 24: 12, 32: 14},
 	24: {16: 12, 24: 12, 32: 14},
 	32: {16: 14, 24: 14, 32: 14}
@@ -279,24 +401,6 @@ for t in range(1, 30):
 	r = mul(2, r)
 	r_con.append(r)
 
-# padding way
-class ZeroPadding:
-	def __init__(self, block_size):
-		self.block_size = block_size
-	def decode(self, source):
-		assert len(source) % self.block_size == 0
-		offset = len(source)
-		if offset == 0:
-			return b''
-		end = offset - self.block_size + 1
-
-		while offset > end:
-			offset -= 1
-			if source[offset]:
-				return source[:offset + 1]
-
-		return source[:end]
-
 class RijndaelCBC:
 # Only CBC is defined, others are not necessary
 	def __init__(self, block_size):
@@ -307,30 +411,30 @@ class RijndaelCBC:
 			# Block size does not throw an exception in these three
 			raise ValueError('The block_size you set (you set it as %s) is not within the definition requirement (16,24,32)!' % str(block_size))
 
-		if len(encryption_key) not in (16, 24, 32):
-			# encryption_key length is not in range throw exception
-			raise ValueError('The encryption_key you set (you set %s) is not within the definition requirements (16, 24, 32)!' % str(len(encryption_key)))
+		if len(encryptionKey) not in (16, 24, 32):
+			# encryptionKey length is not in range throw exception
+			raise ValueError('The encryptionKey you set (you set %s) is not within the definition requirements (16, 24, 32)!' % str(len(encryptionKey)))
 
 		self.block_size = block_size
-		rounds = num_rounds[len(encryption_key)][block_size]
+		rounds = num_rounds[len(encryptionKey)][block_size]
 		b_c = block_size // 4
 		k_e = [[0] * b_c for _ in range(rounds + 1)]
 		k_d = [[0] * b_c for _ in range(rounds + 1)]
-		round_encryption_key_count = (rounds + 1) * b_c
-		k_c = len(encryption_key) // 4
+		roundEncryptionKeyCount = (rounds + 1) * b_c
+		k_c = len(encryptionKey) // 4
 		tk = []
 		for i in range(0, k_c):
-			tk.append((ord(encryption_key[i * 4:i * 4 + 1]) << 24) | (ord(encryption_key[i * 4 + 1:i * 4 + 1 + 1]) << 16) |
-					(ord(encryption_key[i * 4 + 2: i * 4 + 2 + 1]) << 8) | ord(encryption_key[i * 4 + 3:i * 4 + 3 + 1]))
+			tk.append((ord(encryptionKey[i * 4:i * 4 + 1]) << 24) | (ord(encryptionKey[i * 4 + 1:i * 4 + 1 + 1]) << 16) |
+					(ord(encryptionKey[i * 4 + 2: i * 4 + 2 + 1]) << 8) | ord(encryptionKey[i * 4 + 3:i * 4 + 3 + 1]))
 		t = 0
 		j = 0
-		while j < k_c and t < round_encryption_key_count:
+		while j < k_c and t < roundEncryptionKeyCount:
 			k_e[t // b_c][t % b_c] = tk[j]
 			k_d[rounds - (t // b_c)][t % b_c] = tk[j]
 			j += 1
 			t += 1
 		r_con_pointer = 0
-		while t < round_encryption_key_count:
+		while t < roundEncryptionKeyCount:
 			tt = tk[k_c - 1]
 			tk[0] ^= (S[(tt >> 16) & 0xFF] & 0xFF) << 24 ^ \
 					(S[(tt >> 8) & 0xFF] & 0xFF) << 16 ^ \
@@ -352,7 +456,7 @@ class RijndaelCBC:
 				for i in range(k_c // 2 + 1, k_c):
 					tk[i] ^= tk[i - 1]
 			j = 0
-			while j < k_c and t < round_encryption_key_count:
+			while j < k_c and t < roundEncryptionKeyCount:
 				k_e[t // b_c][t % b_c] = tk[j]
 				k_d[rounds - (t // b_c)][t % b_c] = tk[j]
 				j += 1
@@ -368,7 +472,6 @@ class RijndaelCBC:
 				)
 		self.Ke = k_e
 		self.Kd = k_d
-		self.padding = ZeroPadding(24)
 	def decrypt(self, cipher):
 		assert len(cipher) % self.block_size == 0
 		ppt = bytes()
@@ -423,8 +526,20 @@ class RijndaelCBC:
 			ppt += self.x_or_block(decrypted, v)
 			offset += self.block_size
 			v = block
-		pt = self.padding.decode(ppt)
-		return pt
+		
+		# padding way
+		assert len(ppt) % self.block_size == 0
+		offset = len(ppt)
+		if offset == 0:
+			return b''
+		end = offset - self.block_size + 1
+
+		while offset > end:
+			offset -= 1
+			if ppt[offset]:
+				return ppt[:offset + 1]
+
+		return ppt[:end]
 	def x_or_block(self, b1, b2):
 		i = 0
 		r = bytes()
@@ -432,112 +547,6 @@ class RijndaelCBC:
 			r += bytes([ord(b1[i:i+1]) ^ ord(b2[i:i+1])])
 			i += 1
 		return r
-def rsgp_extract(rsgp_NAME, rsgp_OFFSET, file, out, pathout, level):
-# Extract data from RGSP file
-	if file.read(4) == b"pgsr":
-		try:
-			rsgp_VERSION = unpack("<I", file.read(4))[0]
-			
-			file.seek(8, 1)
-			rsgp_TYPE = unpack("<I", file.read(4))[0]
-			rsgp_BASE = unpack("<I", file.read(4))[0]
-
-			DATA_OFFSET = unpack("<I", file.read(4))[0]
-			COMPRESSED_SIZE = unpack("<I", file.read(4))[0]
-			UNCOMPRESSED_SIZE = unpack("<I", file.read(4))[0]
-			if UNCOMPRESSED_SIZE != 0:
-				file.seek(rsgp_OFFSET + DATA_OFFSET)
-				if rsgp_TYPE == 3: # Compressed files
-					blue_print("Decompressing ...")
-					data = decompress(file.read(COMPRESSED_SIZE))
-				else: # Uncompressed files
-					data = file.read(COMPRESSED_SIZE)
-			else:
-				file.seek(4, 1)
-				DATA_OFFSET = unpack("<I", file.read(4))[0]
-				COMPRESSED_SIZE = unpack("<I", file.read(4))[0]
-				UNCOMPRESSED_SIZE = unpack("<I", file.read(4))[0]
-				if UNCOMPRESSED_SIZE != 0:
-					file.seek(rsgp_OFFSET + DATA_OFFSET)
-					if rsgp_TYPE == 0: # Uncompressed files
-						data = file.read(COMPRESSED_SIZE)
-					else: # Compressed files
-						blue_print("Decompressing ...")
-						data = decompress(file.read(COMPRESSED_SIZE))
-			if level < 4:
-				file_path = osjoin(out, rsgp_NAME + ".section")
-				makedirs(out, exist_ok = True)
-				open(file_path, "wb").write(data)
-				print("wrote " + relpath(file_path, pathout))
-			else:
-				file.seek(rsgp_OFFSET + 72)
-				INFO_SIZE = unpack("<I", file.read(4))[0]
-				INFO_OFFSET = rsgp_OFFSET + unpack("<I", file.read(4))[0]
-				INFO_LIMIT = INFO_OFFSET + INFO_SIZE
-				
-				file.seek(INFO_OFFSET)
-				DECODED_NAME = None
-				NAME_DICT = {}
-				while DECODED_NAME != "":
-					FILE_NAME = b""
-					temp = file.tell()
-					for key in list(NAME_DICT.keys()):
-						if NAME_DICT[key] + INFO_OFFSET < temp:
-							NAME_DICT.pop(key)
-						else:
-							FILE_NAME = key
-					BYTE = b""
-					while BYTE != b"\x00":
-						FILE_NAME += BYTE
-						BYTE = file.read(1)
-						LENGTH = 4 * unpack("<I", file.read(3) + b"\x00")[0]
-						if LENGTH != 0:
-							NAME_DICT[FILE_NAME] = LENGTH
-					
-					DECODED_NAME = FILE_NAME.decode().replace("\\", sep)
-					NAME_CHECK = DECODED_NAME.replace("\\", "/").lower()
-					PTX = unpack("<I", file.read(4))[0]
-					FILE_OFFSET = unpack("<I", file.read(4))[0]
-					FILE_SIZE = unpack("<I", file.read(4))[0]
-					if PTX != 0:
-						file.seek(20, 1)
-						#A = unpack("<I", file.read(4))[0]
-						#B = unpack("<I", file.read(4))[0]
-						#C = unpack("<I", file.read(4))[0]
-						#WIDHT = unpack("<I", file.read(4))[0]
-						#HEIGHT = unpack("<I", file.read(4))[0]
-					if DECODED_NAME and NAME_CHECK.startswith(startswith) and NAME_CHECK.endswith(endswith):
-						file_data = data[FILE_OFFSET: FILE_OFFSET + FILE_SIZE]
-						if NAME_CHECK[-5:] == ".rton" and file_data[:2] == b"\x10\x00":
-							file_data = rijndael_cbc.decrypt(file_data[2:])
-						if level < 5:
-							file_path = osjoin(out, DECODED_NAME)
-							makedirs(dirname(file_path), exist_ok = True)
-							open(file_path, "wb").write(file_data)
-							print("wrote " + relpath(file_path, pathout))
-						elif NAME_CHECK[-5:] == ".rton":
-							try:
-								jfn = osjoin(out, DECODED_NAME[:-5] + ".JSON")
-								makedirs(dirname(jfn), exist_ok = True)
-								source = BytesIO(file_data)
-								source.name = file.name + ": " + DECODED_NAME
-								if source.read(4) == b"RTON":
-									json_data = root_object(source, current_indent)
-									open(jfn, "wb").write(json_data)
-									print("wrote " + relpath(jfn, pathout))
-								else:
-									warning_message("No RTON " + source.name)
-							except Exception as e:
-								error_message(type(e).__name__ + " in " + file.name + ": " + DECODED_NAME + " pos " + str(source.tell() - 1) + ": " + str(e))
-						#elif PTX:
-						#	if FILE_SIZE == 4 * WIDHT * HEIGHT:
-						#		file_path = osjoin(out, splitext(DECODED_NAME)[0] + ".PNG")
-						#		makedirs(dirname(file_path), exist_ok = True)
-						#		blue_print("Decoding ...")
-						#		Image.frombuffer("RGBA", (WIDHT, HEIGHT), data[FILE_OFFSET: FILE_OFFSET + FILE_SIZE], "raw", COLORS, 0, 1).save("/Users/wannes/Documents/GitHub/PVZ2tools/PTXTests/ALWAYSLOADED_384_00.PNG")
-						#		print("wrote " + relpath(file_path, pathout))
-		except Exception as e:
-			error_message(type(e).__name__ + " while extracting " + rsgp_NAME + ".rsgp: " + str(e))
 def file_to_folder(inp, out, level, extensions, pathout):
 # Recursive file convert function
 	if isdir(inp):
@@ -556,9 +565,14 @@ def file_to_folder(inp, out, level, extensions, pathout):
 			if HEADER == b"\xD4\xFE\xAD\xDE":
 				UNCOMPRESSED_SIZE = unpack("<I", file.read(4))[0]
 				blue_print("Decompressing ...")
-				file = BytesIO(decompress(file.read()))
-				file.name = inp
-				HEADER = file.read(4)
+				data = decompress(file.read())
+				if level < 3:
+					open(out, "wb").write(data)
+					print("wrote " + relpath(out, pathout))
+				else:
+					file = BytesIO(data)
+					file.name = inp
+					HEADER = file.read(4)
 			if HEADER == b"1bsr":
 				file.seek(40)
 				FILES = unpack("<I", file.read(4))[0]
@@ -571,10 +585,10 @@ def file_to_folder(inp, out, level, extensions, pathout):
 					FILE_SIZE = unpack("<I", file.read(4))[0]
 					
 					file.seek(68, 1)
-					if FILE_CHECK.startswith(rsgpStartswith) and FILE_CHECK.endswith(rsgpEndswith):
+					if FILE_CHECK.startswith(rsgpstartsWith) and FILE_CHECK.endswith(rsgpendsWith):
 						temp = file.tell()
 						file.seek(FILE_OFFSET)
-						if level < 3:
+						if level < 4:
 							makedirs(out, exist_ok = True)
 							open(osjoin(out, FILE_NAME + ".rsgp"), "wb").write(file.read(FILE_SIZE))
 							print("wrote " + relpath(osjoin(out, FILE_NAME + ".rsgp"), pathout))
@@ -672,8 +686,8 @@ def parse_ref(fp):
 		return b'"RTID(0)"'
 	elif ch == b"\x02":
 		p1 = parse_utf8_str(fp)
-		i2 = parse_uvarint(fp)
-		i1 = parse_uvarint(fp)
+		i2 = repr(parse_number(fp))
+		i1 = repr(parse_number(fp))
 		return dumps("RTID(" + i1 + "." + i2 + "." + fp.read(4)[::-1].hex() + "@" + p1 + ")", ensure_ascii = ensureAscii).encode()
 	elif ch == b"\x03":
 		p1 = parse_utf8_str(fp)
@@ -691,12 +705,12 @@ def root_object(fp, currrent_indent):
 		key, chached_strings, chached_printable_strings = parse(fp, new_indent, [], [])
 		value, chached_strings, chached_printable_strings = parse(fp, new_indent, chached_strings, chached_printable_strings)
 		string += new_indent 
-		items = [key + doublepoint + value]
+		items = [key + doublePoint + value]
 		end = currrent_indent + end
 		while True:
 			key, chached_strings, chached_printable_strings = parse(fp, new_indent, chached_strings, chached_printable_strings)
 			value, chached_strings, chached_printable_strings = parse(fp, new_indent, chached_strings, chached_printable_strings)
-			items.append(key + doublepoint + value)
+			items.append(key + doublePoint + value)
 	except KeyError as k:
 		if str(k) == 'b""':
 			if repairFiles:
@@ -723,12 +737,12 @@ def parse_object(fp, currrent_indent, chached_strings, chached_printable_strings
 		key, chached_strings, chached_printable_strings = parse(fp, new_indent, chached_strings, chached_printable_strings)
 		value, chached_strings, chached_printable_strings = parse(fp, new_indent, chached_strings, chached_printable_strings)
 		string += new_indent 
-		items = [key + doublepoint + value]
+		items = [key + doublePoint + value]
 		end = currrent_indent + end
 		while True:
 			key, chached_strings, chached_printable_strings = parse(fp, new_indent, chached_strings, chached_printable_strings)
 			value, chached_strings, chached_printable_strings = parse(fp, new_indent, chached_strings, chached_printable_strings)
-			items.append(key + doublepoint + value)
+			items.append(key + doublePoint + value)
 	except KeyError as k:
 		if str(k) == 'b""':
 			if repairFiles:
@@ -839,19 +853,23 @@ mappings = {
 	b"\x83": parse_ref,
 	b"\x84": lambda x: b'"RTID(0)"' # zero reference
 }
-def conversion(inp, out, pathout):
+def conversion(inp, out, pathout, extensions, noextensions):
 # Recursive file convert function
 	check = inp.lower()
-	if isfile(inp) and (check.endswith(RTONExtensions) or basename(check).startswith(RTONNoExtensions)):
+	if isfile(inp) and (check.endswith(extensions) or basename(check).startswith(noextensions)):
 		try:
-			if check[-5:] == ".rton":
-				out = out[:-5]
-			jfn = out + ".json"
 			file = open(inp, "rb")
-			if file.read(4) == b"RTON":
+			HEADER = file.read(2)
+			if HEADER == b"\x10\x00":
+				open(out,"wb").write(rijndael_cbc.decrypt(file.read()))
+				print("wrote " + relpath(out, pathout))
+			elif HEADER == b"RT" and file.read(2) == b"ON":
+				if out.lower()[-5:] == ".rton":
+					out = out[:-5]
+				out += ".json"
 				data = root_object(file, current_indent)
-				open(jfn, "wb").write(data)
-				print("wrote " + relpath(jfn, pathout))
+				open(out, "wb").write(data)
+				print("wrote " + relpath(out, pathout))
 			elif check[-5:] != ".json":
 				warning_message("No RTON " + inp)
 		except Exception as e:
@@ -861,7 +879,7 @@ def conversion(inp, out, pathout):
 		for entry in listdir(inp):
 			input_file = osjoin(inp, entry)
 			if isfile(input_file) or input_file != pathout:
-				conversion(input_file, osjoin(out, entry), pathout)
+				conversion(input_file, osjoin(out, entry), pathout, extensions, noextensions)
 # Start of the code
 try:
 	system("")
@@ -873,7 +891,7 @@ try:
 	if sys.version_info[0] < 3:
 		raise RuntimeError("Must be using Python 3")
 	
-	print("\033[95m\033[1mOBBUnpacker v1.1.3\n(C) 2022 by Nineteendo, Luigi Auriemma, Small Pea, 1Zulu & h3x4n1um\033[0m\n")
+	print("\033[95m\033[1mOBBUnpacker v1.1.4\n(C) 2022 by Nineteendo, Luigi Auriemma, Small Pea, 1Zulu & h3x4n1um\033[0m\n")
 	try:
 		newoptions = load(open(osjoin(application_path, "options.json"), "rb"))
 		for key in options:
@@ -887,42 +905,46 @@ try:
 	except Exception as e:
 		error_message(type(e).__name__ + " in options.json: " + str(e))
 	
+	if options["smfUnpackLevel"] < 1:
+		options["smfUnpackLevel"] = input_level("SMF Unpack Level", 1, 2)
 	if options["rsbUnpackLevel"] < 1:
-		options["rsbUnpackLevel"] = input_level("OBB/RSB Unpack Level", 1, 5)
+		options["rsbUnpackLevel"] = input_level("OBB/RSB/SMF Unpack Level", 2, 3)
 	if options["rsgpUnpackLevel"] < 1:
-		options["rsgpUnpackLevel"] = input_level("PGSR/RSGP Unpack Level", 2, 5)
+		options["rsgpUnpackLevel"] = input_level("RSGP/OBB/RSB/SMF Unpack Level", 3, 7)
+	if options["encryptedUnpackLevel"] < 1:
+		options["encryptedUnpackLevel"] = input_level("ENCRYPTED Unpack Level", 5, 6)
 	if options["encodedUnpackLevel"] < 1:
-		options["encodedUnpackLevel"] = input_level("ENCODED Unpack Level", 4, 5)
+		options["encodedUnpackLevel"] = input_level("ENCODED Unpack Level", 6, 7)
 
-	if options["rsgpStartswithIgnore"]:
-		rsgpStartswith = ""
+	if options["rsgpstartsWithIgnore"]:
+		rsgpstartsWith = ""
 	else:
-		rsgpStartswith = options["rsgpStartswith"]
-	if options["rsgpEndswithIgnore"]:
-		rsgpEndswith = ""
+		rsgpstartsWith = options["rsgpstartsWith"]
+	if options["rsgpendsWithIgnore"]:
+		rsgpendsWith = ""
 	else:
-		rsgpEndswith = options["rsgpEndswith"]
+		rsgpendsWith = options["rsgpendsWith"]
 
-	encryption_key = str.encode(options["encryption_key"])
-	iv = encryption_key[4: 28]
+	encryptionKey = str.encode(options["encryptionKey"])
+	iv = encryptionKey[4: 28]
 	rijndael_cbc = RijndaelCBC(24)
-	if options["endswithIgnore"]:
-		endswith = ""
+	if options["endsWithIgnore"]:
+		endsWith = ""
 	else:
-		endswith = options["endswith"]
-	if options["startswithIgnore"]:
-		startswith = ""
+		endsWith = options["endsWith"]
+	if options["startsWithIgnore"]:
+		startsWith = ""
 	else:
-		startswith = options["startswith"]
+		startsWith = options["startsWith"]
 
 	if options["comma"] > 0:
 		comma = b"," + b" " * options["comma"]
 	else:
 		comma = b","
-	if options["doublepoint"] > 0:
-		doublepoint = b":" + b" " * options["doublepoint"]
+	if options["doublePoint"] > 0:
+		doublePoint = b":" + b" " * options["doublePoint"]
 	else:
-		doublepoint = b":"
+		doublePoint = b":"
 	if options["indent"] == None:
 		indent = current_indent = b""
 	elif options["indent"] < 0:
@@ -933,35 +955,51 @@ try:
 		indent = b" " * options["indent"]
 	ensureAscii = options["ensureAscii"]
 	repairFiles = options["repairFiles"]
-	RTONExtensions = options["RTONExtensions"]
-	RTONNoExtensions = options["RTONNoExtensions"]
 	sortKeys = options["sortKeys"]
 	sortValues = options["sortValues"]
 	
-	level_to_name = ["SPECIFY", "OBB/RSB", "PGSR/RSGP", "SECTION", "ENCODED", "DECODED (beta)"]
+	level_to_name = ["SPECIFY", "SMF", "RSB", "RSGP", "SECTION", "ENCRYPTED", "ENCODED", "DECODED (beta)"]
 
 	blue_print("Working directory: " + getcwd())
-	if 6 > options["rsbUnpackLevel"] > 1:
-		rsb_input = path_input("OBB/RSB Input file or directory")
-		rsb_output = path_input("OBB/RSB " + level_to_name[options["rsbUnpackLevel"]] + " Output directory")
-	if 6 > options["rsgpUnpackLevel"] > 2:
-		rsgp_input = path_input("PGSR/RSGP Input file or directory")
-		rsgp_output = path_input("PGSR/RSGP " + level_to_name[options["rsgpUnpackLevel"]] + " Output directory")
-	if 6 > options["encodedUnpackLevel"] > 4:
+	if 2 >= options["smfUnpackLevel"] > 1:
+		smf_input = path_input("SMF Input file or directory")
+		if isfile(smf_input):
+			smf_output = path_input("SMF " + level_to_name[options["smfUnpackLevel"]] + " Output file")
+		else:
+			smf_output = path_input("SMF " + level_to_name[options["smfUnpackLevel"]] + " Output directory")
+	if 3 >= options["rsbUnpackLevel"] > 2:
+		rsb_input = path_input("OBB/RSB/SMF Input file or directory")
+		rsb_output = path_input("OBB/RSB/SMF " + level_to_name[options["rsbUnpackLevel"]] + " Output directory")
+	if 7 >= options["rsgpUnpackLevel"] > 3:
+		rsgp_input = path_input("RSGP/OBB/RSB/SMF Input file or directory")
+		rsgp_output = path_input("RSGP/OBB/RSB/SMF " + level_to_name[options["rsgpUnpackLevel"]] + " Output directory")
+	if 6 >= options["encryptedUnpackLevel"] > 5:
+		encrypted_input = path_input("ENCRYPTED Input file or directory")
+		if isfile(encrypted_input):
+			encrypted_output = path_input("ENCRYPTED " + level_to_name[options["encryptedUnpackLevel"]] + " Output file")
+		else:
+			encrypted_output = path_input("ENCRYPTED " + level_to_name[options["encryptedUnpackLevel"]] + " Output directory")
+	if 7 >= options["encodedUnpackLevel"] > 6:
 		encoded_input = path_input("ENCODED Input file or directory")
 		if isfile(encoded_input):
-			encoded_output = path_input("ENCODED " + level_to_name[options["encodedUnpackLevel"]] + " Output file").removesuffix(".json")
+			encoded_output = path_input("ENCODED " + level_to_name[options["encodedUnpackLevel"]] + " Output file")
 		else:
 			encoded_output = path_input("ENCODED " + level_to_name[options["encodedUnpackLevel"]] + " Output directory")
+			if encoded_output.lower()[:-5] == ".json":
+				encoded_output = encoded_output[:-5]
 
 	# Start file_to_folder
 	start_time = datetime.datetime.now()
-	if 6 > options["rsbUnpackLevel"] > 1:
+	if 2 >= options["smfUnpackLevel"] > 1:
+		file_to_folder(smf_input, smf_output, options["smfUnpackLevel"], options["smfExtensions"], dirname(smf_output))
+	if 3 >= options["rsbUnpackLevel"] > 2:
 		file_to_folder(rsb_input, rsb_output, options["rsbUnpackLevel"], options["rsbExtensions"], rsb_output)
-	if 6 > options["rsgpUnpackLevel"] > 2:
+	if 7 >= options["rsgpUnpackLevel"] > 3:
 		file_to_folder(rsgp_input, rsgp_output, options["rsgpUnpackLevel"], options["rsgpExtensions"], rsgp_output)
-	if 6 > options["encodedUnpackLevel"] > 4:
-		conversion(encoded_input, encoded_output, dirname(encoded_output))
+	if 6 >= options["encryptedUnpackLevel"] > 5:
+		conversion(encrypted_input, encrypted_output, dirname(encrypted_output), options["encryptedExtensions"], ())
+	if 7 >= options["encodedUnpackLevel"] > 6:
+		conversion(encoded_input, encoded_output, dirname(encoded_output), options["RTONExtensions"], options["RTONNoExtensions"])
 
 	green_print("finished unpacking in " + str(datetime.datetime.now() - start_time))
 	if fail.tell() > 0:
