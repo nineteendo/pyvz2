@@ -35,7 +35,7 @@
 		".pgsr",
 		".rsgp"
 	],
-	"rsgpUnpackLevel": 7,
+	"rsgpUnpackLevel": 3,
 	"startsWith": [
 		"packages/"
 	],
@@ -49,7 +49,7 @@
 
 	"comma": 0,
 	"doublePoint": 1,
-	"encodedUnpackLevel": 6,
+	"encodedUnpackLevel": 7,
 	"ensureAscii": false,
 	"indent": -1,
 	"repairFiles": false,

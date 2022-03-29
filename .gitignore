@@ -1,20 +1,21 @@
 # Personal Data
-OBBEdit/1a_obb_original
-OBBEdit/1b_obb_modded
-OBBEdit/2a_rsgp_original
-OBBEdit/2b_rsgp_modded
-OBBEdit/3a_obb_section_patches
-OBBEdit/3b_rsgp_section_patches
-OBBEdit/4a_obb_encoded_patches
-OBBEdit/4b_rsgp_encoded_patches
-OBBEdit/5a_obb_decoded_patches
-OBBEdit/5b_rsgp_decoded_patches
-OBBEdit/1bsr_pgsr.bms
+OBBEdit/1a_smf_original
+OBBEdit/1b_smf_modded
+OBBEdit/2a_smf_rsb_original
+OBBEdit/2b_obb_original
+OBBEdit/2c_obb_modded
+OBBEdit/3a_rsgp_original
+OBBEdit/3b_rsgp_modded
+OBBEdit/4_rsgp_section_patches
+OBBEdit/5_rsgp_encrypted_patches
+OBBEdit/6_rsgp_encoded_patches
+OBBEdit/7_rsgp_decoded_patches
+OBBEdit/8_tests
+OBBEdit/Z_RTON-OFF
+OBBEdit/check
 OBBEdit/header_test.py
-RTON-OFF/jsons
-RTON-OFF/rtons
-RTON-OFF/check
-RTON-OFF/slow_jsons.py
+PTXTests/
+SaveMaxer/
 ShopCreator/
 
 # MISC

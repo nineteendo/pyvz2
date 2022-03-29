@@ -35,7 +35,7 @@
 		".pgsr",
 		".rsgp"
 	],
-	"rsgpUnpackLevel": 7,
+	"rsgpUnpackLevel": 6,
 	"startsWith": [
 		"packages/"
 	],
