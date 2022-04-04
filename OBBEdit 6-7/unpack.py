@@ -25,13 +25,13 @@ options = {
 		".obb"
 	),
 	"rsbUnpackLevel": 2,
-	"rsgpendsWith": (),
-	"rsgpendsWithIgnore": True,
-	"rsgpstartsWith": (
+	"rsgpEndsWith": (),
+	"rsgpEndsWithIgnore": True,
+	"rsgpStartsWith": (
 		"packages",
 		"worldpackages_"
 	),
-	"rsgpstartsWithIgnore": False,
+	"rsgpStartsWithIgnore": False,
 	# RSGP options
 	"endsWith": (
 		".rton",
@@ -585,7 +585,7 @@ def file_to_folder(inp, out, level, extensions, pathout):
 					FILE_SIZE = unpack("<I", file.read(4))[0]
 					
 					file.seek(68, 1)
-					if FILE_CHECK.startswith(rsgpstartsWith) and FILE_CHECK.endswith(rsgpendsWith):
+					if FILE_CHECK.startswith(rsgpStartsWith) and FILE_CHECK.endswith(rsgpEndsWith):
 						temp = file.tell()
 						file.seek(FILE_OFFSET)
 						if level < 4:
@@ -891,7 +891,7 @@ try:
 	if sys.version_info[0] < 3:
 		raise RuntimeError("Must be using Python 3")
 	
-	print("\033[95m\033[1mOBBUnpacker v1.1.4\n(C) 2022 by Nineteendo, Luigi Auriemma, Small Pea, 1Zulu & h3x4n1um\033[0m\n")
+	print("\033[95m\033[1mOBBUnpacker v1.1.4\n(C) 2022 by Nineteendo, Luigi Auriemma, Small Pea, 1Zulu, YingFengTingYu & h3x4n1um\033[0m\n")
 	try:
 		newoptions = load(open(osjoin(application_path, "options.json"), "rb"))
 		for key in options:
@@ -916,14 +916,14 @@ try:
 	if options["encodedUnpackLevel"] < 1:
 		options["encodedUnpackLevel"] = input_level("ENCODED Unpack Level", 6, 7)
 
-	if options["rsgpstartsWithIgnore"]:
-		rsgpstartsWith = ""
+	if options["rsgpStartsWithIgnore"]:
+		rsgpStartsWith = ""
 	else:
-		rsgpstartsWith = options["rsgpstartsWith"]
-	if options["rsgpendsWithIgnore"]:
-		rsgpendsWith = ""
+		rsgpStartsWith = options["rsgpStartsWith"]
+	if options["rsgpEndsWithIgnore"]:
+		rsgpEndsWith = ""
 	else:
-		rsgpendsWith = options["rsgpendsWith"]
+		rsgpEndsWith = options["rsgpEndsWith"]
 
 	encryptionKey = str.encode(options["encryptionKey"])
 	iv = encryptionKey[4: 28]

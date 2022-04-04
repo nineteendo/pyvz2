@@ -843,7 +843,7 @@ try:
 	if sys.version_info[0] < 3:
 		raise RuntimeError("Must be using Python 3")
 	
-	print("\033[95m\033[1mOBBUnpatcher v1.1.4\n(C) 2022 by Nineteendo, Luigi Auriemma, Small Pea, 1Zulu & h3x4n1um\033[0m\n")
+	print("\033[95m\033[1mOBBUnpatcher v1.1.4\n(C) 2022 by Nineteendo, Luigi Auriemma, Small Pea, 1Zulu, YingFengTingYu & h3x4n1um\033[0m\n")
 	try:
 		newoptions = load(open(osjoin(application_path, "options.json"), "rb"))
 		for key in options:
