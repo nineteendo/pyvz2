@@ -1,12 +1,14 @@
 # Import libraries
+import sys, datetime
+from pyvz2.rijndael import RijndaelCBC
 from io import BytesIO
-import sys, datetime, copy
 from traceback import format_exc
 from json import load, dumps
 from struct import unpack, error
 from zlib import decompress
 from os import makedirs, listdir, system, getcwd, sep
 from os.path import isdir, isfile, realpath, join as osjoin, dirname, relpath, basename, splitext
+from PIL import Image
 
 options = {
 # Default options
@@ -16,6 +18,10 @@ options = {
 	),
 	"smfUnpackLevel": 1,
 	# RSB options
+	"endsWith": (
+		".rton",
+	),
+	"endsWithIgnore": False,
 	"rsbExtensions": (
 		".1bsr",
 		".rsb1",
@@ -32,22 +38,6 @@ options = {
 		"worldpackages_"
 	),
 	"rsgpstartsWithIgnore": False,
-	# RSGP options
-	"endsWith": (
-		".rton",
-	),
-	"endsWithIgnore": False,
-	"rsgpExtensions": (
-		".1bsr",
-		".rsb1",
-		".bsr",
-		".rsb",
-		".rsb.smf",
-		".obb",
-		".pgsr",
-		".rsgp"
-	),
-	"rsgpUnpackLevel": 7,
 	"startsWith": (
 		"packages/",
 	),
@@ -150,7 +140,43 @@ def input_level(text, minimum, maximum):
 		warning_message("Defaulting to " + str(minimum))
 		return minimum
 # RSGP Unpack functions
-def rsgp_extract(rsgp_NAME, rsgp_OFFSET, file, out, pathout, level):
+def RGBA8888(file_data, WIDHT, HEIGHT):
+	return Image.frombuffer("RGBA", (WIDHT, HEIGHT), file_data, "raw", "RGBA", 0, 1)
+def ABGR4444(file_data, WIDHT, HEIGHT):
+	return Image.merge('RGBA', Image.frombuffer("RGBA", (WIDHT, HEIGHT), file_data, "raw", "RGBA;4B", 0, 1).split()[::-1])
+def BGR565(file_data, WIDHT, HEIGHT):
+	return Image.frombuffer("RGB", (WIDHT, HEIGHT), file_data, "raw", "BGR;16", 0, 1)
+def BGR655(file_data, WIDHT, HEIGHT):
+	img = Image.new('RGBA', (WIDHT, HEIGHT))
+	index = 0
+	for y in range(0, HEIGHT):
+		for x in range(0, WIDHT):
+			a = file_data[index]
+			b = file_data[index + 1]
+			img.putpixel((x,y), (b & 248, 36 * (b & 7) + (a & 192) // 8, 4 * (a & 63), 255))
+			index += 2
+	return img
+def Block32x32(image_decoder, file_data, WIDHT, HEIGHT):
+	BLOCK_OFFSET = 0
+	img = Image.new('RGBA', (WIDHT, HEIGHT))
+	for y in range(0, HEIGHT, 32):
+		for x in range(0, WIDHT, 32):
+			img.paste(image_decoder(file_data[BLOCK_OFFSET: BLOCK_OFFSET + 2048], 32, 32), (x, y))
+			BLOCK_OFFSET += 2048
+	
+	return img
+image_decoders = {
+	0: RGBA8888,
+	1: ABGR4444,
+	2: BGR565,
+	3: BGR655,
+	
+	#20: RGBA8888,
+	21: ABGR4444,
+	22: BGR565,
+	23: BGR655
+}
+def rsgp_extract(rsgp_NAME, rsgp_OFFSET, IMAGE_FORMATS, file, out, pathout, level):
 # Extract data from RGSP file
 	if file.read(4) == b"pgsr":
 		try:
@@ -163,25 +189,27 @@ def rsgp_extract(rsgp_NAME, rsgp_OFFSET, file, out, pathout, level):
 			DATA_OFFSET = unpack("<I", file.read(4))[0]
 			COMPRESSED_SIZE = unpack("<I", file.read(4))[0]
 			UNCOMPRESSED_SIZE = unpack("<I", file.read(4))[0]
+			temp = file.tell()
 			if UNCOMPRESSED_SIZE != 0:
 				file.seek(rsgp_OFFSET + DATA_OFFSET)
 				if rsgp_TYPE == 3: # Compressed files
-					blue_print("Decompressing ...")
+					blue_print("Decompressing...")
 					data = decompress(file.read(COMPRESSED_SIZE))
 				else: # Uncompressed files
 					data = file.read(COMPRESSED_SIZE)
-			else:
-				file.seek(4, 1)
-				DATA_OFFSET = unpack("<I", file.read(4))[0]
-				COMPRESSED_SIZE = unpack("<I", file.read(4))[0]
-				UNCOMPRESSED_SIZE = unpack("<I", file.read(4))[0]
-				if UNCOMPRESSED_SIZE != 0:
-					file.seek(rsgp_OFFSET + DATA_OFFSET)
-					if rsgp_TYPE == 0: # Uncompressed files
-						data = file.read(COMPRESSED_SIZE)
-					else: # Compressed files
-						blue_print("Decompressing ...")
-						data = decompress(file.read(COMPRESSED_SIZE))
+				
+			file.seek(temp + 4)
+			DATA_OFFSET = unpack("<I", file.read(4))[0]
+			COMPRESSED_SIZE = unpack("<I", file.read(4))[0]
+			UNCOMPRESSED_SIZE = unpack("<I", file.read(4))[0]
+			if UNCOMPRESSED_SIZE != 0:
+				file.seek(rsgp_OFFSET + DATA_OFFSET)
+				if rsgp_TYPE == 0: # Uncompressed files
+					img_data = file.read(COMPRESSED_SIZE)
+				else: # Compressed files
+					blue_print("Decompressing...")
+					img_data = decompress(file.read(COMPRESSED_SIZE))
+			
 			if level < 5:
 				file_path = osjoin(out, rsgp_NAME + ".section")
 				makedirs(out, exist_ok = True)
@@ -214,18 +242,20 @@ def rsgp_extract(rsgp_NAME, rsgp_OFFSET, file, out, pathout, level):
 					
 					DECODED_NAME = FILE_NAME.decode().replace("\\", sep)
 					NAME_CHECK = DECODED_NAME.replace("\\", "/").lower()
-					PTX = unpack("<I", file.read(4))[0]
+					IS_PTX = unpack("<I", file.read(4))[0] == 1
 					FILE_OFFSET = unpack("<I", file.read(4))[0]
 					FILE_SIZE = unpack("<I", file.read(4))[0]
-					if PTX != 0:
-						file.seek(20, 1)
-						#A = unpack("<I", file.read(4))[0]
-						#B = unpack("<I", file.read(4))[0]
-						#C = unpack("<I", file.read(4))[0]
-						#WIDHT = unpack("<I", file.read(4))[0]
-						#HEIGHT = unpack("<I", file.read(4))[0]
+					if IS_PTX:
+						IMAGE_SUB_ID = unpack("<I", file.read(4))[0]
+						file.seek(8, 1)
+						WIDHT = unpack("<I", file.read(4))[0]
+						HEIGHT = unpack("<I", file.read(4))[0]
 					if DECODED_NAME and NAME_CHECK.startswith(startsWith) and NAME_CHECK.endswith(endsWith):
-						file_data = data[FILE_OFFSET: FILE_OFFSET + FILE_SIZE]
+						if IS_PTX:
+							file_data = img_data[FILE_OFFSET: FILE_OFFSET + FILE_SIZE]
+						else:
+							file_data = data[FILE_OFFSET: FILE_OFFSET + FILE_SIZE]
+						
 						if NAME_CHECK[-5:] == ".rton" and file_data[:2] == b"\x10\x00" and 5 < level:
 							file_data = rijndael_cbc.decrypt(file_data[2:])
 						if level < 7:
@@ -247,306 +277,22 @@ def rsgp_extract(rsgp_NAME, rsgp_OFFSET, file, out, pathout, level):
 									warning_message("No RTON " + source.name)
 							except Exception as e:
 								error_message(type(e).__name__ + " in " + file.name + ": " + DECODED_NAME + " pos " + str(source.tell() - 1) + ": " + str(e))
-						#elif PTX:
-						#	if FILE_SIZE == 4 * WIDHT * HEIGHT:
-						#		file_path = osjoin(out, splitext(DECODED_NAME)[0] + ".PNG")
-						#		makedirs(dirname(file_path), exist_ok = True)
-						#		blue_print("Decoding ...")
-						#		Image.frombuffer("RGBA", (WIDHT, HEIGHT), data[FILE_OFFSET: FILE_OFFSET + FILE_SIZE], "raw", COLORS, 0, 1).save("/Users/wannes/Documents/GitHub/PVZ2tools/PTXTests/ALWAYSLOADED_384_00.PNG")
-						#		print("wrote " + relpath(file_path, pathout))
+						elif IS_PTX:
+							try:
+								file_path = osjoin(out, splitext(DECODED_NAME)[0] + ".PNG")
+								makedirs(dirname(file_path), exist_ok = True)
+								IMAGE_FORMAT = IMAGE_FORMATS[IMAGE_SUB_ID]
+								if IMAGE_FORMAT in [0, 1, 2, 3]: # Single Image
+									image_decoders[IMAGE_FORMAT](file_data, WIDHT, HEIGHT).save(file_path)
+									print("wrote " + relpath(file_path, pathout))
+								elif IMAGE_FORMAT in [21, 22, 23]: # 32x32 Block
+									Block32x32(image_decoders[IMAGE_FORMAT], file_data, WIDHT, HEIGHT).save(file_path)
+									print("wrote " + relpath(file_path, pathout))
+							except Exception as e:
+								error_message(type(e).__name__ + " in " + file.name + rsgp_NAME + ": " + DECODED_NAME + ": " + str(e))
+
 		except Exception as e:
 			error_message(type(e).__name__ + " while extracting " + rsgp_NAME + ".rsgp: " + str(e))
-# decryption algorithm based on https://en.m.wikipedia.org/wiki/Advanced_Encryption_Standard
-shifts = [
-	[[0, 0], [1, 3], [2, 2], [3, 1]],
-	[[0, 0], [1, 5], [2, 4], [3, 3]],
-	[[0, 0], [1, 7], [3, 5], [4, 4]]
-]
-num_rounds = {
-# [encryptionKeySize][block_size] number of rounds
-	16: {16: 10, 24: 12, 32: 14},
-	24: {16: 12, 24: 12, 32: 14},
-	32: {16: 14, 24: 14, 32: 14}
-}
-A = [
-	[1, 1, 1, 1, 1, 0, 0, 0],
-	[0, 1, 1, 1, 1, 1, 0, 0],
-	[0, 0, 1, 1, 1, 1, 1, 0],
-	[0, 0, 0, 1, 1, 1, 1, 1],
-	[1, 0, 0, 0, 1, 1, 1, 1],
-	[1, 1, 0, 0, 0, 1, 1, 1],
-	[1, 1, 1, 0, 0, 0, 1, 1],
-	[1, 1, 1, 1, 0, 0, 0, 1]
-]
-# field GF(2^m) (generator = 3)
-a_log = [1]
-for i in range(255):
-	j = (a_log[-1] << 1) ^ a_log[-1]
-	if j & 0x100 != 0:
-		j ^= 0x11B
-	a_log.append(j)
-
-log = [0] * 256
-for i in range(1, 255):
-	log[a_log[i]] = i
-
-# Multiply by GF(2^m)
-def mul(a, b):
-	if a == 0 or b == 0:
-		return 0
-	return a_log[(log[a & 0xFF] + log[b & 0xFF]) % 255]
-
-# F^{-1}(x)
-box = [[0] * 8 for i in range(256)]
-box[1][7] = 1
-for i in range(2, 256):
-	j = a_log[255 - log[i]]
-	for t in range(8):
-		box[i][t] = (j >> (7 - t)) & 0x01
-
-B = [0, 1, 1, 0, 0, 0, 1, 1]
-
-# box[i] <- B + A*box[i]
-cox = [[0] * 8 for i in range(256)]
-for i in range(256):
-	for t in range(8):
-		cox[i][t] = B[t]
-		for j in range(8):
-			cox[i][t] ^= A[t][j] * box[i][j]
-
-S = [0] * 256
-Si = [0] * 256
-for i in range(256):
-	S[i] = cox[i][0] << 7
-	for t in range(1, 8):
-		S[i] ^= cox[i][t] << (7-t)
-	Si[S[i] & 0xFF] = i
-
-# T-Box
-G = [
-	[2, 1, 1, 3],
-	[3, 2, 1, 1],
-	[1, 3, 2, 1],
-	[1, 1, 3, 2]
-]
-
-AA = [[0] * 8 for i in range(4)]
-
-for i in range(4):
-	for j in range(4):
-		AA[i][j] = G[i][j]
-		AA[i][i+4] = 1
-
-for i in range(4):
-	pivot = AA[i][i]
-	for j in range(8):
-		if AA[i][j] != 0:
-			AA[i][j] = a_log[(255 + log[AA[i][j] & 0xFF] - log[pivot & 0xFF]) % 255]
-	for t in range(4):
-		if i != t:
-			for j in range(i+1, 8):
-				AA[t][j] ^= mul(AA[i][j], AA[t][i])
-			AA[t][i] = 0
-
-iG = [[0] * 4 for i in range(4)]
-
-for i in range(4):
-	for j in range(4):
-		iG[i][j] = AA[i][j + 4]
-
-def mul4(a, bs):
-	if a == 0:
-		return 0
-	rr = 0
-	for b in bs:
-		rr <<= 8
-		if b != 0:
-			rr = rr | mul(a, b)
-	return rr
-
-T1 = []
-T2 = []
-T3 = []
-T4 = []
-T5 = []
-T6 = []
-T7 = []
-T8 = []
-U1 = []
-U2 = []
-U3 = []
-U4 = []
-
-for t in range(256):
-	s = S[t]
-	T1.append(mul4(s, G[0]))
-	T2.append(mul4(s, G[1]))
-	T3.append(mul4(s, G[2]))
-	T4.append(mul4(s, G[3]))
-
-	s = Si[t]
-	T5.append(mul4(s, iG[0]))
-	T6.append(mul4(s, iG[1]))
-	T7.append(mul4(s, iG[2]))
-	T8.append(mul4(s, iG[3]))
-
-	U1.append(mul4(t, iG[0]))
-	U2.append(mul4(t, iG[1]))
-	U3.append(mul4(t, iG[2]))
-	U4.append(mul4(t, iG[3]))
-
-r_con = [1]
-r = 1
-for t in range(1, 30):
-	r = mul(2, r)
-	r_con.append(r)
-
-class RijndaelCBC:
-# Only CBC is defined, others are not necessary
-	def __init__(self, block_size):
-		if len(iv) not in (16, 24, 32):
-			# The offset is not in these three and throws an exception
-			raise ValueError('The iv you set (you set %s) is not within the definition requirements (16, 24, 32)!' % str(iv))
-		if block_size not in (16, 24, 32):
-			# Block size does not throw an exception in these three
-			raise ValueError('The block_size you set (you set it as %s) is not within the definition requirement (16,24,32)!' % str(block_size))
-
-		if len(encryptionKey) not in (16, 24, 32):
-			# encryptionKey length is not in range throw exception
-			raise ValueError('The encryptionKey you set (you set %s) is not within the definition requirements (16, 24, 32)!' % str(len(encryptionKey)))
-
-		self.block_size = block_size
-		rounds = num_rounds[len(encryptionKey)][block_size]
-		b_c = block_size // 4
-		k_e = [[0] * b_c for _ in range(rounds + 1)]
-		k_d = [[0] * b_c for _ in range(rounds + 1)]
-		roundEncryptionKeyCount = (rounds + 1) * b_c
-		k_c = len(encryptionKey) // 4
-		tk = []
-		for i in range(0, k_c):
-			tk.append((ord(encryptionKey[i * 4:i * 4 + 1]) << 24) | (ord(encryptionKey[i * 4 + 1:i * 4 + 1 + 1]) << 16) |
-					(ord(encryptionKey[i * 4 + 2: i * 4 + 2 + 1]) << 8) | ord(encryptionKey[i * 4 + 3:i * 4 + 3 + 1]))
-		t = 0
-		j = 0
-		while j < k_c and t < roundEncryptionKeyCount:
-			k_e[t // b_c][t % b_c] = tk[j]
-			k_d[rounds - (t // b_c)][t % b_c] = tk[j]
-			j += 1
-			t += 1
-		r_con_pointer = 0
-		while t < roundEncryptionKeyCount:
-			tt = tk[k_c - 1]
-			tk[0] ^= (S[(tt >> 16) & 0xFF] & 0xFF) << 24 ^ \
-					(S[(tt >> 8) & 0xFF] & 0xFF) << 16 ^ \
-					(S[tt & 0xFF] & 0xFF) << 8 ^ \
-					(S[(tt >> 24) & 0xFF] & 0xFF) ^ \
-					(r_con[r_con_pointer] & 0xFF) << 24
-			r_con_pointer += 1
-			if k_c != 8:
-				for i in range(1, k_c):
-					tk[i] ^= tk[i - 1]
-			else:
-				for i in range(1, k_c // 2):
-					tk[i] ^= tk[i - 1]
-				tt = tk[k_c // 2 - 1]
-				tk[k_c // 2] ^= (S[tt & 0xFF] & 0xFF) ^ \
-								(S[(tt >> 8) & 0xFF] & 0xFF) << 8 ^ \
-								(S[(tt >> 16) & 0xFF] & 0xFF) << 16 ^ \
-								(S[(tt >> 24) & 0xFF] & 0xFF) << 24
-				for i in range(k_c // 2 + 1, k_c):
-					tk[i] ^= tk[i - 1]
-			j = 0
-			while j < k_c and t < roundEncryptionKeyCount:
-				k_e[t // b_c][t % b_c] = tk[j]
-				k_d[rounds - (t // b_c)][t % b_c] = tk[j]
-				j += 1
-				t += 1
-		for r in range(1, rounds):
-			for j in range(b_c):
-				tt = k_d[r][j]
-				k_d[r][j] = (
-					U1[(tt >> 24) & 0xFF] ^
-					U2[(tt >> 16) & 0xFF] ^
-					U3[(tt >> 8) & 0xFF] ^
-					U4[tt & 0xFF]
-				)
-		self.Ke = k_e
-		self.Kd = k_d
-	def decrypt(self, cipher):
-		assert len(cipher) % self.block_size == 0
-		ppt = bytes()
-		offset = 0
-		v = iv
-		while offset < len(cipher):
-			block = cipher[offset:offset + self.block_size]
-			if len(block) != self.block_size:
-				raise ValueError(
-					'The self.block_size: %s you set does not match the current block data size: %s' % (
-						str(self.block_size),
-						str(len(block))
-					)
-				)
-
-			k_d = self.Kd
-			b_c = self.block_size // 4
-			rounds = len(k_d) - 1
-			if b_c == 4:
-				s_c = 0
-			elif b_c == 6:
-				s_c = 1
-			else:
-				s_c = 2
-			s1 = shifts[s_c][1][1]
-			s2 = shifts[s_c][2][1]
-			s3 = shifts[s_c][3][1]
-			a = [0] * b_c
-			t = [0] * b_c
-			for i in range(b_c):
-				t[i] = (ord(block[i * 4: i * 4 + 1]) << 24 |
-						ord(block[i * 4 + 1: i * 4 + 1 + 1]) << 16 |
-						ord(block[i * 4 + 2: i * 4 + 2 + 1]) << 8 |
-						ord(block[i * 4 + 3: i * 4 + 3 + 1])) ^ k_d[0][i]
-			for r in range(1, rounds):
-				for i in range(b_c):
-					a[i] = (T5[(t[i] >> 24) & 0xFF] ^
-							T6[(t[(i + s1) % b_c] >> 16) & 0xFF] ^
-							T7[(t[(i + s2) % b_c] >> 8) & 0xFF] ^
-							T8[t[(i + s3) % b_c] & 0xFF]) ^ k_d[r][i]
-				t = copy.copy(a)
-			result = []
-			for i in range(b_c):
-				tt = k_d[rounds][i]
-				result.append((Si[(t[i] >> 24) & 0xFF] ^ (tt >> 24)) & 0xFF)
-				result.append((Si[(t[(i + s1) % b_c] >> 16) & 0xFF] ^ (tt >> 16)) & 0xFF)
-				result.append((Si[(t[(i + s2) % b_c] >> 8) & 0xFF] ^ (tt >> 8)) & 0xFF)
-				result.append((Si[t[(i + s3) % b_c] & 0xFF] ^ tt) & 0xFF)
-			decrypted = bytes()
-			for xx in result:
-				decrypted += bytes([xx])
-			ppt += self.x_or_block(decrypted, v)
-			offset += self.block_size
-			v = block
-		
-		# padding way
-		assert len(ppt) % self.block_size == 0
-		offset = len(ppt)
-		if offset == 0:
-			return b''
-		end = offset - self.block_size + 1
-
-		while offset > end:
-			offset -= 1
-			if ppt[offset]:
-				return ppt[:offset + 1]
-
-		return ppt[:end]
-	def x_or_block(self, b1, b2):
-		i = 0
-		r = bytes()
-		while i < self.block_size:
-			r += bytes([ord(b1[i:i+1]) ^ ord(b2[i:i+1])])
-			i += 1
-		return r
 def file_to_folder(inp, out, level, extensions, pathout):
 # Recursive file convert function
 	if isdir(inp):
@@ -564,7 +310,7 @@ def file_to_folder(inp, out, level, extensions, pathout):
 			HEADER = file.read(4)
 			if HEADER == b"\xD4\xFE\xAD\xDE":
 				UNCOMPRESSED_SIZE = unpack("<I", file.read(4))[0]
-				blue_print("Decompressing ...")
+				blue_print("Decompressing...")
 				data = decompress(file.read())
 				if level < 3:
 					open(out, "wb").write(data)
@@ -574,15 +320,74 @@ def file_to_folder(inp, out, level, extensions, pathout):
 					file.name = inp
 					HEADER = file.read(4)
 			if HEADER == b"1bsr":
-				file.seek(40)
-				FILES = unpack("<I", file.read(4))[0]
-				DATA_OFFSET = unpack("<I", file.read(4))[0]
-				file.seek(DATA_OFFSET)
-				for i in range(0, FILES):
+				VERSION = unpack('<L', file.read(4))[0]
+
+				file.seek(4, 1)
+				FILE_DATA_OFFSET = unpack('<L', file.read(4))[0]
+
+				DIRECTORY_0_LENGTH = unpack('<L', file.read(4))[0]
+				DIRECTORY_0_OFFSET = unpack('<L', file.read(4))[0]
+
+				file.seek(8, 1)
+				DIRECTORY_1_LENGTH = unpack('<L', file.read(4))[0]
+				DIRECTORY_1_OFFSET = unpack('<L', file.read(4))[0]
+				DIRECTORY_4_ENTRIES = unpack("<I", file.read(4))[0]
+				DIRECTORY_4_OFFSET = unpack("<I", file.read(4))[0]
+				DIRECTORY_4_ENTRY_SIZE = unpack('<L', file.read(4))[0]
+
+				DIRECTORY_2_ENTRIES = unpack('<L', file.read(4))[0]
+				DIRECTORY_2_OFFSET = unpack('<L', file.read(4))[0]
+				DIRECTORY_2_ENTRY_SIZE = unpack('<L', file.read(4))[0]
+
+				DIRECTORY_3_LENGTH = unpack('<L', file.read(4))[0]
+				DIRECTORY_3_OFFSET = unpack('<L', file.read(4))[0]
+
+				DIRECTORY_5_ENTRIES = unpack('<L', file.read(4))[0]
+				DIRECTORY_5_OFFSET = unpack('<L', file.read(4))[0]
+				DIRECTORY_5_ENTRY_SIZE = unpack('<L', file.read(4))[0]
+
+				DIRECTORY_6_ENTRIES = unpack('<L', file.read(4))[0]
+				DIRECTORY_6_OFFSET = unpack('<L', file.read(4))[0]
+				DIRECTORY_6_ENTRY_SIZE = unpack('<L', file.read(4))[0]
+
+				DIRECTORY_7_OFFSET = unpack('<L', file.read(4))[0]
+				DIRECTORY_8_OFFSET = unpack('<L', file.read(4))[0]
+				DIRECTORY_9_OFFSET = unpack('<L', file.read(4))[0]
+
+				blue_print("Indexing...")
+				TEXTURE_FORMATS = []
+				file.seek(DIRECTORY_6_OFFSET)
+				for IMAGE_ID in range(0, DIRECTORY_6_ENTRIES):
+					WIDHT = unpack("<I", file.read(4))[0]
+					HEIGHT = unpack("<I", file.read(4))[0]
+					WIDHT_BYTES = unpack("<I", file.read(4))[0]
+					TEXTURE_FORMATS.append(unpack("<I", file.read(4))[0])
+					#(IMAGE_ID, WIDHT, HEIGHT, WIDHT_BYTES, TEXTURE_FORMAT)
+
+				file.seek(DIRECTORY_4_OFFSET)
+				for i in range(0, DIRECTORY_4_ENTRIES):
 					FILE_NAME = file.read(128).strip(b"\x00").decode()
 					FILE_CHECK = FILE_NAME.lower()
 					FILE_OFFSET = unpack("<I", file.read(4))[0]
-					FILE_SIZE = unpack("<I", file.read(4))[0]
+					FILE_LENGTH = unpack("<I", file.read(4))[0]
+					
+					RSGP_ID = unpack("<I", file.read(4))[0]
+
+					RSGP_TYPE = unpack("<I", file.read(4))[0]
+					HEADER_PADDING = unpack("<I", file.read(4))[0]
+					DATA_OFFSET = unpack("<I", file.read(4))[0]
+
+					DATA_PADDING = unpack("<I", file.read(4))[0]
+					COMPRESSED_DATA_SIZE = unpack("<I", file.read(4))[0]
+					DECOMPRESSED_DATA_SIZE = unpack("<I", file.read(4))[0]
+					
+					IMAGE_PADDING = unpack("<I", file.read(4))[0]
+					COMPRESSED_IMAGE_SIZE = unpack("<I", file.read(4))[0]
+					DECOMPRESSED_IMAGE_SIZE = unpack("<I", file.read(4))[0]
+
+					file.seek(20, 1)
+					IMAGE_ENTRIES = unpack("<I", file.read(4))[0] # Image layer?
+					IMAGE_ID = unpack("<I", file.read(4))[0]
 					
 					file.seek(68, 1)
 					if FILE_CHECK.startswith(rsgpstartsWith) and FILE_CHECK.endswith(rsgpendsWith):
@@ -590,14 +395,11 @@ def file_to_folder(inp, out, level, extensions, pathout):
 						file.seek(FILE_OFFSET)
 						if level < 4:
 							makedirs(out, exist_ok = True)
-							open(osjoin(out, FILE_NAME + ".rsgp"), "wb").write(file.read(FILE_SIZE))
+							open(osjoin(out, FILE_NAME + ".rsgp"), "wb").write(file.read(FILE_LENGTH))
 							print("wrote " + relpath(osjoin(out, FILE_NAME + ".rsgp"), pathout))
 						else:
-							rsgp_extract(FILE_NAME, FILE_OFFSET, file, out, pathout, level)
+							rsgp_extract(FILE_NAME, FILE_OFFSET, TEXTURE_FORMATS[IMAGE_ID:IMAGE_ID + IMAGE_ENTRIES], file, out, pathout, level)
 						file.seek(temp)
-			elif HEADER == b"pgsr":
-				file.seek(0)
-				rsgp_extract("data", 0, file, out, pathout, level)
 		except Exception as e:
 			error_message("Failed OBBUnpack: " + type(e).__name__ + " in " + inp + " pos " + str(file.tell()) + ": " + str(e))
 # RTON Decode functions
@@ -909,8 +711,6 @@ try:
 		options["smfUnpackLevel"] = input_level("SMF Unpack Level", 1, 2)
 	if options["rsbUnpackLevel"] < 1:
 		options["rsbUnpackLevel"] = input_level("OBB/RSB/SMF Unpack Level", 2, 3)
-	if options["rsgpUnpackLevel"] < 1:
-		options["rsgpUnpackLevel"] = input_level("RSGP/OBB/RSB/SMF Unpack Level", 3, 7)
 	if options["encryptedUnpackLevel"] < 1:
 		options["encryptedUnpackLevel"] = input_level("ENCRYPTED Unpack Level", 5, 6)
 	if options["encodedUnpackLevel"] < 1:
@@ -925,9 +725,7 @@ try:
 	else:
 		rsgpendsWith = options["rsgpendsWith"]
 
-	encryptionKey = str.encode(options["encryptionKey"])
-	iv = encryptionKey[4: 28]
-	rijndael_cbc = RijndaelCBC(24)
+	rijndael_cbc = RijndaelCBC(str.encode(options["encryptionKey"]), 24)
 	if options["endsWithIgnore"]:
 		endsWith = ""
 	else:
@@ -967,12 +765,9 @@ try:
 			smf_output = path_input("SMF " + level_to_name[options["smfUnpackLevel"]] + " Output file")
 		else:
 			smf_output = path_input("SMF " + level_to_name[options["smfUnpackLevel"]] + " Output directory")
-	if 3 >= options["rsbUnpackLevel"] > 2:
+	if 7 >= options["rsbUnpackLevel"] > 2:
 		rsb_input = path_input("OBB/RSB/SMF Input file or directory")
 		rsb_output = path_input("OBB/RSB/SMF " + level_to_name[options["rsbUnpackLevel"]] + " Output directory")
-	if 7 >= options["rsgpUnpackLevel"] > 3:
-		rsgp_input = path_input("RSGP/OBB/RSB/SMF Input file or directory")
-		rsgp_output = path_input("RSGP/OBB/RSB/SMF " + level_to_name[options["rsgpUnpackLevel"]] + " Output directory")
 	if 6 >= options["encryptedUnpackLevel"] > 5:
 		encrypted_input = path_input("ENCRYPTED Input file or directory")
 		if isfile(encrypted_input):
@@ -992,10 +787,8 @@ try:
 	start_time = datetime.datetime.now()
 	if 2 >= options["smfUnpackLevel"] > 1:
 		file_to_folder(smf_input, smf_output, options["smfUnpackLevel"], options["smfExtensions"], dirname(smf_output))
-	if 3 >= options["rsbUnpackLevel"] > 2:
+	if 7 >= options["rsbUnpackLevel"] > 2:
 		file_to_folder(rsb_input, rsb_output, options["rsbUnpackLevel"], options["rsbExtensions"], rsb_output)
-	if 7 >= options["rsgpUnpackLevel"] > 3:
-		file_to_folder(rsgp_input, rsgp_output, options["rsgpUnpackLevel"], options["rsgpExtensions"], rsgp_output)
 	if 6 >= options["encryptedUnpackLevel"] > 5:
 		conversion(encrypted_input, encrypted_output, dirname(encrypted_output), options["encryptedExtensions"], ())
 	if 7 >= options["encodedUnpackLevel"] > 6:

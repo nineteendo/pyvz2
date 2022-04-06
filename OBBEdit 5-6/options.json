@@ -4,6 +4,10 @@
 	],
 	"smfUnpackLevel": 1,
 
+	"endsWith": [
+		".ptx"
+	],
+	"endsWithIgnore": false,
 	"rsbExtensions": [
 		".1bsr",
 		".rsb1",
@@ -19,27 +23,11 @@
 		"packages",
 		"worldpackages_"
 	],
-	"rsgpStartsWithIgnore": false,
-
-	"endsWith": [
-		".rton"
-	],
-	"endsWithIgnore": false,
-	"rsgpExtensions": [
-		".1bsr",
-		".rsb1",
-		".bsr",
-		".rsb",
-		".rsb.smf",
-		".obb",
-		".pgsr",
-		".rsgp"
-	],
-	"rsgpUnpackLevel": 3,
+	"rsgpStartsWithIgnore": true,
 	"startsWith": [
 		"packages/"
 	],
-	"startsWithIgnore": false,
+	"startsWithIgnore": true,
 
 	"encryptedExtensions": [
 		".rton"

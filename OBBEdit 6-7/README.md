@@ -12,17 +12,14 @@ key | purpose
 smfExtensions | Only unpack SMFs with these extensions
 smfUnpackLevel | Level to unpack SMFs to (make negative for manual input)
  | 
+endsWith | Only unpack paths ending with these strings
+endsWithIgnore | Ignore the end of the path
 rsbExtensions | Only unpack RSBs/OBBs/SMFs with these extensions
 rsbUnpackLevel | Level to unpack RSBs/OBBs/SMFs to (make negative for manual input)
 rsgpEndsWith | Only unpack RSGPs ending with these strings
 rsgpEndsWithIgnore | Ignore the end of RSGPs
 rsgpStartsWith | Only unpack RSGPs starting with these strings
 rsgpStartsWithIgnore | Ignore the start of RSGPs
- | 
-endsWith | Only unpack paths ending with these strings
-endsWithIgnore | Ignore the end of the path
-rsgpExtensions | Only unpack RSGPs/RSBs/OBBs/SMFs with these extensions
-rsgpUnpackLevel | Level to unpack RSGPs/RSBs/OBBs/SMFs to (make negative for manual input)
 startsWith | Only unpack paths starting with these strings
 startsWithIgnore | Ignore the start of the path
  | 
