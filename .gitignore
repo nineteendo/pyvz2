@@ -12,11 +12,9 @@ OBBEdit/6_rsgp_encoded_patches
 OBBEdit/7_rsgp_decoded_patches
 OBBEdit/8_tests
 OBBEdit/Z_RTON-OFF
-OBBEdit/check
-OBBEdit/header_test.py
-PTXTests/
 SaveMaxer/
 ShopCreator/
+SMFUnpacker/
 
 # MISC
 fail.txt

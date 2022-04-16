@@ -5,7 +5,7 @@
 	"smfUnpackLevel": 1,
 
 	"endsWith": [
-		".ptx"
+		".rton"
 	],
 	"endsWithIgnore": false,
 	"rsbExtensions": [
@@ -16,18 +16,18 @@
 		".rsb.smf",
 		".obb"
 	],
-	"rsbUnpackLevel": 6,
+	"rsbUnpackLevel": 2,
 	"rsgpEndsWith": [],
 	"rsgpEndsWithIgnore": true,
 	"rsgpStartsWith": [
 		"packages",
 		"worldpackages_"
 	],
-	"rsgpStartsWithIgnore": true,
+	"rsgpStartsWithIgnore": false,
 	"startsWith": [
 		"packages/"
 	],
-	"startsWithIgnore": true,
+	"startsWithIgnore": false,
 
 	"encryptedExtensions": [
 		".rton"
@@ -37,7 +37,7 @@
 
 	"comma": 0,
 	"doublePoint": 1,
-	"encodedUnpackLevel": 6,
+	"encodedUnpackLevel": 7,
 	"ensureAscii": false,
 	"indent": -1,
 	"repairFiles": false,

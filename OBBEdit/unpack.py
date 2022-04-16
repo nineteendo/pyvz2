@@ -1,14 +1,17 @@
 # Import libraries
-import sys, datetime
-from pyvz2.rijndael import RijndaelCBC
+import datetime
+
 from io import BytesIO
-from traceback import format_exc
-from json import load, dumps
-from struct import unpack, error
-from zlib import decompress
+from json import load
+from libraries.pyvz2rijndael import RijndaelCBC
+from libraries.pyvz2rton import RTONDecoder
 from os import makedirs, listdir, system, getcwd, sep
 from os.path import isdir, isfile, realpath, join as osjoin, dirname, relpath, basename, splitext
 from PIL import Image
+from struct import unpack
+import sys
+from traceback import format_exc
+from zlib import decompress
 
 options = {
 # Default options
@@ -30,14 +33,14 @@ options = {
 		".rsb.smf",
 		".obb"
 	),
-	"rsbUnpackLevel": 2,
-	"rsgpendsWith": (),
-	"rsgpendsWithIgnore": True,
-	"rsgpstartsWith": (
+	"rsbUnpackLevel": 7,
+	"rsgpEndsWith": (),
+	"rsgpEndsWithIgnore": True,
+	"rsgpStartsWith": (
 		"packages",
 		"worldpackages_"
 	),
-	"rsgpstartsWithIgnore": False,
+	"rsgpStartsWithIgnore": False,
 	"startsWith": (
 		"packages/",
 	),
@@ -142,6 +145,8 @@ def input_level(text, minimum, maximum):
 # RSGP Unpack functions
 def RGBA8888(file_data, WIDHT, HEIGHT):
 	return Image.frombuffer("RGBA", (WIDHT, HEIGHT), file_data, "raw", "RGBA", 0, 1)
+def BGRA8888(file_data, WIDHT, HEIGHT):
+	return Image.frombuffer("RGBA", (WIDHT, HEIGHT), file_data, "raw", "BGRA", 0, 1)
 def ABGR4444(file_data, WIDHT, HEIGHT):
 	return Image.merge('RGBA', Image.frombuffer("RGBA", (WIDHT, HEIGHT), file_data, "raw", "RGBA;4B", 0, 1).split()[::-1])
 def BGR565(file_data, WIDHT, HEIGHT):
@@ -156,77 +161,111 @@ def BGR655(file_data, WIDHT, HEIGHT):
 			img.putpixel((x,y), (b & 248, 36 * (b & 7) + (a & 192) // 8, 4 * (a & 63), 255))
 			index += 2
 	return img
-def Block32x32(image_decoder, file_data, WIDHT, HEIGHT):
+def RGBABlock32x32(image_decoder, file_data, WIDHT, HEIGHT):
 	BLOCK_OFFSET = 0
 	img = Image.new('RGBA', (WIDHT, HEIGHT))
 	for y in range(0, HEIGHT, 32):
 		for x in range(0, WIDHT, 32):
 			img.paste(image_decoder(file_data[BLOCK_OFFSET: BLOCK_OFFSET + 2048], 32, 32), (x, y))
 			BLOCK_OFFSET += 2048
-	
 	return img
-image_decoders = {
+def RGBBlock32x32(image_decoder, file_data, WIDHT, HEIGHT):
+	BLOCK_OFFSET = 0
+	img = Image.new('RGB', (WIDHT, HEIGHT))
+	for y in range(0, HEIGHT, 32):
+		for x in range(0, WIDHT, 32):
+			img.paste(image_decoder(file_data[BLOCK_OFFSET: BLOCK_OFFSET + 2048], 32, 32), (x, y))
+			BLOCK_OFFSET += 2048
+	return img
+rsb_image_decoders = {
+	0: BGRA8888,
+	1: ABGR4444,
+	2: BGR565,
+	3: BGR655,
+	
+	#5: DXT5,
+
+	#20: RGBA8888,
+	21: ABGR4444,
+	22: BGR565,
+	23: BGR655
+
+	#30: PVRTCI_4bpp_RGBA
+	#147: ETC1_A8
+	#148: ETC1_A_Palette
+}
+obb_image_decoders = {
 	0: RGBA8888,
 	1: ABGR4444,
 	2: BGR565,
 	3: BGR655,
 	
+	#5: DXT5,
+
 	#20: RGBA8888,
 	21: ABGR4444,
 	22: BGR565,
 	23: BGR655
+
+	#30: PVRTCI_4bpp_RGBA
+	#147: ETC1_A8
+	#148: ETC1_A_Palette
 }
-def rsgp_extract(rsgp_NAME, rsgp_OFFSET, IMAGE_FORMATS, file, out, pathout, level):
+def rsgp_extract(rsgp_NAME, rsgp_OFFSET, IMAGE_FORMATS, image_decoders, file, out, pathout, level):
 # Extract data from RGSP file
 	if file.read(4) == b"pgsr":
 		try:
 			rsgp_VERSION = unpack("<I", file.read(4))[0]
 			
 			file.seek(8, 1)
-			rsgp_TYPE = unpack("<I", file.read(4))[0]
+			COMPRESSION_FLAGS = unpack("<I", file.read(4))[0]
 			rsgp_BASE = unpack("<I", file.read(4))[0]
 
 			DATA_OFFSET = unpack("<I", file.read(4))[0]
-			COMPRESSED_SIZE = unpack("<I", file.read(4))[0]
-			UNCOMPRESSED_SIZE = unpack("<I", file.read(4))[0]
-			temp = file.tell()
-			if UNCOMPRESSED_SIZE != 0:
+			COMPRESSED_DATA_SIZE = unpack("<I", file.read(4))[0]
+			UNCOMPRESSED_DATA_SIZE = unpack("<I", file.read(4))[0]
+			
+			file.seek(4, 1)
+			IMAGE_DATA_OFFSET = unpack("<I", file.read(4))[0]
+			COMPRESSED_IMAGE_DATA_SIZE = unpack("<I", file.read(4))[0]
+			UNCOMPRESSED_IMAGE_DATA_SIZE = unpack("<I", file.read(4))[0]
+			
+			file.seek(20, 1)
+			INFO_SIZE = unpack("<I", file.read(4))[0]
+			INFO_OFFSET = rsgp_OFFSET + unpack("<I", file.read(4))[0]
+			INFO_LIMIT = INFO_OFFSET + INFO_SIZE
+			
+			if UNCOMPRESSED_DATA_SIZE != 0:
 				file.seek(rsgp_OFFSET + DATA_OFFSET)
-				if rsgp_TYPE == 3: # Compressed files
+				if COMPRESSION_FLAGS & 2 != 0: # Compressed files
 					blue_print("Decompressing...")
-					data = decompress(file.read(COMPRESSED_SIZE))
+					data = decompress(file.read(COMPRESSED_DATA_SIZE))
 				else: # Uncompressed files
-					data = file.read(COMPRESSED_SIZE)
+					data = file.read(COMPRESSED_DATA_SIZE)
 				
-			file.seek(temp + 4)
-			DATA_OFFSET = unpack("<I", file.read(4))[0]
-			COMPRESSED_SIZE = unpack("<I", file.read(4))[0]
-			UNCOMPRESSED_SIZE = unpack("<I", file.read(4))[0]
-			if UNCOMPRESSED_SIZE != 0:
-				file.seek(rsgp_OFFSET + DATA_OFFSET)
-				if rsgp_TYPE == 0: # Uncompressed files
-					img_data = file.read(COMPRESSED_SIZE)
-				else: # Compressed files
+			if UNCOMPRESSED_IMAGE_DATA_SIZE != 0:
+				file.seek(rsgp_OFFSET + IMAGE_DATA_OFFSET)
+				if COMPRESSION_FLAGS & 1 != 0:
 					blue_print("Decompressing...")
-					img_data = decompress(file.read(COMPRESSED_SIZE))
+					image_data = decompress(file.read(COMPRESSED_IMAGE_DATA_SIZE))
+				else: # Uncompressed files
+					image_data = file.read(COMPRESSED_IMAGE_DATA_SIZE)
 			
 			if level < 5:
-				file_path = osjoin(out, rsgp_NAME + ".section")
-				makedirs(out, exist_ok = True)
-				open(file_path, "wb").write(data)
-				print("wrote " + relpath(file_path, pathout))
+				if UNCOMPRESSED_DATA_SIZE != 0:
+					file_path = osjoin(out, rsgp_NAME + ".section")
+					open(file_path, "wb").write(data)
+					print("wrote " + relpath(file_path, pathout))
+				if UNCOMPRESSED_IMAGE_DATA_SIZE != 0:
+					image_path = osjoin(out, rsgp_NAME + ".section2")
+					open(image_path, "wb").write(image_data)
+					print("wrote " + relpath(image_path, pathout))
 			else:
-				file.seek(rsgp_OFFSET + 72)
-				INFO_SIZE = unpack("<I", file.read(4))[0]
-				INFO_OFFSET = rsgp_OFFSET + unpack("<I", file.read(4))[0]
-				INFO_LIMIT = INFO_OFFSET + INFO_SIZE
-				
-				file.seek(INFO_OFFSET)
-				DECODED_NAME = None
 				NAME_DICT = {}
-				while DECODED_NAME != "":
+				temp = INFO_OFFSET
+				file.seek(INFO_OFFSET)
+				while temp < INFO_LIMIT:
 					FILE_NAME = b""
-					temp = file.tell()
 					for key in list(NAME_DICT.keys()):
 						if NAME_DICT[key] + INFO_OFFSET < temp:
 							NAME_DICT.pop(key)
@@ -242,17 +281,17 @@ def rsgp_extract(rsgp_NAME, rsgp_OFFSET, IMAGE_FORMATS, file, out, pathout, leve
 					
 					DECODED_NAME = FILE_NAME.decode().replace("\\", sep)
 					NAME_CHECK = DECODED_NAME.replace("\\", "/").lower()
-					IS_PTX = unpack("<I", file.read(4))[0] == 1
+					IS_IMAGE = unpack("<I", file.read(4))[0] == 1
 					FILE_OFFSET = unpack("<I", file.read(4))[0]
 					FILE_SIZE = unpack("<I", file.read(4))[0]
-					if IS_PTX:
-						IMAGE_SUB_ID = unpack("<I", file.read(4))[0]
+					if IS_IMAGE:
+						IMAGE_ENTRY = unpack("<I", file.read(4))[0]
 						file.seek(8, 1)
 						WIDHT = unpack("<I", file.read(4))[0]
 						HEIGHT = unpack("<I", file.read(4))[0]
 					if DECODED_NAME and NAME_CHECK.startswith(startsWith) and NAME_CHECK.endswith(endsWith):
-						if IS_PTX:
-							file_data = img_data[FILE_OFFSET: FILE_OFFSET + FILE_SIZE]
+						if IS_IMAGE:
+							file_data = image_data[FILE_OFFSET: FILE_OFFSET + FILE_SIZE]
 						else:
 							file_data = data[FILE_OFFSET: FILE_OFFSET + FILE_SIZE]
 						
@@ -277,24 +316,28 @@ def rsgp_extract(rsgp_NAME, rsgp_OFFSET, IMAGE_FORMATS, file, out, pathout, leve
 									warning_message("No RTON " + source.name)
 							except Exception as e:
 								error_message(type(e).__name__ + " in " + file.name + ": " + DECODED_NAME + " pos " + str(source.tell() - 1) + ": " + str(e))
-						elif IS_PTX:
+						elif IS_IMAGE:
 							try:
 								file_path = osjoin(out, splitext(DECODED_NAME)[0] + ".PNG")
 								makedirs(dirname(file_path), exist_ok = True)
-								IMAGE_FORMAT = IMAGE_FORMATS[IMAGE_SUB_ID]
+								IMAGE_FORMAT = IMAGE_FORMATS[IMAGE_ENTRY]
 								if IMAGE_FORMAT in [0, 1, 2, 3]: # Single Image
 									image_decoders[IMAGE_FORMAT](file_data, WIDHT, HEIGHT).save(file_path)
 									print("wrote " + relpath(file_path, pathout))
-								elif IMAGE_FORMAT in [21, 22, 23]: # 32x32 Block
-									Block32x32(image_decoders[IMAGE_FORMAT], file_data, WIDHT, HEIGHT).save(file_path)
+								elif IMAGE_FORMAT == 21: # 32x32 RGBABlock
+									RGBABlock32x32(image_decoders[21], file_data, WIDHT, HEIGHT).save(file_path)
+									print("wrote " + relpath(file_path, pathout))
+								elif IMAGE_FORMAT in [22, 23]: # 32x32 RGBBlock
+									RGBBlock32x32(image_decoders[IMAGE_FORMAT], file_data, WIDHT, HEIGHT).save(file_path)
 									print("wrote " + relpath(file_path, pathout))
 							except Exception as e:
 								error_message(type(e).__name__ + " in " + file.name + rsgp_NAME + ": " + DECODED_NAME + ": " + str(e))
-
+					temp = file.tell()
 		except Exception as e:
 			error_message(type(e).__name__ + " while extracting " + rsgp_NAME + ".rsgp: " + str(e))
 def file_to_folder(inp, out, level, extensions, pathout):
 # Recursive file convert function
+	check = inp.lower()
 	if isdir(inp):
 		makedirs(out, exist_ok = True)
 		for entry in sorted(listdir(inp)):
@@ -304,7 +347,7 @@ def file_to_folder(inp, out, level, extensions, pathout):
 				file_to_folder(input_file, splitext(output_file)[0], level, extensions, pathout)
 			elif input_file != pathout:
 				file_to_folder(input_file, output_file, level, extensions, pathout)
-	elif isfile(inp) and inp.lower().endswith(extensions):
+	elif isfile(inp) and check.endswith(extensions):
 		try:
 			file = open(inp, "rb")
 			HEADER = file.read(4)
@@ -320,6 +363,12 @@ def file_to_folder(inp, out, level, extensions, pathout):
 					file.name = inp
 					HEADER = file.read(4)
 			if HEADER == b"1bsr":
+				makedirs(out, exist_ok = True)
+				if check[-4:] == ".obb":
+					image_decoders = obb_image_decoders
+				else:
+					image_decoders = rsb_image_decoders
+
 				VERSION = unpack('<L', file.read(4))[0]
 
 				file.seek(4, 1)
@@ -361,8 +410,12 @@ def file_to_folder(inp, out, level, extensions, pathout):
 					WIDHT = unpack("<I", file.read(4))[0]
 					HEIGHT = unpack("<I", file.read(4))[0]
 					WIDHT_BYTES = unpack("<I", file.read(4))[0]
-					TEXTURE_FORMATS.append(unpack("<I", file.read(4))[0])
-					#(IMAGE_ID, WIDHT, HEIGHT, WIDHT_BYTES, TEXTURE_FORMAT)
+					TEXTURE_FORMAT = unpack("<I", file.read(4))[0]
+					if DIRECTORY_6_ENTRY_SIZE == 24:
+						COMPRESSED_IMAGE_SIZE = unpack("<I", file.read(4))[0]
+						HUNDRED = unpack("<I", file.read(4))[0]
+
+					TEXTURE_FORMATS.append(TEXTURE_FORMAT)
 
 				file.seek(DIRECTORY_4_OFFSET)
 				for i in range(0, DIRECTORY_4_ENTRIES):
@@ -373,7 +426,7 @@ def file_to_folder(inp, out, level, extensions, pathout):
 					
 					RSGP_ID = unpack("<I", file.read(4))[0]
 
-					RSGP_TYPE = unpack("<I", file.read(4))[0]
+					COMPRESSION_FLAGS = unpack("<I", file.read(4))[0]
 					HEADER_PADDING = unpack("<I", file.read(4))[0]
 					DATA_OFFSET = unpack("<I", file.read(4))[0]
 
@@ -388,273 +441,17 @@ def file_to_folder(inp, out, level, extensions, pathout):
 					file.seek(20, 1)
 					IMAGE_ENTRIES = unpack("<I", file.read(4))[0] # Image layer?
 					IMAGE_ID = unpack("<I", file.read(4))[0]
-					
-					file.seek(68, 1)
-					if FILE_CHECK.startswith(rsgpstartsWith) and FILE_CHECK.endswith(rsgpendsWith):
+					if FILE_CHECK.startswith(rsgpStartsWith) and FILE_CHECK.endswith(rsgpEndsWith):
 						temp = file.tell()
 						file.seek(FILE_OFFSET)
 						if level < 4:
-							makedirs(out, exist_ok = True)
 							open(osjoin(out, FILE_NAME + ".rsgp"), "wb").write(file.read(FILE_LENGTH))
 							print("wrote " + relpath(osjoin(out, FILE_NAME + ".rsgp"), pathout))
 						else:
-							rsgp_extract(FILE_NAME, FILE_OFFSET, TEXTURE_FORMATS[IMAGE_ID:IMAGE_ID + IMAGE_ENTRIES], file, out, pathout, level)
+							rsgp_extract(FILE_NAME, FILE_OFFSET, TEXTURE_FORMATS[IMAGE_ID:IMAGE_ID + IMAGE_ENTRIES], image_decoders, file, out, pathout, level)
 						file.seek(temp)
 		except Exception as e:
 			error_message("Failed OBBUnpack: " + type(e).__name__ + " in " + inp + " pos " + str(file.tell()) + ": " + str(e))
-# RTON Decode functions
-def parse_int8(fp):
-# type 08
-	return repr(unpack("b", fp.read(1))[0]).encode()
-def parse_uint8(fp):
-# type 0a
-	return repr(fp.read(1)[0]).encode()
-def parse_int16(fp):
-# type 10
-	return repr(unpack("<h", fp.read(2))[0]).encode()
-def parse_uint16(fp):
-# type 12
-	return repr(unpack("<H", fp.read(2))[0]).encode()
-def parse_int32(fp):
-# type 20
-	return repr(unpack("<i", fp.read(4))[0]).encode()
-def parse_float(fp):
-# type 22
-	return repr(unpack("<f", fp.read(4))[0]).replace("inf", "Infinity").replace("nan", "NaN").encode()
-def parse_uvarint(fp):
-# type 24, 28, 44 and 48
-	return repr(parse_number(fp)).encode()
-def parse_varint(fp):
-# type 25, 29, 45 and 49
-	num = parse_number(fp)
-	if num % 2:
-		num = -num -1
-	return repr(num // 2).encode()
-def parse_number(fp):
-	num = fp.read(1)[0]
-	result = num & 0x7f
-	i = 128
-	while num > 127:
-		num = fp.read(1)[0]
-		result += i * (num & 0x7f)
-		i *= 128
-	return result
-def parse_uint32(fp):
-# type 26
-	return repr(unpack("<I", fp.read(4))[0]).encode()
-def parse_int64(fp):
-# type 40
-	return repr(unpack("<q", fp.read(8))[0]).encode()
-def parse_double(fp):
-# type 42
-	return repr(unpack("<d", fp.read(8))[0]).replace("inf", "Infinity").replace("nan", "NaN").encode()
-def parse_uint64(fp):
-# type 46
-	return repr(unpack("<Q", fp.read(8))[0]).encode()
-def parse_str(fp):
-# types 81, 90
-	byte = fp.read(parse_number(fp))
-	try:
-		return dumps(byte.decode('utf-8'), ensure_ascii = ensureAscii).encode()
-	except Exception:
-		return dumps(byte.decode('latin-1'), ensure_ascii = ensureAscii).encode()
-def parse_printable_str(fp):
-# type 82, 92
-	return dumps(parse_utf8_str(fp), ensure_ascii = ensureAscii).encode()
-def parse_utf8_str(fp):
-	i1 = parse_number(fp) # Character length
-	string = fp.read(parse_number(fp)).decode()
-	i2 = len(string)
-	if i1 != i2:
-		warning_message("SilentError: " + fp.name + " pos " + str(fp.tell() - 1) + ": Unicode string of character length " + str(i2) + " found, expected " + str(i1))
-	return string
-def parse_cached_str(fp, code, chached_strings, chached_printable_strings):
-# types 90, 91, 92, 93
-	if code == b"\x90":
-		result = parse_str(fp)
-		chached_strings.append(result)
-	elif code in b"\x91":
-		result = chached_strings[parse_number(fp)]
-	elif code in b"\x92":
-		result = parse_printable_str(fp)
-		chached_printable_strings.append(result)
-	elif code in b"\x93":
-		result = chached_printable_strings[parse_number(fp)]
-	return (result, chached_strings, chached_printable_strings)
-def parse_ref(fp):
-# type 83
-	ch = fp.read(1)
-	if ch == b"\x00":
-		return b'"RTID(0)"'
-	elif ch == b"\x02":
-		p1 = parse_utf8_str(fp)
-		i2 = repr(parse_number(fp))
-		i1 = repr(parse_number(fp))
-		return dumps("RTID(" + i1 + "." + i2 + "." + fp.read(4)[::-1].hex() + "@" + p1 + ")", ensure_ascii = ensureAscii).encode()
-	elif ch == b"\x03":
-		p1 = parse_utf8_str(fp)
-		return dumps("RTID(" + parse_utf8_str(fp) + "@" + p1 + ")", ensure_ascii = ensureAscii).encode()
-	else:
-		raise TypeError("unexpected subtype for type 83, found: " + ch.hex())
-def root_object(fp, currrent_indent):
-# root object
-	VER = unpack("<I", fp.read(4))[0]
-	string = b"{"
-	new_indent = currrent_indent + indent
-	items = []
-	end = b"}"
-	try:
-		key, chached_strings, chached_printable_strings = parse(fp, new_indent, [], [])
-		value, chached_strings, chached_printable_strings = parse(fp, new_indent, chached_strings, chached_printable_strings)
-		string += new_indent 
-		items = [key + doublePoint + value]
-		end = currrent_indent + end
-		while True:
-			key, chached_strings, chached_printable_strings = parse(fp, new_indent, chached_strings, chached_printable_strings)
-			value, chached_strings, chached_printable_strings = parse(fp, new_indent, chached_strings, chached_printable_strings)
-			items.append(key + doublePoint + value)
-	except KeyError as k:
-		if str(k) == 'b""':
-			if repairFiles:
-				warning_message("SilentError: " + fp.name + " pos " + str(fp.tell() - 1) + ": end of file")
-			else:
-				raise EOFError
-		elif k.args[0] != b'\xff':
-			raise TypeError("unknown tag " + k.args[0].hex())
-	except (error, IndexError):
-		if repairFiles:
-			warning_message("SilentError: " + fp.name + " pos " + str(fp.tell() - 1) + ": end of file")
-		else:
-			raise EOFError
-	if sortKeys:
-		items = sorted(items)
-	return string + (comma + new_indent).join(items) + end
-def parse_object(fp, currrent_indent, chached_strings, chached_printable_strings):
-# type 85
-	string = b"{"
-	new_indent = currrent_indent + indent
-	items = []
-	end = b"}"
-	try:
-		key, chached_strings, chached_printable_strings = parse(fp, new_indent, chached_strings, chached_printable_strings)
-		value, chached_strings, chached_printable_strings = parse(fp, new_indent, chached_strings, chached_printable_strings)
-		string += new_indent 
-		items = [key + doublePoint + value]
-		end = currrent_indent + end
-		while True:
-			key, chached_strings, chached_printable_strings = parse(fp, new_indent, chached_strings, chached_printable_strings)
-			value, chached_strings, chached_printable_strings = parse(fp, new_indent, chached_strings, chached_printable_strings)
-			items.append(key + doublePoint + value)
-	except KeyError as k:
-		if str(k) == 'b""':
-			if repairFiles:
-				warning_message("SilentError: " + fp.name + " pos " + str(fp.tell() - 1) + ": end of file")
-			else:
-				raise EOFError
-		elif k.args[0] != b'\xff':
-			raise TypeError("unknown tag " + k.args[0].hex())
-	except (error, IndexError):
-		if repairFiles:
-			warning_message("SilentError: " + fp.name + " pos " + str(fp.tell() - 1) + ": end of file")
-		else:
-			raise EOFError
-	if sortKeys:
-		items = sorted(items)
-	return (string + (comma + new_indent).join(items) + end, chached_strings, chached_printable_strings)
-def parse_list(fp, currrent_indent, chached_strings, chached_printable_strings):
-# type 86
-	code = fp.read(1)
-	if code == b"":
-		if repairFiles:
-			warning_message("SilentError: " + fp.name + " pos " + str(fp.tell() - 1) + ": end of file")
-		else:
-			raise EOFError
-	elif code != b"\xfd":
-		raise TypeError("List starts with " + code.hex())
-	string = b"["
-	new_indent = currrent_indent + indent
-	items = []
-	end = b"]"
-	i1 = parse_number(fp)
-	try:
-		value, chached_strings, chached_printable_strings = parse(fp, new_indent, chached_strings, chached_printable_strings)
-		string += new_indent
-		items = [value]
-		end = currrent_indent + end
-		while True:
-			value, chached_strings, chached_printable_strings = parse(fp, new_indent, chached_strings, chached_printable_strings)
-			items.append(value)
-	except KeyError as k:
-		if str(k) == 'b""':
-			if repairFiles:
-				warning_message("SilentError: " + fp.name + " pos " + str(fp.tell() - 1) + ": end of file")
-			else:
-				raise EOFError
-		elif k.args[0] != b'\xfe':
-			raise TypeError("unknown tag " + k.args[0].hex())
-	except (error, IndexError):
-		if repairFiles:
-			warning_message("SilentError: " + fp.name + " pos " + str(fp.tell() - 1) + ": end of file")
-		else:
-			raise EOFError
-	i2 = len(items)
-	if i1 != i2:
-		warning_message("SilentError: " + fp.name + " pos " + str(fp.tell() -1) + ": Array of length " + str(i1) + " found, expected " + str(i2))
-	if sortValues:
-		items = sorted(sorted(items), key = lambda key : len(key))
-	
-	return (string + (comma + new_indent).join(items) + end, chached_strings, chached_printable_strings)
-def parse(fp, current_indent, chached_strings, chached_printable_strings):
-	code = fp.read(1)
-	if code == b"\x85":
-		return parse_object(fp, current_indent, chached_strings, chached_printable_strings)
-	elif code == b"\x86":
-		return parse_list(fp, current_indent, chached_strings, chached_printable_strings)
-	elif code in cached_codes:
-		return parse_cached_str(fp, code, chached_strings, chached_printable_strings)
-	return (mappings[code](fp), chached_strings, chached_printable_strings)
-cached_codes = [
-	b"\x90",
-	b"\x91",
-	b"\x92",
-	b"\x93"
-]
-mappings = {	
-	b"\x00": lambda x: b"false",
-	b"\x01": lambda x: b"true",
-	b"\x08": parse_int8,  
-	b"\x09": lambda x: b"0", # int8_zero
-	b"\x0a": parse_uint8,
-	b"\x0b": lambda x: b"0", # uint8_zero
-	b"\x10": parse_int16,
-	b"\x11": lambda x: b"0",  # int16_zero
-	b"\x12": parse_uint16,
-	b"\x13": lambda x: b"0", # uint16_zero
-	b"\x20": parse_int32,
-	b"\x21": lambda x: b"0", # int32_zero
-	b"\x22": parse_float,
-	b"\x23": lambda x: b"0.0", # float_zero
-	b"\x24": parse_uvarint, # int32_uvarint
-	b"\x25": parse_varint, # int32_varint
-	b"\x26": parse_uint32,
-	b"\x27": lambda x: b"0", #uint_32_zero
-	b"\x28": parse_uvarint, # uint32_uvarint
-	b"\x29": parse_varint, # uint32_varint?
-	b"\x40": parse_int64,
-	b"\x41": lambda x: b"0", #int64_zero
-	b"\x42": parse_double,
-	b"\x43": lambda x: b"0.0", # double_zero
-	b"\x44": parse_uvarint, # int64_uvarint
-	b"\x45": parse_varint, # int64_varint
-	b"\x46": parse_uint64,
-	b"\x47": lambda x: b"0", # uint64_zero
-	b"\x48": parse_uvarint, # uint64_uvarint
-	b"\x49": parse_varint, # uint64_varint
-	b"\x81": parse_str, # uncached string
-	b"\x82": parse_printable_str, # uncached printable string
-	b"\x83": parse_ref,
-	b"\x84": lambda x: b'"RTID(0)"' # zero reference
-}
 def conversion(inp, out, pathout, extensions, noextensions):
 # Recursive file convert function
 	check = inp.lower()
@@ -693,19 +490,36 @@ try:
 	if sys.version_info[0] < 3:
 		raise RuntimeError("Must be using Python 3")
 	
-	print("\033[95m\033[1mOBBUnpacker v1.1.4\n(C) 2022 by Nineteendo, Luigi Auriemma, Small Pea, 1Zulu & h3x4n1um\033[0m\n")
+	print("\033[95m\033[1mOBBUnpacker v1.1.5\n(C) 2022 by Nineteendo, Luigi Auriemma, Small Pea, 1Zulu & h3x4n1um\033[0m\n")
 	try:
-		newoptions = load(open(osjoin(application_path, "options.json"), "rb"))
-		for key in options:
-			if key in newoptions and newoptions[key] != options[key]:
-				if type(options[key]) == type(newoptions[key]):
-					options[key] = newoptions[key]
-				elif isinstance(options[key], tuple) and isinstance(newoptions[key], list):
-					options[key] = tuple([str(i).lower() for i in newoptions[key]])
-				elif key == "indent" and newoptions[key] == None:
-					options[key] = newoptions[key]
+		folder = osjoin(application_path, "options")
+		templates = list(filter(lambda entry: isfile(osjoin(folder, entry)) and entry[-5:] == ".json", sorted(listdir(folder))))
+		length = len(templates)
+		if length == 0:
+			green_print("Loaded default template")
+		else:
+			blue_print("\033[1mTEMPLATES:\033[0m")
+			for index in range(length):
+				blue_print("\033[1m" + repr(index) + "\033[0m: "  + templates[index][:-5].strip())
+			
+			if length == 1:
+				newoptions = load(open(osjoin(folder, templates[0]), "rb"))
+			else:
+				newoptions = load(open(osjoin(folder, templates[int(bold_input("Choose template"))]), "rb"))
+			
+			for key in options:
+				if key in newoptions and newoptions[key] != options[key]:
+					if type(options[key]) == type(newoptions[key]):
+						options[key] = newoptions[key]
+					elif isinstance(options[key], tuple) and isinstance(newoptions[key], list):
+						options[key] = tuple([str(i).lower() for i in newoptions[key]])
+					elif key == "indent" and newoptions[key] == None:
+						options[key] = newoptions[key]
+			
+			green_print("Loaded template")
 	except Exception as e:
-		error_message(type(e).__name__ + " in options.json: " + str(e))
+		error_message(type(e).__name__ + " while loading options: " + str(e))
+		warning_message("Falling back to default options.")
 	
 	if options["smfUnpackLevel"] < 1:
 		options["smfUnpackLevel"] = input_level("SMF Unpack Level", 1, 2)
@@ -716,14 +530,14 @@ try:
 	if options["encodedUnpackLevel"] < 1:
 		options["encodedUnpackLevel"] = input_level("ENCODED Unpack Level", 6, 7)
 
-	if options["rsgpstartsWithIgnore"]:
-		rsgpstartsWith = ""
+	if options["rsgpStartsWithIgnore"]:
+		rsgpStartsWith = ""
 	else:
-		rsgpstartsWith = options["rsgpstartsWith"]
-	if options["rsgpendsWithIgnore"]:
-		rsgpendsWith = ""
+		rsgpStartsWith = options["rsgpStartsWith"]
+	if options["rsgpEndsWithIgnore"]:
+		rsgpEndsWith = ""
 	else:
-		rsgpendsWith = options["rsgpendsWith"]
+		rsgpEndsWith = options["rsgpEndsWith"]
 
 	rijndael_cbc = RijndaelCBC(str.encode(options["encryptionKey"]), 24)
 	if options["endsWithIgnore"]:
@@ -755,6 +569,7 @@ try:
 	repairFiles = options["repairFiles"]
 	sortKeys = options["sortKeys"]
 	sortValues = options["sortValues"]
+	root_object = RTONDecoder(comma, doublePoint, ensureAscii, fail, indent, repairFiles, sortKeys, sortValues).root_object
 	
 	level_to_name = ["SPECIFY", "SMF", "RSB", "RSGP", "SECTION", "ENCRYPTED", "ENCODED", "DECODED (beta)"]
 
@@ -796,7 +611,7 @@ try:
 
 	green_print("finished unpacking in " + str(datetime.datetime.now() - start_time))
 	if fail.tell() > 0:
-		print("\33[93m" + "Errors occured, check: " + fail.name + "\33[0m")
+		print("\33[93mErrors occured, check: " + fail.name + "\33[0m")
 	bold_input("\033[95mPRESS [ENTER]")
 except Exception as e:
 	error_message(type(e).__name__ + " : " + str(e))
