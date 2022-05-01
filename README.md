@@ -16,5 +16,8 @@ Python3 scripts for modifying Plants VS Zombies 2
 2. YingFengTingYu for documenting the RSB.SMF format: https://github.com/YingFengTingYu/PopStudio
 3. H3x4n1um for the documentating the RTON format: https://github.com/h3x4n1um/RETON
 
+## MODDING SUPPORT
+https://discord.gg/CVZdcGKVSw
+
 ## REPORT ISSUES ON GITHUB:
 https://github.com/Nineteendo/PVZ2tools

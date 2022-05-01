@@ -1,0 +1,77 @@
+{
+	"smfExtensions": [
+		".rsb.smf"
+	],
+	"smfUnpackLevel": 0,
+
+	"rsbExtensions": [
+		".rsb.smf",
+		
+		".1bsr",
+		".rsb1",
+		".rsb",
+		".obb"
+	],
+	"rsbUnpackLevel": 1,
+	"rsgEndsWith": [],
+	"rsgEndsWithIgnore": true,
+	"rsgStartsWith": [
+		"packages",
+		"worldpackages_"
+	],
+	"rsgStartsWithIgnore": true,
+
+	"endsWith": [
+		".rton"
+	],
+	"endsWithIgnore": true,
+	"overrideDataCompression": 0,
+	"overrideEncryption": 0,
+	"overrideImageDataCompression": 0,
+	"rsgExtensions": [
+		".rsb.smf",
+		
+		".1bsr",
+		".rsb1",
+		".rsb",
+		".obb",
+		
+		".pgsr",
+		".rsgp",
+		".rsg",
+		".rsg.smf"
+	],
+	"rsgUnpackLevel": 2,
+	"startsWith": [
+		"packages/"
+	],
+	"startsWithIgnore": true,
+
+	"encryptedExtensions": [
+		".rton"
+	],
+	"encryptedUnpackLevel": 4,
+	"encryptionKey": "00000000000000000000000000000000",
+
+	"comma": 0,
+	"doublePoint": 1,
+	"encodedUnpackLevel": 5,
+	"ensureAscii": false,
+	"indent": -1,
+	"repairFiles": true,
+	"RTONExtensions": [
+		".bin",
+		".dat",
+		".json",
+		".rton",
+		".section"
+	],
+	"RTONNoExtensions": [
+		"draper_",
+		"local_profiles",
+		"loot",
+		"_saveheader_rton"
+	],
+	"sortKeys": false,
+	"sortValues": false
+}

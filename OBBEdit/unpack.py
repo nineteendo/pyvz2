@@ -7,7 +7,7 @@ from libraries.pyvz2rijndael import RijndaelCBC
 from libraries.pyvz2rton import RTONDecoder
 from os import makedirs, listdir, system, getcwd, sep
 from os.path import isdir, isfile, realpath, join as osjoin, dirname, relpath, basename, splitext
-from PIL import Image
+#from PIL import Image
 from struct import unpack
 import sys
 from traceback import format_exc
@@ -21,26 +21,44 @@ options = {
 	),
 	"smfUnpackLevel": 1,
 	# RSB options
+	"rsbExtensions": (
+		".rsb.smf",
+		
+		".1bsr",
+		".rsb1",
+		".rsb",
+		".obb"
+	),
+	"rsbUnpackLevel": 2,
+	"rsgEndsWith": (),
+	"rsgEndsWithIgnore": True,
+	"rsgStartsWith": (
+		"packages",
+		"worldpackages_"
+	),
+	"rsgStartsWithIgnore": False,
+	# RSG options
 	"endsWith": (
 		".rton",
 	),
 	"endsWithIgnore": False,
-	"rsbExtensions": (
+	"overrideDataCompression": 1,
+	"overrideEncryption": 1,
+	"overrideImageDataCompression": 1,
+	"rsgExtensions": (
+		".rsb.smf",
+		
 		".1bsr",
 		".rsb1",
-		".bsr",
 		".rsb",
-		".rsb.smf",
-		".obb"
+		".obb",
+		
+		".pgsr",
+		".rsgp",
+		".rsg",
+		".rsg.smf"
 	),
-	"rsbUnpackLevel": 7,
-	"rsgpEndsWith": (),
-	"rsgpEndsWithIgnore": True,
-	"rsgpStartsWith": (
-		"packages",
-		"worldpackages_"
-	),
-	"rsgpStartsWithIgnore": False,
+	"rsgUnpackLevel": 7,
 	"startsWith": (
 		"packages/",
 	),
@@ -102,17 +120,17 @@ def path_input(text):
 		string = ""
 		quoted = 0
 		escaped = False
-		tempstring = ""
+		temp_string = ""
 		confirm = False
 		for char in newstring:
 			if escaped:
 				if quoted != 1 and char == "'" or quoted != 2 and char == '"' or quoted == 0 and char in "\\ ":
-					string += tempstring + char
+					string += temp_string + char
 					confirm = True
 				else:
-					string += tempstring + "\\" + char
+					string += temp_string + "\\" + char
 				
-				tempstring = ""
+				temp_string = ""
 				escaped = False
 			elif char == "\\":
 				escaped = True
@@ -121,10 +139,10 @@ def path_input(text):
 			elif quoted != 1 and char == '"':
 				quoted = 2 - quoted
 			elif quoted != 0 or char != " ":
-				string += tempstring + char
-				tempstring = ""
+				string += temp_string + char
+				temp_string = ""
 			else:
-				tempstring += " "
+				temp_string += " "
 		
 		if string == "":
 			newstring = bold_input("\033[91mEnter a path")
@@ -134,130 +152,143 @@ def path_input(text):
 			if confirm:
 				newstring = bold_input("Confirm \033[100m" + string)
 	return string
-def input_level(text, minimum, maximum):
-# Set input level for conversion
-	try:
-		return max(minimum, min(maximum, int(bold_input(text + "(" + str(minimum) + "-" + str(maximum) + ")"))))
-	except Exception as e:
-		error_message(type(e).__name__ + " : " + str(e))
-		warning_message("Defaulting to " + str(minimum))
-		return minimum
-# RSGP Unpack functions
-def RGBA8888(file_data, WIDHT, HEIGHT):
-	return Image.frombuffer("RGBA", (WIDHT, HEIGHT), file_data, "raw", "RGBA", 0, 1)
-def BGRA8888(file_data, WIDHT, HEIGHT):
-	return Image.frombuffer("RGBA", (WIDHT, HEIGHT), file_data, "raw", "BGRA", 0, 1)
-def ABGR4444(file_data, WIDHT, HEIGHT):
-	return Image.merge('RGBA', Image.frombuffer("RGBA", (WIDHT, HEIGHT), file_data, "raw", "RGBA;4B", 0, 1).split()[::-1])
-def BGR565(file_data, WIDHT, HEIGHT):
-	return Image.frombuffer("RGB", (WIDHT, HEIGHT), file_data, "raw", "BGR;16", 0, 1)
-def BGR655(file_data, WIDHT, HEIGHT):
-	img = Image.new('RGBA', (WIDHT, HEIGHT))
-	index = 0
-	for y in range(0, HEIGHT):
-		for x in range(0, WIDHT):
-			a = file_data[index]
-			b = file_data[index + 1]
-			img.putpixel((x,y), (b & 248, 36 * (b & 7) + (a & 192) // 8, 4 * (a & 63), 255))
-			index += 2
-	return img
-def RGBABlock32x32(image_decoder, file_data, WIDHT, HEIGHT):
-	BLOCK_OFFSET = 0
-	img = Image.new('RGBA', (WIDHT, HEIGHT))
-	for y in range(0, HEIGHT, 32):
-		for x in range(0, WIDHT, 32):
-			img.paste(image_decoder(file_data[BLOCK_OFFSET: BLOCK_OFFSET + 2048], 32, 32), (x, y))
-			BLOCK_OFFSET += 2048
-	return img
-def RGBBlock32x32(image_decoder, file_data, WIDHT, HEIGHT):
-	BLOCK_OFFSET = 0
-	img = Image.new('RGB', (WIDHT, HEIGHT))
-	for y in range(0, HEIGHT, 32):
-		for x in range(0, WIDHT, 32):
-			img.paste(image_decoder(file_data[BLOCK_OFFSET: BLOCK_OFFSET + 2048], 32, 32), (x, y))
-			BLOCK_OFFSET += 2048
-	return img
-rsb_image_decoders = {
-	0: BGRA8888,
-	1: ABGR4444,
-	2: BGR565,
-	3: BGR655,
+# RSG Unpack functions
+# def ARGB8888(file_data, WIDHT, HEIGHT):
+# 	return Image.frombuffer("RGBA", (WIDHT, HEIGHT), file_data, "raw", "BGRA", 0, 1)
+# def ABGR8888(file_data, WIDHT, HEIGHT):
+# 	return Image.frombuffer("RGBA", (WIDHT, HEIGHT), file_data, "raw", "RGBA", 0, 1)
+# def RGBA4444(file_data, WIDHT, HEIGHT):
+# 	return Image.merge('RGBA', Image.frombuffer("RGBA", (WIDHT, HEIGHT), file_data, "raw", "RGBA;4B", 0, 1).split()[::-1])
+# def RGB565(file_data, WIDHT, HEIGHT):
+# 	return Image.frombuffer("RGB", (WIDHT, HEIGHT), file_data, "raw", "BGR;16", 0, 1)
+# def RGBA5551(file_data, WIDHT, HEIGHT):
+# 	img = Image.new('RGBA', (WIDHT, HEIGHT))
+# 	index = 0
+# 	for y in range(0, HEIGHT):
+# 		for x in range(0, WIDHT):
+# 			a = file_data[index]
+# 			b = file_data[index + 1]
+# 			img.putpixel((x,y), (b & 248, 36 * (b & 7) + (a & 192) // 8, 4 * (a & 62), 255 * (a & 1)))
+# 			index += 2
+# 	return img
+# def RGBABlock32x32(image_decoder, file_data, WIDHT, HEIGHT):
+# 	BLOCK_OFFSET = 0
+# 	img = Image.new('RGBA', (WIDHT, HEIGHT))
+# 	for y in range(0, HEIGHT, 32):
+# 		for x in range(0, WIDHT, 32):
+# 			img.paste(image_decoder(file_data[BLOCK_OFFSET: BLOCK_OFFSET + 2048], 32, 32), (x, y))
+# 			BLOCK_OFFSET += 2048
+# 	return img
+# def RGBBlock32x32(image_decoder, file_data, WIDHT, HEIGHT):
+# 	BLOCK_OFFSET = 0
+# 	img = Image.new('RGB', (WIDHT, HEIGHT))
+# 	for y in range(0, HEIGHT, 32):
+# 		for x in range(0, WIDHT, 32):
+# 			img.paste(image_decoder(file_data[BLOCK_OFFSET: BLOCK_OFFSET + 2048], 32, 32), (x, y))
+# 			BLOCK_OFFSET += 2048
+# 	return img
+# rsb_image_decoders = {
+# 	0: ARGB8888,
+# 	1: RGBA4444,
+# 	2: RGB565,
+# 	3: RGBA5551,
 	
-	#5: DXT5,
+# 	#5: DXT5,
 
-	#20: RGBA8888,
-	21: ABGR4444,
-	22: BGR565,
-	23: BGR655
+# 	21: RGBA4444, # 32x32 block
+# 	22: RGB565, # 32x32 block
+# 	23: RGBA5551 # 32x32 block
 
-	#30: PVRTCI_4bpp_RGBA
-	#147: ETC1_A8
-	#148: ETC1_A_Palette
-}
-obb_image_decoders = {
-	0: RGBA8888,
-	1: ABGR4444,
-	2: BGR565,
-	3: BGR655,
+# 	#30: PVRTC_4BPP_RGBA,
+# 	#31: PVRTC_2BPP_RGBA,
+# 	#32: ETC1_RGB,
+# 	#33: ETC2_RGB,
+# 	#34: ETC2_RGBA,
+# 	#35: DXT1_RGB,
+# 	#36: DXT3_RGBA,
+# 	#37: DXT5_RGBA,
+# 	#38: ATITC_RGB,
+# 	#39: ATITC_RGBA,
+
+# 	#147: ETC1_RGB_A8,
+# 	#148: PVRTC_4BPP_RGB_A8,
+# 	#149: XRGB8888_A8,
+# 	#150: ETC1_RGB_A_Palette
+# }
+# obb_image_decoders = {
+# 	0: ABGR8888,
+# 	1: RGBA4444,
+# 	2: RGB565,
+# 	3: RGBA5551,
 	
-	#5: DXT5,
+# 	#5: DXT5,
 
-	#20: RGBA8888,
-	21: ABGR4444,
-	22: BGR565,
-	23: BGR655
+# 	21: RGBA4444, # 32x32 block
+# 	22: RGB565, # 32x32 block
+# 	23: RGBA5551 # 32x32 block
 
-	#30: PVRTCI_4bpp_RGBA
-	#147: ETC1_A8
-	#148: ETC1_A_Palette
-}
-def rsgp_extract(rsgp_NAME, rsgp_OFFSET, IMAGE_FORMATS, image_decoders, file, out, pathout, level):
-# Extract data from RGSP file
+# 	#30: PVRTC_4BPP_RGBA,
+# 	#31: PVRTC_2BPP_RGBA,
+# 	#32: ETC1_RGB,
+# 	#33: ETC2_RGB,
+# 	#34: ETC2_RGBA,
+# 	#35: DXT1_RGB,
+# 	#36: DXT3_RGBA,
+# 	#37: DXT5_RGBA,
+# 	#38: ATITC_RGB,
+# 	#39: ATITC_RGBA,
+
+# 	#147: ETC1_RGB_A8,
+# 	#148: PVRTC_4BPP_RGB_A8,
+# 	#149: XRGB8888_A8,
+# 	#150: ETC1_RGB_A_Palette
+# }
+#def rsgp_extract(RSG_NAME, RSG_OFFSET, IMAGE_FORMATS, image_decoders, file, out, pathout, level):
+def rsgp_extract(RSG_NAME, RSG_OFFSET, file, out, pathout, level):
 	if file.read(4) == b"pgsr":
 		try:
-			rsgp_VERSION = unpack("<I", file.read(4))[0]
+			VERSION = unpack("<I", file.read(4))[0]
 			
 			file.seek(8, 1)
 			COMPRESSION_FLAGS = unpack("<I", file.read(4))[0]
-			rsgp_BASE = unpack("<I", file.read(4))[0]
+			HEADER_LENGTH = unpack("<I", file.read(4))[0]
 
 			DATA_OFFSET = unpack("<I", file.read(4))[0]
 			COMPRESSED_DATA_SIZE = unpack("<I", file.read(4))[0]
-			UNCOMPRESSED_DATA_SIZE = unpack("<I", file.read(4))[0]
+			DECOMPRESSED_DATA_SIZE = unpack("<I", file.read(4))[0]
 			
 			file.seek(4, 1)
 			IMAGE_DATA_OFFSET = unpack("<I", file.read(4))[0]
 			COMPRESSED_IMAGE_DATA_SIZE = unpack("<I", file.read(4))[0]
-			UNCOMPRESSED_IMAGE_DATA_SIZE = unpack("<I", file.read(4))[0]
+			DECOMPRESSED_IMAGE_DATA_SIZE = unpack("<I", file.read(4))[0]
 			
 			file.seek(20, 1)
 			INFO_SIZE = unpack("<I", file.read(4))[0]
-			INFO_OFFSET = rsgp_OFFSET + unpack("<I", file.read(4))[0]
+			INFO_OFFSET = RSG_OFFSET + unpack("<I", file.read(4))[0]
 			INFO_LIMIT = INFO_OFFSET + INFO_SIZE
 			
-			if UNCOMPRESSED_DATA_SIZE != 0:
-				file.seek(rsgp_OFFSET + DATA_OFFSET)
-				if COMPRESSION_FLAGS & 2 != 0: # Compressed files
-					blue_print("Decompressing...")
-					data = decompress(file.read(COMPRESSED_DATA_SIZE))
-				else: # Uncompressed files
-					data = file.read(COMPRESSED_DATA_SIZE)
+			file.seek(RSG_OFFSET + DATA_OFFSET)
+			if COMPRESSION_FLAGS & 2 == 0: # Decompressed files
+				data = file.read(COMPRESSED_DATA_SIZE)
+			elif COMPRESSED_DATA_SIZE != 0: # Compressed files
+				blue_print("Decompressing...")
+				data = decompress(file.read(COMPRESSED_DATA_SIZE))
 				
-			if UNCOMPRESSED_IMAGE_DATA_SIZE != 0:
-				file.seek(rsgp_OFFSET + IMAGE_DATA_OFFSET)
-				if COMPRESSION_FLAGS & 1 != 0:
+			if DECOMPRESSED_IMAGE_DATA_SIZE != 0:
+				file.seek(RSG_OFFSET + IMAGE_DATA_OFFSET)
+				if COMPRESSION_FLAGS & 1 == 0: # Decompressed files
+					image_data = file.read(COMPRESSED_IMAGE_DATA_SIZE)
+				else: # Compressed files
 					blue_print("Decompressing...")
 					image_data = decompress(file.read(COMPRESSED_IMAGE_DATA_SIZE))
-				else: # Uncompressed files
-					image_data = file.read(COMPRESSED_IMAGE_DATA_SIZE)
 			
 			if level < 5:
-				if UNCOMPRESSED_DATA_SIZE != 0:
-					file_path = osjoin(out, rsgp_NAME + ".section")
+				if COMPRESSION_FLAGS & 2 == 0 or COMPRESSED_DATA_SIZE != 0:
+					file_path = osjoin(out, RSG_NAME + ".section")
 					open(file_path, "wb").write(data)
 					print("wrote " + relpath(file_path, pathout))
-				if UNCOMPRESSED_IMAGE_DATA_SIZE != 0:
-					image_path = osjoin(out, rsgp_NAME + ".section2")
+				if DECOMPRESSED_IMAGE_DATA_SIZE != 0:
+					image_path = osjoin(out, RSG_NAME + ".section2")
 					open(image_path, "wb").write(image_data)
 					print("wrote " + relpath(image_path, pathout))
 			else:
@@ -272,10 +303,10 @@ def rsgp_extract(rsgp_NAME, rsgp_OFFSET, IMAGE_FORMATS, image_decoders, file, ou
 						else:
 							FILE_NAME = key
 					BYTE = b""
-					while BYTE != b"\x00":
+					while BYTE != b"\0":
 						FILE_NAME += BYTE
 						BYTE = file.read(1)
-						LENGTH = 4 * unpack("<I", file.read(3) + b"\x00")[0]
+						LENGTH = 4 * unpack("<I", file.read(3) + b"\0")[0]
 						if LENGTH != 0:
 							NAME_DICT[FILE_NAME] = LENGTH
 					
@@ -285,29 +316,34 @@ def rsgp_extract(rsgp_NAME, rsgp_OFFSET, IMAGE_FORMATS, image_decoders, file, ou
 					FILE_OFFSET = unpack("<I", file.read(4))[0]
 					FILE_SIZE = unpack("<I", file.read(4))[0]
 					if IS_IMAGE:
-						IMAGE_ENTRY = unpack("<I", file.read(4))[0]
-						file.seek(8, 1)
-						WIDHT = unpack("<I", file.read(4))[0]
-						HEIGHT = unpack("<I", file.read(4))[0]
+						file.seek(20, 1)
+						#IMAGE_ENTRY = unpack("<I", file.read(4))[0]
+						#file.seek(8, 1)
+						#WIDHT = unpack("<I", file.read(4))[0]
+						#HEIGHT = unpack("<I", file.read(4))[0]
 					if DECODED_NAME and NAME_CHECK.startswith(startsWith) and NAME_CHECK.endswith(endsWith):
 						if IS_IMAGE:
 							file_data = image_data[FILE_OFFSET: FILE_OFFSET + FILE_SIZE]
 						else:
 							file_data = data[FILE_OFFSET: FILE_OFFSET + FILE_SIZE]
 						
-						if NAME_CHECK[-5:] == ".rton" and file_data[:2] == b"\x10\x00" and 5 < level:
+						if NAME_CHECK[-5:] == ".rton" and file_data[:2] == b"\x10\0" and 5 < level:
 							file_data = rijndael_cbc.decrypt(file_data[2:])
+
 						if level < 7:
-							file_path = osjoin(out, DECODED_NAME)
-							makedirs(dirname(file_path), exist_ok = True)
-							open(file_path, "wb").write(file_data)
-							print("wrote " + relpath(file_path, pathout))
+							if NAME_CHECK[-5:] == ".rton" and 6 == level and file_data[:4] != b"RTON":
+								warning_message("No RTON " + relpath(out, pathout) + ":" + DECODED_NAME)
+							else:
+								file_path = osjoin(out, DECODED_NAME)
+								makedirs(dirname(file_path), exist_ok = True)
+								open(file_path, "wb").write(file_data)
+								print("wrote " + relpath(file_path, pathout))
 						elif NAME_CHECK[-5:] == ".rton":
 							try:
 								jfn = osjoin(out, DECODED_NAME[:-5] + ".JSON")
 								makedirs(dirname(jfn), exist_ok = True)
 								source = BytesIO(file_data)
-								source.name = file.name + ": " + DECODED_NAME
+								source.name = relpath(out, pathout) + ":" + DECODED_NAME
 								if source.read(4) == b"RTON":
 									json_data = root_object(source, current_indent)
 									open(jfn, "wb").write(json_data)
@@ -316,28 +352,111 @@ def rsgp_extract(rsgp_NAME, rsgp_OFFSET, IMAGE_FORMATS, image_decoders, file, ou
 									warning_message("No RTON " + source.name)
 							except Exception as e:
 								error_message(type(e).__name__ + " in " + file.name + ": " + DECODED_NAME + " pos " + str(source.tell() - 1) + ": " + str(e))
-						elif IS_IMAGE:
-							try:
-								file_path = osjoin(out, splitext(DECODED_NAME)[0] + ".PNG")
-								makedirs(dirname(file_path), exist_ok = True)
-								IMAGE_FORMAT = IMAGE_FORMATS[IMAGE_ENTRY]
-								if IMAGE_FORMAT in [0, 1, 2, 3]: # Single Image
-									image_decoders[IMAGE_FORMAT](file_data, WIDHT, HEIGHT).save(file_path)
-									print("wrote " + relpath(file_path, pathout))
-								elif IMAGE_FORMAT == 21: # 32x32 RGBABlock
-									RGBABlock32x32(image_decoders[21], file_data, WIDHT, HEIGHT).save(file_path)
-									print("wrote " + relpath(file_path, pathout))
-								elif IMAGE_FORMAT in [22, 23]: # 32x32 RGBBlock
-									RGBBlock32x32(image_decoders[IMAGE_FORMAT], file_data, WIDHT, HEIGHT).save(file_path)
-									print("wrote " + relpath(file_path, pathout))
-							except Exception as e:
-								error_message(type(e).__name__ + " in " + file.name + rsgp_NAME + ": " + DECODED_NAME + ": " + str(e))
+						# elif IS_IMAGE:
+						# 	try:
+						# 		file_path = osjoin(out, splitext(DECODED_NAME)[0] + ".PNG")
+						# 		makedirs(dirname(file_path), exist_ok = True)
+						# 		IMAGE_FORMAT = IMAGE_FORMATS[IMAGE_ENTRY]
+						# 		if IMAGE_FORMAT in [0, 1, 2, 3]: # Single Image
+						# 			image_decoders[IMAGE_FORMAT](file_data, WIDHT, HEIGHT).save(file_path)
+						# 			print("wrote " + relpath(file_path, pathout))
+						# 		elif IMAGE_FORMAT in [21, 23]: # 32x32 RGBABlock
+						# 			RGBABlock32x32(image_decoders[21], file_data, WIDHT, HEIGHT).save(file_path)
+						# 			print("wrote " + relpath(file_path, pathout))
+						# 		elif IMAGE_FORMAT == 22: # 32x32 RGBBlock
+						# 			RGBBlock32x32(image_decoders[IMAGE_FORMAT], file_data, WIDHT, HEIGHT).save(file_path)
+						# 			print("wrote " + relpath(file_path, pathout))
+						# 	except Exception as e:
+						# 		error_message(type(e).__name__ + " in " + file.name + RSG_NAME + ": " + DECODED_NAME + ": " + str(e))
 					temp = file.tell()
 		except Exception as e:
-			error_message(type(e).__name__ + " while extracting " + rsgp_NAME + ".rsgp: " + str(e))
+			error_message(type(e).__name__ + " while extracting " + RSG_NAME + ".rsg: " + str(e))
+
+#def rsb_extract(file, out, level, image_decoders, pathout):
+def rsb_extract(file, out, level, pathout):
+	VERSION = unpack('<L', file.read(4))[0]
+
+	file.seek(4, 1)
+	DIRECTORY_10_OFFSET = unpack('<L', file.read(4))[0]
+
+	DIRECTORY_0_LENGTH = unpack('<L', file.read(4))[0]
+	DIRECTORY_0_OFFSET = unpack('<L', file.read(4))[0]
+
+	file.seek(8, 1)
+	DIRECTORY_1_LENGTH = unpack('<L', file.read(4))[0]
+	DIRECTORY_1_OFFSET = unpack('<L', file.read(4))[0]
+	DIRECTORY_4_ENTRIES = unpack("<I", file.read(4))[0]
+	DIRECTORY_4_OFFSET = unpack("<I", file.read(4))[0]
+	DIRECTORY_4_ENTRY_SIZE = unpack('<L', file.read(4))[0]
+
+	DIRECTORY_2_ENTRIES = unpack('<L', file.read(4))[0]
+	DIRECTORY_2_OFFSET = unpack('<L', file.read(4))[0]
+	DIRECTORY_2_ENTRY_SIZE = unpack('<L', file.read(4))[0]
+
+	DIRECTORY_3_LENGTH = unpack('<L', file.read(4))[0]
+	DIRECTORY_3_OFFSET = unpack('<L', file.read(4))[0]
+
+	DIRECTORY_5_ENTRIES = unpack('<L', file.read(4))[0]
+	DIRECTORY_5_OFFSET = unpack('<L', file.read(4))[0]
+	DIRECTORY_5_ENTRY_SIZE = unpack('<L', file.read(4))[0]
+
+	DIRECTORY_6_ENTRIES = unpack('<L', file.read(4))[0]
+	DIRECTORY_6_OFFSET = unpack('<L', file.read(4))[0]
+	DIRECTORY_6_ENTRY_SIZE = unpack('<L', file.read(4))[0]
+
+	DIRECTORY_7_OFFSET = unpack('<L', file.read(4))[0]
+	DIRECTORY_8_OFFSET = unpack('<L', file.read(4))[0]
+	DIRECTORY_9_OFFSET = unpack('<L', file.read(4))[0]
+
+	# TEXTURE_FORMATS = []
+	# file.seek(DIRECTORY_6_OFFSET)
+	# for IMAGE_ID in range(0, DIRECTORY_6_ENTRIES):
+	# 	WIDHT = unpack("<I", file.read(4))[0]
+	# 	HEIGHT = unpack("<I", file.read(4))[0]
+	# 	WIDHT_BYTES = unpack("<I", file.read(4))[0]
+	# 	TEXTURE_FORMAT = unpack("<I", file.read(4))[0]
+	# 	if DIRECTORY_6_ENTRY_SIZE == 24:
+	# 		COMPRESSED_IMAGE_SIZE = unpack("<I", file.read(4))[0]
+	# 		HUNDRED = unpack("<I", file.read(4))[0]
+
+	# 	TEXTURE_FORMATS.append(TEXTURE_FORMAT)
+
+	file.seek(DIRECTORY_4_OFFSET)
+	for i in range(0, DIRECTORY_4_ENTRIES):
+		RSG_NAME = file.read(128).strip(b"\0").decode()
+		RSG_CHECK = RSG_NAME.lower()
+		RSG_OFFSET = unpack("<I", file.read(4))[0]
+		RSG_LENGTH = unpack("<I", file.read(4))[0]
+		
+		RSG_ID = unpack("<I", file.read(4))[0]
+
+		COMPRESSION_FLAGS = unpack("<I", file.read(4))[0]
+		HEADER_LENGTH = unpack("<I", file.read(4))[0]
+
+		DATA_OFFSET = unpack("<I", file.read(4))[0]
+		COMPRESSED_DATA_SIZE = unpack("<I", file.read(4))[0]
+		DECOMPRESSED_DATA_SIZE = unpack("<I", file.read(4))[0]
+		DECOMPRESSED_DATA_SIZE_B = unpack("<I", file.read(4))[0]
+		
+		IMAGE_DATA_OFFSET = unpack("<I", file.read(4))[0]
+		COMPRESSED_IMAGE_DATA_SIZE = unpack("<I", file.read(4))[0]
+		DECOMPRESSED_IMAGE_DATA_SIZE = unpack("<I", file.read(4))[0]
+
+		file.seek(20, 1)
+		IMAGE_ENTRIES = unpack("<I", file.read(4))[0]
+		IMAGE_ID = unpack("<I", file.read(4))[0]
+		if RSG_CHECK.startswith(rsgStartsWith) and RSG_CHECK.endswith(rsgEndsWith):
+			temp = file.tell()
+			file.seek(RSG_OFFSET)
+			if level < 4:
+				open(osjoin(out, RSG_NAME + ".rsg"), "wb").write(file.read(RSG_LENGTH))
+				print("wrote " + relpath(osjoin(out, RSG_NAME + ".rsg"), pathout))
+			else:
+				rsgp_extract(RSG_NAME, RSG_OFFSET, file, out, pathout, level)
+				#rsgp_extract(RSG_NAME, RSG_OFFSET, TEXTURE_FORMATS[IMAGE_ID:IMAGE_ID + IMAGE_ENTRIES], image_decoders, file, out, pathout, level)
+			file.seek(temp)
 def file_to_folder(inp, out, level, extensions, pathout):
 # Recursive file convert function
-	check = inp.lower()
 	if isdir(inp):
 		makedirs(out, exist_ok = True)
 		for entry in sorted(listdir(inp)):
@@ -347,13 +466,12 @@ def file_to_folder(inp, out, level, extensions, pathout):
 				file_to_folder(input_file, splitext(output_file)[0], level, extensions, pathout)
 			elif input_file != pathout:
 				file_to_folder(input_file, output_file, level, extensions, pathout)
-	elif isfile(inp) and check.endswith(extensions):
+	elif isfile(inp) and inp.lower().endswith(extensions):
 		try:
 			file = open(inp, "rb")
 			HEADER = file.read(4)
 			if HEADER == b"\xD4\xFE\xAD\xDE":
-				UNCOMPRESSED_SIZE = unpack("<I", file.read(4))[0]
-				blue_print("Decompressing...")
+				DECOMPRESSED_SIZE = unpack("<I", file.read(4))[0]
 				data = decompress(file.read())
 				if level < 3:
 					open(out, "wb").write(data)
@@ -363,93 +481,19 @@ def file_to_folder(inp, out, level, extensions, pathout):
 					file.name = inp
 					HEADER = file.read(4)
 			if HEADER == b"1bsr":
+				# if file.[-4:] == ".obb":
+				# 	image_decoders = obb_image_decoders
+				# else:
+				# 	image_decoders = rsb_image_decoders
+
 				makedirs(out, exist_ok = True)
-				if check[-4:] == ".obb":
-					image_decoders = obb_image_decoders
-				else:
-					image_decoders = rsb_image_decoders
-
-				VERSION = unpack('<L', file.read(4))[0]
-
-				file.seek(4, 1)
-				FILE_DATA_OFFSET = unpack('<L', file.read(4))[0]
-
-				DIRECTORY_0_LENGTH = unpack('<L', file.read(4))[0]
-				DIRECTORY_0_OFFSET = unpack('<L', file.read(4))[0]
-
-				file.seek(8, 1)
-				DIRECTORY_1_LENGTH = unpack('<L', file.read(4))[0]
-				DIRECTORY_1_OFFSET = unpack('<L', file.read(4))[0]
-				DIRECTORY_4_ENTRIES = unpack("<I", file.read(4))[0]
-				DIRECTORY_4_OFFSET = unpack("<I", file.read(4))[0]
-				DIRECTORY_4_ENTRY_SIZE = unpack('<L', file.read(4))[0]
-
-				DIRECTORY_2_ENTRIES = unpack('<L', file.read(4))[0]
-				DIRECTORY_2_OFFSET = unpack('<L', file.read(4))[0]
-				DIRECTORY_2_ENTRY_SIZE = unpack('<L', file.read(4))[0]
-
-				DIRECTORY_3_LENGTH = unpack('<L', file.read(4))[0]
-				DIRECTORY_3_OFFSET = unpack('<L', file.read(4))[0]
-
-				DIRECTORY_5_ENTRIES = unpack('<L', file.read(4))[0]
-				DIRECTORY_5_OFFSET = unpack('<L', file.read(4))[0]
-				DIRECTORY_5_ENTRY_SIZE = unpack('<L', file.read(4))[0]
-
-				DIRECTORY_6_ENTRIES = unpack('<L', file.read(4))[0]
-				DIRECTORY_6_OFFSET = unpack('<L', file.read(4))[0]
-				DIRECTORY_6_ENTRY_SIZE = unpack('<L', file.read(4))[0]
-
-				DIRECTORY_7_OFFSET = unpack('<L', file.read(4))[0]
-				DIRECTORY_8_OFFSET = unpack('<L', file.read(4))[0]
-				DIRECTORY_9_OFFSET = unpack('<L', file.read(4))[0]
-
-				blue_print("Indexing...")
-				TEXTURE_FORMATS = []
-				file.seek(DIRECTORY_6_OFFSET)
-				for IMAGE_ID in range(0, DIRECTORY_6_ENTRIES):
-					WIDHT = unpack("<I", file.read(4))[0]
-					HEIGHT = unpack("<I", file.read(4))[0]
-					WIDHT_BYTES = unpack("<I", file.read(4))[0]
-					TEXTURE_FORMAT = unpack("<I", file.read(4))[0]
-					if DIRECTORY_6_ENTRY_SIZE == 24:
-						COMPRESSED_IMAGE_SIZE = unpack("<I", file.read(4))[0]
-						HUNDRED = unpack("<I", file.read(4))[0]
-
-					TEXTURE_FORMATS.append(TEXTURE_FORMAT)
-
-				file.seek(DIRECTORY_4_OFFSET)
-				for i in range(0, DIRECTORY_4_ENTRIES):
-					FILE_NAME = file.read(128).strip(b"\x00").decode()
-					FILE_CHECK = FILE_NAME.lower()
-					FILE_OFFSET = unpack("<I", file.read(4))[0]
-					FILE_LENGTH = unpack("<I", file.read(4))[0]
-					
-					RSGP_ID = unpack("<I", file.read(4))[0]
-
-					COMPRESSION_FLAGS = unpack("<I", file.read(4))[0]
-					HEADER_PADDING = unpack("<I", file.read(4))[0]
-					DATA_OFFSET = unpack("<I", file.read(4))[0]
-
-					DATA_PADDING = unpack("<I", file.read(4))[0]
-					COMPRESSED_DATA_SIZE = unpack("<I", file.read(4))[0]
-					DECOMPRESSED_DATA_SIZE = unpack("<I", file.read(4))[0]
-					
-					IMAGE_PADDING = unpack("<I", file.read(4))[0]
-					COMPRESSED_IMAGE_SIZE = unpack("<I", file.read(4))[0]
-					DECOMPRESSED_IMAGE_SIZE = unpack("<I", file.read(4))[0]
-
-					file.seek(20, 1)
-					IMAGE_ENTRIES = unpack("<I", file.read(4))[0] # Image layer?
-					IMAGE_ID = unpack("<I", file.read(4))[0]
-					if FILE_CHECK.startswith(rsgpStartsWith) and FILE_CHECK.endswith(rsgpEndsWith):
-						temp = file.tell()
-						file.seek(FILE_OFFSET)
-						if level < 4:
-							open(osjoin(out, FILE_NAME + ".rsgp"), "wb").write(file.read(FILE_LENGTH))
-							print("wrote " + relpath(osjoin(out, FILE_NAME + ".rsgp"), pathout))
-						else:
-							rsgp_extract(FILE_NAME, FILE_OFFSET, TEXTURE_FORMATS[IMAGE_ID:IMAGE_ID + IMAGE_ENTRIES], image_decoders, file, out, pathout, level)
-						file.seek(temp)
+				rsb_extract(file, out, level, pathout)
+				#rsb_extract(file, out, level, image_decoders, pathout)
+			elif HEADER == b"pgsr":
+				makedirs(out, exist_ok = True)
+				file.seek(0)
+				rsgp_extract("data", 0, file, out, pathout, level)
+				#rsgp_extract("data", 0, [], {} file, out, pathout, level)
 		except Exception as e:
 			error_message("Failed OBBUnpack: " + type(e).__name__ + " in " + inp + " pos " + str(file.tell()) + ": " + str(e))
 def conversion(inp, out, pathout, extensions, noextensions):
@@ -459,7 +503,7 @@ def conversion(inp, out, pathout, extensions, noextensions):
 		try:
 			file = open(inp, "rb")
 			HEADER = file.read(2)
-			if HEADER == b"\x10\x00":
+			if HEADER == b"\x10\0":
 				open(out,"wb").write(rijndael_cbc.decrypt(file.read()))
 				print("wrote " + relpath(out, pathout))
 			elif HEADER == b"RT" and file.read(2) == b"ON":
@@ -479,6 +523,16 @@ def conversion(inp, out, pathout, extensions, noextensions):
 			input_file = osjoin(inp, entry)
 			if isfile(input_file) or input_file != pathout:
 				conversion(input_file, osjoin(out, entry), pathout, extensions, noextensions)
+def list_levels(levels):
+	blue_print(" ".join([repr(i) + "-" + levels[i] for i in range(len(levels))]))
+def input_level(text, minimum, maximum):
+# Set input level for conversion
+	try:
+		return max(minimum, min(maximum, int(bold_input(text + " (" + str(minimum) + "-" + str(maximum) + ")"))))
+	except Exception as e:
+		error_message(type(e).__name__ + " : " + str(e))
+		warning_message("Defaulting to " + str(minimum))
+		return minimum
 # Start of the code
 try:
 	system("")
@@ -490,23 +544,27 @@ try:
 	if sys.version_info[0] < 3:
 		raise RuntimeError("Must be using Python 3")
 	
-	print("\033[95m\033[1mOBBUnpacker v1.1.5\n(C) 2022 by Nineteendo, Luigi Auriemma, Small Pea, 1Zulu & h3x4n1um\033[0m\n")
+	print("\033[95m\033[1mOBBUnpacker v1.1.6 (C) 2022 by Nineteendo\nCode based on: Luigi Auriemma, Small Pea & 1Zulu\nDocumentation: Watto Studios, YingFengTingYu & h3x4n1um\033[0m\n")
 	try:
 		folder = osjoin(application_path, "options")
-		templates = list(filter(lambda entry: isfile(osjoin(folder, entry)) and entry[-5:] == ".json", sorted(listdir(folder))))
+		templates = {}
+		for entry in sorted(listdir(folder)):
+			if isfile(osjoin(folder, entry)) and entry[-5:] == ".json" and entry.count("-") == 1:
+				key, value = entry.split("-")
+				templates[key] = value
 		length = len(templates)
 		if length == 0:
 			green_print("Loaded default template")
 		else:
 			blue_print("\033[1mTEMPLATES:\033[0m")
-			for index in range(length):
-				blue_print("\033[1m" + repr(index) + "\033[0m: "  + templates[index][:-5].strip())
+			for key in sorted(templates):
+				blue_print("\033[1m" + key + "\033[0m: " + templates[key][:-5])
 			
-			if length == 1:
-				newoptions = load(open(osjoin(folder, templates[0]), "rb"))
-			else:
-				newoptions = load(open(osjoin(folder, templates[int(bold_input("Choose template"))]), "rb"))
+			if length > 1:
+				key = bold_input("Choose template")
 			
+			name = key + "-" + templates[key]
+			newoptions = load(open(osjoin(folder, name), "rb"))
 			for key in options:
 				if key in newoptions and newoptions[key] != options[key]:
 					if type(options[key]) == type(newoptions[key]):
@@ -515,29 +573,33 @@ try:
 						options[key] = tuple([str(i).lower() for i in newoptions[key]])
 					elif key == "indent" and newoptions[key] == None:
 						options[key] = newoptions[key]
-			
-			green_print("Loaded template")
+			green_print("Loaded template " + name)
 	except Exception as e:
 		error_message(type(e).__name__ + " while loading options: " + str(e))
 		warning_message("Falling back to default options.")
 	
-	if options["smfUnpackLevel"] < 1:
+	level_to_name = ["SPECIFY", "SMF", "RSB", "RSG", "SECTION", "ENCRYPTED", "ENCODED", "DECODED"]
+	if options["smfUnpackLevel"] <= 0 or options["rsbUnpackLevel"] <= 1 or options["rsgUnpackLevel"] <= 2 or options["encryptedUnpackLevel"] <= 4 or options["encodedUnpackLevel"] <= 5:
+		list_levels(level_to_name)
+	if options["smfUnpackLevel"] <= 0:
 		options["smfUnpackLevel"] = input_level("SMF Unpack Level", 1, 2)
-	if options["rsbUnpackLevel"] < 1:
-		options["rsbUnpackLevel"] = input_level("OBB/RSB/SMF Unpack Level", 2, 3)
-	if options["encryptedUnpackLevel"] < 1:
+	if options["rsbUnpackLevel"] <= 1:
+		options["rsbUnpackLevel"] = input_level("RSB/SMF Unpack Level", 2, 3)
+	if options["rsgUnpackLevel"] <= 2:
+		options["rsgUnpackLevel"] = input_level("RSG/RSB/SMF Unpack Level", 3, 7)
+	if options["encryptedUnpackLevel"] <= 4:
 		options["encryptedUnpackLevel"] = input_level("ENCRYPTED Unpack Level", 5, 6)
-	if options["encodedUnpackLevel"] < 1:
+	if options["encodedUnpackLevel"] <= 5:
 		options["encodedUnpackLevel"] = input_level("ENCODED Unpack Level", 6, 7)
 
-	if options["rsgpStartsWithIgnore"]:
-		rsgpStartsWith = ""
+	if options["rsgStartsWithIgnore"]:
+		rsgStartsWith = ""
 	else:
-		rsgpStartsWith = options["rsgpStartsWith"]
-	if options["rsgpEndsWithIgnore"]:
-		rsgpEndsWith = ""
+		rsgStartsWith = options["rsgStartsWith"]
+	if options["rsgEndsWithIgnore"]:
+		rsgEndsWith = ""
 	else:
-		rsgpEndsWith = options["rsgpEndsWith"]
+		rsgEndsWith = options["rsgEndsWith"]
 
 	rijndael_cbc = RijndaelCBC(str.encode(options["encryptionKey"]), 24)
 	if options["endsWithIgnore"]:
@@ -571,8 +633,6 @@ try:
 	sortValues = options["sortValues"]
 	root_object = RTONDecoder(comma, doublePoint, ensureAscii, fail, indent, repairFiles, sortKeys, sortValues).root_object
 	
-	level_to_name = ["SPECIFY", "SMF", "RSB", "RSGP", "SECTION", "ENCRYPTED", "ENCODED", "DECODED (beta)"]
-
 	blue_print("Working directory: " + getcwd())
 	if 2 >= options["smfUnpackLevel"] > 1:
 		smf_input = path_input("SMF Input file or directory")
@@ -580,9 +640,12 @@ try:
 			smf_output = path_input("SMF " + level_to_name[options["smfUnpackLevel"]] + " Output file")
 		else:
 			smf_output = path_input("SMF " + level_to_name[options["smfUnpackLevel"]] + " Output directory")
-	if 7 >= options["rsbUnpackLevel"] > 2:
-		rsb_input = path_input("OBB/RSB/SMF Input file or directory")
-		rsb_output = path_input("OBB/RSB/SMF " + level_to_name[options["rsbUnpackLevel"]] + " Output directory")
+	if 3 >= options["rsbUnpackLevel"] > 2:
+		rsb_input = path_input("RSB/SMF Input file or directory")
+		rsb_output = path_input("RSB/SMF " + level_to_name[options["rsbUnpackLevel"]] + " Output directory")
+	if 7 >= options["rsgUnpackLevel"] > 3:
+		rsg_input = path_input("RSG/RSB/SMF Input file or directory")
+		rsg_output = path_input("RSG/RSB/SMF " + level_to_name[options["rsgUnpackLevel"]] + " Output directory")
 	if 6 >= options["encryptedUnpackLevel"] > 5:
 		encrypted_input = path_input("ENCRYPTED Input file or directory")
 		if isfile(encrypted_input):
@@ -602,8 +665,10 @@ try:
 	start_time = datetime.datetime.now()
 	if 2 >= options["smfUnpackLevel"] > 1:
 		file_to_folder(smf_input, smf_output, options["smfUnpackLevel"], options["smfExtensions"], dirname(smf_output))
-	if 7 >= options["rsbUnpackLevel"] > 2:
+	if 3 >= options["rsbUnpackLevel"] > 2:
 		file_to_folder(rsb_input, rsb_output, options["rsbUnpackLevel"], options["rsbExtensions"], rsb_output)
+	if 7 >= options["rsgUnpackLevel"] > 3:
+		file_to_folder(rsg_input, rsg_output, options["rsgUnpackLevel"], options["rsgExtensions"], rsg_output)
 	if 6 >= options["encryptedUnpackLevel"] > 5:
 		conversion(encrypted_input, encrypted_output, dirname(encrypted_output), options["encryptedExtensions"], ())
 	if 7 >= options["encodedUnpackLevel"] > 6:

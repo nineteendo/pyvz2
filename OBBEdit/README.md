@@ -1,4 +1,5 @@
 # OBBEdit
+## Files
 - fail.txt: file with the last errors
 - options.json: settings for unpacking (see below)
 - patch.py a tool to patch 1bsr and pgsr
@@ -6,30 +7,36 @@
 - unpack.py a tool to unpack 1bsr and pgsr
 - versions.cfg (old configuration file)
 
-# options.json
+## options.json
 key | purpose
 --- | ---
 smfExtensions | Only unpack SMFs with these extensions
-smfUnpackLevel | Level to unpack SMFs to (make negative for manual input)
- | 
-endsWith | Only unpack paths ending with these strings
-endsWithIgnore | Ignore the end of the path
-rsbExtensions | Only unpack RSBs/OBBs/SMFs with these extensions
-rsbUnpackLevel | Level to unpack RSBs/OBBs/SMFs to (make negative for manual input)
+smfUnpackLevel | Level to unpack SMFs to (make negative / zero for manual input)
+/ | /
+rsbExtensions | Only unpack RSBs/SMFs with these extensions
+rsbUnpackLevel | Level to unpack RSBs/SMFs to (make negative / zero for manual input)
 rsgpEndsWith | Only unpack RSGPs ending with these strings
 rsgpEndsWithIgnore | Ignore the end of RSGPs
 rsgpStartsWith | Only unpack RSGPs starting with these strings
 rsgpStartsWithIgnore | Ignore the start of RSGPs
+/ | /
+endsWith | Only unpack paths ending with these strings
+endsWithIgnore | Ignore the end of the path
+overrideDataCompression | Override data compression (make negative / zero for manual input)
+overrideEncryption | Override image data compression (make negative / zero for manual input)
+overrideImageDataCompression | Override image data compression (make negative / zero for manual input)
+rsgExtensions | Only encrypt RSG/RSBs/SMFs with these extensions
+rsgUnpackLevel | Level to unpack RSG/RSBs/SMFs to (make negative / zero for manual input)
 startsWith | Only unpack paths starting with these strings
 startsWithIgnore | Ignore the start of the path
- | 
+/ | /
 encryptedExtensions | Only encrypt ENCRYPTED with these extensions
-encryptedUnpackLevel | Level to unpack ENCRYPTED to (make negative for manual input)
+encryptedUnpackLevel | Level to unpack ENCRYPTED to (make negative / zero for manual input)
 encryptionKey | Key used for encrypting, the default is not right, search it if you want to decrypt
- | 
+/ | /
 comma | Spaces between values in JSON (make negative to disable)
 doublePoint | Spaces between key & value in JSON (make negative to disable)
-encodedUnpackLevel | Level to unpack ENCODED to (make negative for manual input)
+encodedUnpackLevel | Level to unpack ENCODED to (make negative / zero for manual input)
 ensureAscii | escape non-ASCII characters with \uXXXX sequences
 indent | Spaces as indent, negative for tab, *null:* no indent
 repairFiles | Repair RTON files that end abruptly
@@ -39,39 +46,40 @@ shortNames | Remove RTON extensions for JSON files
 sortKeys | Sort keys in object
 sortValues | Sort values in array
 
-# Data Formats
+## Data Formats
 Please help me finishing this documentation and correcting errors.
 
-## 1BSR Header
-what | type | purpose
---- | --- | ---
-HEADER | string 4 | 1bsr
-VERSION | < long | 3/4
-NOTHING | long | NOTHING
-FIRST_PGSR_OFFSET | < long | start of first pgsr file
-FILE_NAME_SIZE | < long | size of unpacked files names segment
-FILE_NAME_OFFSET | < long | start of file names
-NOTHING | 12 bytes | NOTHING
-PGSR_NAME_SIZE | < long | size of  of pgsr files names
-PGSR_NAME_OFFSET | < long | start of pgsr names
-PGSRS | < long | # of PGSR files
-PGSR_OFFSET | < long | start of PGSR files
-??? | long | ???
-??? | long | ???
-COMPOSITE_GROUP_OFFSET | long | start of composite groups
-??? | long | ???
-??? | long | ???
-COMPOSITE_GROUP_NAME_OFFSET | long | start of composite groups names
-??? | long | ???
-AUTOPOOL_OFFSET | long | start of autopool
-??? | long | ???
-??? | long | ???
-???_OFFSET | long | start of ???
-??? | long | ???
-NOTHING | 12 bytes | NOTHING
-FIRST_PGSR_OFFSET | < long | start of first pgsr file
+### 1BSR Header
+Byte | what
+--- | ---
+4 | HEADER (1bsr)
+4 | VERSION (3/4)
+4 | /
+4 | FILE_DATA_OFFSET
+4 | DIRECTORY_0_LENGTH
+4 | DIRECTORY_0_OFFSET
+8 | /
+4 | DIRECTORY_1_LENGTH
+4 | DIRECTORY_1_OFFSET
+4 | DIRECTORY_4_ENTRIES
+4 | DIRECTORY_4_OFFSET
+4 | DIRECTORY_4_ENTRY_SIZE (204)
+4 | DIRECTORY_2_ENTRIES
+4 | DIRECTORY_2_OFFSET
+4 | DIRECTORY_2_ENTRY_SIZE (1156)
+4 | DIRECTORY_3_LENGTH
+4 | DIRECTORY_3_OFFSET
+4 | DIRECTORY_5_ENTRIES
+4 | DIRECTORY_5_OFFSET
+4 | DIRECTORY_5_ENTRY_SIZE (152)
+4 | DIRECTORY_6_ENTRIES
+4 | DIRECTORY_6_OFFSET
+4 | DIRECTORY_6_ENTRY_SIZE (16)
+4 | DIRECTORY_7 ?
+4 | DIRECTORY_8 ?
+4 | DIRECTORY_9 ?
 
-## 1BSR smart pathnames -> GET_NAME()
+### 1BSR smart pathnames -> GET_NAME()
 what | type | purpose
 --- | --- | ---
 CHAR | string 1 | character of path name
@@ -97,7 +105,7 @@ def GET_NAME(file, OFFSET, NAME_DICT):
 	return (NAME, NAME_DICT)
 ```
 
-## PGSR Header -> GET_SECTION():
+### PGSR Header -> GET_SECTION():
 what | type | purpose
 --- | --- | ---
 HEADER | string 4 | pgsr

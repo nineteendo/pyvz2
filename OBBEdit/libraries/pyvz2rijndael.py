@@ -300,7 +300,7 @@ class RijndaelCBC:
 		offset = 0
 
 		ct = bytes()
-		v = iv
+		v = self.key[4: 28]
 		while offset < len(ppt):
 			block = ppt[offset:offset + self.block_size]
 			block = self.x_or_block(block, v)

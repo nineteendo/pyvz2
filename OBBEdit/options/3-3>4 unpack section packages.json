@@ -4,26 +4,44 @@
 	],
 	"smfUnpackLevel": 1,
 
+	"rsbExtensions": [
+		".rsb.smf",
+		
+		".1bsr",
+		".rsb1",
+		".rsb",
+		".obb"
+	],
+	"rsbUnpackLevel": 2,
+	"rsgEndsWith": [],
+	"rsgEndsWithIgnore": true,
+	"rsgStartsWith": [
+		"packages",
+		"worldpackages_"
+	],
+	"rsgStartsWithIgnore": false,
+
 	"endsWith": [
 		".rton"
 	],
 	"endsWithIgnore": false,
-	"rsbExtensions": [
+	"overrideDataCompression": 1,
+	"overrideEncryption": 2,
+	"overrideImageDataCompression": 1,
+	"rsgExtensions": [
+		".rsb.smf",
+		
 		".1bsr",
 		".rsb1",
-		".bsr",
 		".rsb",
-		".rsb.smf",
-		".obb"
+		".obb",
+		
+		".pgsr",
+		".rsgp",
+		".rsg",
+		".rsg.smf"
 	],
-	"rsbUnpackLevel": 6,
-	"rsgpEndsWith": [],
-	"rsgpEndsWithIgnore": true,
-	"rsgpStartsWith": [
-		"packages",
-		"worldpackages_"
-	],
-	"rsgpStartsWithIgnore": false,
+	"rsgUnpackLevel": 4,
 	"startsWith": [
 		"packages/"
 	],
@@ -40,7 +58,7 @@
 	"encodedUnpackLevel": 6,
 	"ensureAscii": false,
 	"indent": -1,
-	"repairFiles": false,
+	"repairFiles": true,
 	"RTONExtensions": [
 		".bin",
 		".dat",
