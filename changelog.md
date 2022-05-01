@@ -330,7 +330,7 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* README:
 		* Split up credits in Code & Documentation
 		* Creditted YingFengTingYu & Watto Studios
-## Beta 1.1.6 (28 Apr 2022)
+## Beta 1.1.6 (1 May 2022)
 1. OBBEdit:
 	* Added changelog
 	* Resupported rsg unpacking

@@ -317,11 +317,14 @@ def rsg_patch_data(RSG_NAME, file, pathout_data, patch, patchout, level):
 								raise FileNotFoundError
 
 							FILE_SIZE = len(patch_data)
-							patch_data += extend_to_4096(FILE_SIZE)
-							image_data[FILE_OFFSET: FILE_OFFSET_NEW] = patch_data
-							pathout_data[FILE_INFO - 24: FILE_INFO - 20] = pack("<I", FILE_SIZE)
-							IMAGE_DATA_SHIFT += len(patch_data) + FILE_OFFSET - FILE_OFFSET_NEW
-							print("patched " + relpath(file_name, patchout))
+							if FILE_SIZE == 0:
+								warning_message("No PTX: " + file_name)
+							else:
+								patch_data += extend_to_4096(FILE_SIZE)
+								image_data[FILE_OFFSET: FILE_OFFSET_NEW] = patch_data
+								pathout_data[FILE_INFO - 24: FILE_INFO - 20] = pack("<I", FILE_SIZE)
+								IMAGE_DATA_SHIFT += len(patch_data) + FILE_OFFSET - FILE_OFFSET_NEW
+								print("patched " + relpath(file_name, patchout))
 						except FileNotFoundError:
 							pass
 						except Exception as e:
@@ -573,8 +576,8 @@ try:
 		folder = osjoin(application_path, "options")
 		templates = {}
 		for entry in sorted(listdir(folder)):
-			if isfile(osjoin(folder, entry)) and entry[-5:] == ".json" and entry.count("-") == 1:
-				key, value = entry.split("-")
+			if isfile(osjoin(folder, entry)) and entry[-5:] == ".json" and entry.count("--") == 1:
+				key, value = entry.split("--")
 				templates[key] = value
 		length = len(templates)
 		if length == 0:
@@ -587,7 +590,7 @@ try:
 			if length > 1:
 				key = bold_input("Choose template")
 			
-			name = key + "-" + templates[key]
+			name = key + "--" + templates[key]
 			newoptions = load(open(osjoin(folder, name), "rb"))
 			for key in options:
 				if key in newoptions and newoptions[key] != options[key]:

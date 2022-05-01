@@ -332,7 +332,7 @@ def rsgp_extract(RSG_NAME, RSG_OFFSET, file, out, pathout, level):
 
 						if level < 7:
 							if NAME_CHECK[-5:] == ".rton" and 6 == level and file_data[:4] != b"RTON":
-								warning_message("No RTON " + relpath(out, pathout) + ":" + DECODED_NAME)
+								warning_message("No RTON " + file.name + ":" + RSG_NAME + ":" + DECODED_NAME)
 							else:
 								file_path = osjoin(out, DECODED_NAME)
 								makedirs(dirname(file_path), exist_ok = True)
@@ -343,7 +343,7 @@ def rsgp_extract(RSG_NAME, RSG_OFFSET, file, out, pathout, level):
 								jfn = osjoin(out, DECODED_NAME[:-5] + ".JSON")
 								makedirs(dirname(jfn), exist_ok = True)
 								source = BytesIO(file_data)
-								source.name = relpath(out, pathout) + ":" + DECODED_NAME
+								source.name = file.name + ":" + RSG_NAME + ":" + DECODED_NAME
 								if source.read(4) == b"RTON":
 									json_data = root_object(source, current_indent)
 									open(jfn, "wb").write(json_data)
@@ -351,7 +351,7 @@ def rsgp_extract(RSG_NAME, RSG_OFFSET, file, out, pathout, level):
 								else:
 									warning_message("No RTON " + source.name)
 							except Exception as e:
-								error_message(type(e).__name__ + " in " + file.name + ": " + DECODED_NAME + " pos " + str(source.tell() - 1) + ": " + str(e))
+								error_message(type(e).__name__ + " in " + file.name + ": " + RSG_NAME + ":" + DECODED_NAME + " pos " + str(source.tell() - 1) + ": " + str(e))
 						# elif IS_IMAGE:
 						# 	try:
 						# 		file_path = osjoin(out, splitext(DECODED_NAME)[0] + ".PNG")
@@ -370,7 +370,7 @@ def rsgp_extract(RSG_NAME, RSG_OFFSET, file, out, pathout, level):
 						# 		error_message(type(e).__name__ + " in " + file.name + RSG_NAME + ": " + DECODED_NAME + ": " + str(e))
 					temp = file.tell()
 		except Exception as e:
-			error_message(type(e).__name__ + " while extracting " + RSG_NAME + ".rsg: " + str(e))
+			error_message(type(e).__name__ + " while extracting " + file.name + ":" + RSG_NAME + str(e))
 
 #def rsb_extract(file, out, level, image_decoders, pathout):
 def rsb_extract(file, out, level, pathout):
@@ -549,8 +549,8 @@ try:
 		folder = osjoin(application_path, "options")
 		templates = {}
 		for entry in sorted(listdir(folder)):
-			if isfile(osjoin(folder, entry)) and entry[-5:] == ".json" and entry.count("-") == 1:
-				key, value = entry.split("-")
+			if isfile(osjoin(folder, entry)) and entry[-5:] == ".json" and entry.count("--") == 1:
+				key, value = entry.split("--")
 				templates[key] = value
 		length = len(templates)
 		if length == 0:
@@ -563,7 +563,7 @@ try:
 			if length > 1:
 				key = bold_input("Choose template")
 			
-			name = key + "-" + templates[key]
+			name = key + "--" + templates[key]
 			newoptions = load(open(osjoin(folder, name), "rb"))
 			for key in options:
 				if key in newoptions and newoptions[key] != options[key]:
