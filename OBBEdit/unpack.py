@@ -549,21 +549,21 @@ try:
 		folder = osjoin(application_path, "options")
 		templates = {}
 		for entry in sorted(listdir(folder)):
-			if isfile(osjoin(folder, entry)) and entry[-5:] == ".json" and entry.count("--") == 1:
-				key, value = entry.split("--")
-				templates[key] = value
+			if isfile(osjoin(folder, entry)) and entry[-5:] == ".json" and entry.count("--") == 2:
+				key, unpack_name, patch_name = entry[:-5].split("--")
+				templates[key] = [unpack_name, patch_name]
 		length = len(templates)
 		if length == 0:
 			green_print("Loaded default template")
 		else:
 			blue_print("\033[1mTEMPLATES:\033[0m")
 			for key in sorted(templates):
-				blue_print("\033[1m" + key + "\033[0m: " + templates[key][:-5])
+				blue_print("\033[1m" + key + "\033[0m: " + templates[key][0])
 			
 			if length > 1:
 				key = bold_input("Choose template")
 			
-			name = key + "--" + templates[key]
+			name = key + "--" + "--".join(templates[key]) + ".json"
 			newoptions = load(open(osjoin(folder, name), "rb"))
 			for key in options:
 				if key in newoptions and newoptions[key] != options[key]:

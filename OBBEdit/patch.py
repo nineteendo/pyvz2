@@ -307,7 +307,7 @@ def rsg_patch_data(RSG_NAME, file, pathout_data, patch, patchout, level):
 				FILE_OFFSET_NEW = IMAGE_DATA_SHIFT + IMAGE_DATA_DICT[DECODED_NAME_NEW]["FILE_OFFSET"]
 				if DECODED_NAME:
 					NAME_CHECK = DECODED_NAME.replace("\\", "/").lower()
-					FILE_INFO = DATA_DICT[DECODED_NAME]["FILE_INFO"]
+					FILE_INFO = IMAGE_DATA_DICT[DECODED_NAME]["FILE_INFO"]
 					if NAME_CHECK.startswith(startsWith) and NAME_CHECK.endswith(endsWith):
 						try:
 							if level < 7:
@@ -576,21 +576,21 @@ try:
 		folder = osjoin(application_path, "options")
 		templates = {}
 		for entry in sorted(listdir(folder)):
-			if isfile(osjoin(folder, entry)) and entry[-5:] == ".json" and entry.count("--") == 1:
-				key, value = entry.split("--")
-				templates[key] = value
+			if isfile(osjoin(folder, entry)) and entry[-5:] == ".json" and entry.count("--") == 2:
+				key, unpack_name, patch_name = entry[:-5].split("--")
+				templates[key] = [unpack_name, patch_name]
 		length = len(templates)
 		if length == 0:
 			green_print("Loaded default template")
 		else:
 			blue_print("\033[1mTEMPLATES:\033[0m")
 			for key in sorted(templates):
-				blue_print("\033[1m" + key + "\033[0m: " + templates[key][:-5])
+				blue_print("\033[1m" + key + "\033[0m: " + templates[key][1])
 			
 			if length > 1:
 				key = bold_input("Choose template")
 			
-			name = key + "--" + templates[key]
+			name = key + "--" + "--".join(templates[key]) + ".json"
 			newoptions = load(open(osjoin(folder, name), "rb"))
 			for key in options:
 				if key in newoptions and newoptions[key] != options[key]:
