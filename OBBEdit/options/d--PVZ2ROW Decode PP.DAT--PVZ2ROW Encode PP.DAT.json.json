@@ -53,7 +53,7 @@
 	"rsgPacked": "",
 	"rsgPatched": "",
 	"rsgUnpacked": "",
-	"rsgUnpackLevel": 7,
+	"rsgUnpackLevel": 3,
 
 	"encryptedExtensions": [
 		".rton"
@@ -65,9 +65,9 @@
 
 	"comma": 0,
 	"doublePoint": 1,
-	"encodedPacked": "",
-	"encodedUnpacked": "",
-	"encodedUnpackLevel": 6,
+	"encodedPacked": "/storage/emulated/0/Android/data/com.ea.game.pvz2_row/files/no_backup/pp.dat",
+	"encodedUnpacked": "/storage/emulated/0/Android/data/com.ea.game.pvz2_row/files/no_backup/pp.dat.json",
+	"encodedUnpackLevel": 7,
 	"ensureAscii": false,
 	"indent": -1,
 	"repairFiles": false,

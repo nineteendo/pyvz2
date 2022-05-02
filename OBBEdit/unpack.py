@@ -19,6 +19,8 @@ options = {
 	"smfExtensions": (
 		".rsb.smf",
 	),
+	"smfPacked": "",
+	"smfUnpacked": "",
 	"smfUnpackLevel": 1,
 	# RSB options
 	"rsbExtensions": (
@@ -29,6 +31,9 @@ options = {
 		".rsb",
 		".obb"
 	),
+	"rsbPacked": "",
+	"rsbPatched": "",
+	"rsbUnpacked": "",
 	"rsbUnpackLevel": 2,
 	"rsgEndsWith": (),
 	"rsgEndsWithIgnore": True,
@@ -38,13 +43,17 @@ options = {
 	),
 	"rsgStartsWithIgnore": False,
 	# RSG options
-	"endsWith": (
-		".rton",
-	),
-	"endsWithIgnore": False,
 	"overrideDataCompression": 1,
 	"overrideEncryption": 1,
 	"overrideImageDataCompression": 1,
+	"pathEndsWith": (
+		".rton",
+	),
+	"pathEndsWithIgnore": False,
+	"pathStartsWith": (
+		"packages/",
+	),
+	"pathStartsWithIgnore": False,
 	"rsgExtensions": (
 		".rsb.smf",
 		
@@ -58,20 +67,23 @@ options = {
 		".rsg",
 		".rsg.smf"
 	),
+	"rsgPacked": "",
+	"rsgPatched": "",
+	"rsgUnpacked": "",
 	"rsgUnpackLevel": 7,
-	"startsWith": (
-		"packages/",
-	),
-	"startsWithIgnore": False,
-	# Encryption
+	# Encryption options
 	"encryptedExtensions": (
 		".rton",
 	),
+	"encryptedPacked": "",
+	"encryptedUnpacked": "",
 	"encryptedUnpackLevel": 5,
 	"encryptionKey": "00000000000000000000000000000000",
 	# RTON options
 	"comma": 0,
 	"doublePoint": 1,
+	"encodedPacked": "",
+	"encodedUnpacked": "",
 	"encodedUnpackLevel": 6,
 	"ensureAscii": False,
 	"indent": -1,
@@ -112,46 +124,48 @@ def green_print(text):
 def bold_input(text):
 # Input in bold text
 	return input("\033[1m"+ text + "\033[0m: ")
-def path_input(text):
+def path_input(text, preset):
 # Input hybrid path
-	string = ""
-	newstring = bold_input(text)
-	while newstring or string == "":
+	if preset != "":
+		print("\033[1m"+ text + "\033[0m: " + preset)
+		return preset
+	else:
 		string = ""
-		quoted = 0
-		escaped = False
-		temp_string = ""
-		confirm = False
-		for char in newstring:
-			if escaped:
-				if quoted != 1 and char == "'" or quoted != 2 and char == '"' or quoted == 0 and char in "\\ ":
+		newstring = bold_input(text)
+		while newstring or string == "":
+			string = ""
+			quoted = 0
+			escaped = False
+			temp_string = ""
+			confirm = False
+			for char in newstring:
+				if escaped:
+					if quoted != 1 and char == "'" or quoted != 2 and char == '"' or quoted == 0 and char in "\\ ":
+						string += temp_string + char
+						confirm = True
+					else:
+						string += temp_string + "\\" + char
+					temp_string = ""
+					escaped = False
+				elif char == "\\":
+					escaped = True
+				elif quoted != 2 and char == "'":
+					quoted = 1 - quoted
+				elif quoted != 1 and char == '"':
+					quoted = 2 - quoted
+				elif quoted != 0 or char != " ":
 					string += temp_string + char
-					confirm = True
+					temp_string = ""
 				else:
-					string += temp_string + "\\" + char
-				
-				temp_string = ""
-				escaped = False
-			elif char == "\\":
-				escaped = True
-			elif quoted != 2 and char == "'":
-				quoted = 1 - quoted
-			elif quoted != 1 and char == '"':
-				quoted = 2 - quoted
-			elif quoted != 0 or char != " ":
-				string += temp_string + char
-				temp_string = ""
+					temp_string += " "
+			if string == "":
+				newstring = bold_input("\033[91mEnter a path")
 			else:
-				temp_string += " "
-		
-		if string == "":
-			newstring = bold_input("\033[91mEnter a path")
-		else:
-			newstring = ""
-			string = realpath(string)
-			if confirm:
-				newstring = bold_input("Confirm \033[100m" + string)
-	return string
+				newstring = ""
+				string = realpath(string)
+				if confirm:
+					newstring = bold_input("Confirm \033[100m" + string)
+		return string
 # RSG Unpack functions
 # def ARGB8888(file_data, WIDHT, HEIGHT):
 # 	return Image.frombuffer("RGBA", (WIDHT, HEIGHT), file_data, "raw", "BGRA", 0, 1)
@@ -321,7 +335,7 @@ def rsgp_extract(RSG_NAME, RSG_OFFSET, file, out, pathout, level):
 						#file.seek(8, 1)
 						#WIDHT = unpack("<I", file.read(4))[0]
 						#HEIGHT = unpack("<I", file.read(4))[0]
-					if DECODED_NAME and NAME_CHECK.startswith(startsWith) and NAME_CHECK.endswith(endsWith):
+					if DECODED_NAME and NAME_CHECK.startswith(pathStartsWith) and NAME_CHECK.endswith(pathEndsWith):
 						if IS_IMAGE:
 							file_data = image_data[FILE_OFFSET: FILE_OFFSET + FILE_SIZE]
 						else:
@@ -544,26 +558,29 @@ try:
 	if sys.version_info[0] < 3:
 		raise RuntimeError("Must be using Python 3")
 	
-	print("\033[95m\033[1mOBBUnpacker v1.1.6 (C) 2022 by Nineteendo\nCode based on: Luigi Auriemma, Small Pea & 1Zulu\nDocumentation: Watto Studios, YingFengTingYu & h3x4n1um\033[0m\n")
+	print("\033[95m\033[1mOBBUnpacker v1.1.6b (C) 2022 by Nineteendo\nCode based on: Luigi Auriemma, Small Pea & 1Zulu\nDocumentation: Watto Studios, YingFengTingYu & h3x4n1um\033[0m\n")
 	try:
 		folder = osjoin(application_path, "options")
 		templates = {}
+		blue_print("\033[1mTEMPLATES:\033[0m")
 		for entry in sorted(listdir(folder)):
-			if isfile(osjoin(folder, entry)) and entry[-5:] == ".json" and entry.count("--") == 2:
-				key, unpack_name, patch_name = entry[:-5].split("--")
-				templates[key] = [unpack_name, patch_name]
+			if isfile(osjoin(folder, entry)):
+				file, extension = splitext(entry)
+				if extension == ".json" and entry.count("--") == 2:
+					key, unpack_name, patch_name = file.split("--")
+					if not key in templates:
+						blue_print("\033[1m" + key + "\033[0m: " + unpack_name)
+						templates[key] = unpack_name + "--" + patch_name + ".json"
+				elif entry.count("--") > 0:
+					print("--".join(file.split("--")[1:]))
 		length = len(templates)
 		if length == 0:
 			green_print("Loaded default template")
 		else:
-			blue_print("\033[1mTEMPLATES:\033[0m")
-			for key in sorted(templates):
-				blue_print("\033[1m" + key + "\033[0m: " + templates[key][0])
-			
 			if length > 1:
 				key = bold_input("Choose template")
 			
-			name = key + "--" + "--".join(templates[key]) + ".json"
+			name = key + "--" + templates[key]
 			newoptions = load(open(osjoin(folder, name), "rb"))
 			for key in options:
 				if key in newoptions and newoptions[key] != options[key]:
@@ -602,14 +619,14 @@ try:
 		rsgEndsWith = options["rsgEndsWith"]
 
 	rijndael_cbc = RijndaelCBC(str.encode(options["encryptionKey"]), 24)
-	if options["endsWithIgnore"]:
-		endsWith = ""
+	if options["pathEndsWithIgnore"]:
+		pathEndsWith = ""
 	else:
-		endsWith = options["endsWith"]
-	if options["startsWithIgnore"]:
-		startsWith = ""
+		pathEndsWith = options["pathEndsWith"]
+	if options["pathStartsWithIgnore"]:
+		pathStartsWith = ""
 	else:
-		startsWith = options["startsWith"]
+		pathStartsWith = options["pathStartsWith"]
 
 	if options["comma"] > 0:
 		comma = b"," + b" " * options["comma"]
@@ -635,31 +652,31 @@ try:
 	
 	blue_print("Working directory: " + getcwd())
 	if 2 >= options["smfUnpackLevel"] > 1:
-		smf_input = path_input("SMF Input file or directory")
+		smf_input = path_input("SMF Input file or directory", options["smfPacked"])
 		if isfile(smf_input):
-			smf_output = path_input("SMF " + level_to_name[options["smfUnpackLevel"]] + " Output file")
+			smf_output = path_input("SMF " + level_to_name[options["smfUnpackLevel"]] + " Output file", options["smfUnpacked"])
 		else:
-			smf_output = path_input("SMF " + level_to_name[options["smfUnpackLevel"]] + " Output directory")
+			smf_output = path_input("SMF " + level_to_name[options["smfUnpackLevel"]] + " Output directory", options["smfUnpacked"])
 	if 3 >= options["rsbUnpackLevel"] > 2:
-		rsb_input = path_input("RSB/SMF Input file or directory")
-		rsb_output = path_input("RSB/SMF " + level_to_name[options["rsbUnpackLevel"]] + " Output directory")
+		rsb_input = path_input("RSB/SMF Input file or directory", options["rsbPacked"])
+		rsb_output = path_input("RSB/SMF " + level_to_name[options["rsbUnpackLevel"]] + " Output directory", options["rsbUnpacked"])
 	if 7 >= options["rsgUnpackLevel"] > 3:
-		rsg_input = path_input("RSG/RSB/SMF Input file or directory")
-		rsg_output = path_input("RSG/RSB/SMF " + level_to_name[options["rsgUnpackLevel"]] + " Output directory")
+		rsg_input = path_input("RSG/RSB/SMF Input file or directory", options["rsgPacked"])
+		rsg_output = path_input("RSG/RSB/SMF " + level_to_name[options["rsgUnpackLevel"]] + " Output directory", options["rsgUnpacked"])
 	if 6 >= options["encryptedUnpackLevel"] > 5:
-		encrypted_input = path_input("ENCRYPTED Input file or directory")
+		encrypted_input = path_input("ENCRYPTED Input file or directory", options["encryptedPacked"])
 		if isfile(encrypted_input):
-			encrypted_output = path_input("ENCRYPTED " + level_to_name[options["encryptedUnpackLevel"]] + " Output file")
+			encrypted_output = path_input("ENCRYPTED " + level_to_name[options["encryptedUnpackLevel"]] + " Output file", options["encryptedUnpacked"])
 		else:
-			encrypted_output = path_input("ENCRYPTED " + level_to_name[options["encryptedUnpackLevel"]] + " Output directory")
+			encrypted_output = path_input("ENCRYPTED " + level_to_name[options["encryptedUnpackLevel"]] + " Output directory", options["encryptedUnpacked"])
 	if 7 >= options["encodedUnpackLevel"] > 6:
-		encoded_input = path_input("ENCODED Input file or directory")
+		encoded_input = path_input("ENCODED Input file or directory", options["encodedPacked"])
 		if isfile(encoded_input):
-			encoded_output = path_input("ENCODED " + level_to_name[options["encodedUnpackLevel"]] + " Output file")
-		else:
-			encoded_output = path_input("ENCODED " + level_to_name[options["encodedUnpackLevel"]] + " Output directory")
+			encoded_output = path_input("ENCODED " + level_to_name[options["encodedUnpackLevel"]] + " Output file", options["encodedUnpacked"])
 			if encoded_output.lower()[:-5] == ".json":
 				encoded_output = encoded_output[:-5]
+		else:
+			encoded_output = path_input("ENCODED " + level_to_name[options["encodedUnpackLevel"]] + " Output directory", options["encodedUnpacked"])
 
 	# Start file_to_folder
 	start_time = datetime.datetime.now()

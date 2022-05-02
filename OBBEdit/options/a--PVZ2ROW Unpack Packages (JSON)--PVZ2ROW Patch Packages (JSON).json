@@ -50,9 +50,9 @@
 		".rsg",
 		".rsg.smf"
 	],
-	"rsgPacked": "",
-	"rsgPatched": "",
-	"rsgUnpacked": "",
+	"rsgPacked": "/storage/emulated/0/Android/obb/com.ea.game.pvz2_row (1)",
+	"rsgPatched": "/storage/emulated/0/Android/obb/com.ea.game.pvz2_row",
+	"rsgUnpacked": "/storage/emulated/0/Android/obb/com.ea.game.pvz2_row (2)",
 	"rsgUnpackLevel": 7,
 
 	"encryptedExtensions": [

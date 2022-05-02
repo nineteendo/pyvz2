@@ -2,6 +2,8 @@
 	"smfExtensions": [
 		".rsb.smf"
 	],
+	"smfPacked": "",
+	"smfUnpacked": "",
 	"smfUnpackLevel": 1,
 
 	"rsbExtensions": [
@@ -12,6 +14,9 @@
 		".rsb",
 		".obb"
 	],
+	"rsbPacked": "",
+	"rsbPatched": "",
+	"rsbUnpacked": "",
 	"rsbUnpackLevel": 2,
 	"rsgEndsWith": [],
 	"rsgEndsWithIgnore": true,
@@ -21,13 +26,17 @@
 	],
 	"rsgStartsWithIgnore": true,
 
-	"endsWith": [
+	"overrideDataCompression": 1,
+	"overrideEncryption": 1,
+	"overrideImageDataCompression": 1,
+	"pathEndsWith": [
 		".rton"
 	],
-	"endsWithIgnore": true,
-	"overrideDataCompression": 1,
-	"overrideEncryption": 2,
-	"overrideImageDataCompression": 1,
+	"pathEndsWithIgnore": true,
+	"pathStartsWith": [
+		"packages/"
+	],
+	"pathStartsWithIgnore": true,
 	"rsgExtensions": [
 		".rsb.smf",
 		
@@ -41,24 +50,27 @@
 		".rsg",
 		".rsg.smf"
 	],
+	"rsgPacked": "",
+	"rsgPatched": "",
+	"rsgUnpacked": "",
 	"rsgUnpackLevel": 7,
-	"startsWith": [
-		"packages/"
-	],
-	"startsWithIgnore": true,
 
 	"encryptedExtensions": [
 		".rton"
 	],
+	"encryptedPacked": "",
+	"encryptedUnpacked": "",
 	"encryptedUnpackLevel": 5,
 	"encryptionKey": "00000000000000000000000000000000",
 
 	"comma": 0,
 	"doublePoint": 1,
+	"encodedPacked": "",
+	"encodedUnpacked": "",
 	"encodedUnpackLevel": 6,
 	"ensureAscii": false,
 	"indent": -1,
-	"repairFiles": true,
+	"repairFiles": false,
 	"RTONExtensions": [
 		".bin",
 		".dat",

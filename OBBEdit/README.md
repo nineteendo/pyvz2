@@ -11,32 +11,44 @@
 key | purpose
 --- | ---
 smfExtensions | Only unpack SMFs with these extensions
-smfUnpackLevel | Level to unpack SMFs to (make negative / zero for manual input)
+smfPacked | path to packed smf (blank for manual input)
+smfUnpacked | path to unpacked smf (blank for manual input)
+smfUnpackLevel | Level to unpack SMFs to (negative / 0 for manual input)
 / | /
 rsbExtensions | Only unpack RSBs/SMFs with these extensions
-rsbUnpackLevel | Level to unpack RSBs/SMFs to (make negative / zero for manual input)
+rsbPacked | path to packed rsb (blank for manual input)
+rsbPatched | path to patched rsb (blank for manual input)
+rsbUnpacked | path to unpacked rsb (blank for manual input)
+rsbUnpackLevel | Level to unpack RSBs/SMFs to (negative / 0 for manual input)
 rsgpEndsWith | Only unpack RSGPs ending with these strings
 rsgpEndsWithIgnore | Ignore the end of RSGPs
 rsgpStartsWith | Only unpack RSGPs starting with these strings
 rsgpStartsWithIgnore | Ignore the start of RSGPs
 / | /
-endsWith | Only unpack paths ending with these strings
-endsWithIgnore | Ignore the end of the path
-overrideDataCompression | Override data compression (make negative / zero for manual input)
-overrideEncryption | Override image data compression (make negative / zero for manual input)
-overrideImageDataCompression | Override image data compression (make negative / zero for manual input)
+overrideDataCompression | Override data compression (negative / 0 for manual input)
+overrideEncryption | Override image data compression (negative / 0 for manual input)
+overrideImageDataCompression | Override image data compression (negative / 0 for manual input)
+pathEndsWith | Only unpack paths ending with these strings
+pathEndsWithIgnore | Ignore the end of the path
+pathStartsWith | Only unpack paths starting with these strings
+pathStartsWithIgnore | Ignore the start of the path
 rsgExtensions | Only encrypt RSG/RSBs/SMFs with these extensions
-rsgUnpackLevel | Level to unpack RSG/RSBs/SMFs to (make negative / zero for manual input)
-startsWith | Only unpack paths starting with these strings
-startsWithIgnore | Ignore the start of the path
+rsgPacked | path to packed rsg (blank for manual input)
+rsgPatched | path to patched rsg (blank for manual input)
+rsgUnpacked | path to unpacked rsg (blank for manual input)
+rsgUnpackLevel | Level to unpack RSG/RSBs/SMFs to (negative / 0 for manual input)
 / | /
 encryptedExtensions | Only encrypt ENCRYPTED with these extensions
-encryptedUnpackLevel | Level to unpack ENCRYPTED to (make negative / zero for manual input)
+encryptedPacked | path to packed encrypted (blank for manual input)
+encryptedUnpacked | path to unpacked encrypted (blank for manual input)
+encryptedUnpackLevel | Level to unpack ENCRYPTED to (negative / 0 for manual input)
 encryptionKey | Key used for encrypting, the default is not right, search it if you want to decrypt
 / | /
-comma | Spaces between values in JSON (make negative to disable)
-doublePoint | Spaces between key & value in JSON (make negative to disable)
-encodedUnpackLevel | Level to unpack ENCODED to (make negative / zero for manual input)
+comma | Spaces between values in JSON (negative to disable)
+doublePoint | Spaces between key & value in JSON (negative to disable)
+encodedPacked | path to packed encoded (blank for manual input)
+encodedUnpacked | path to unpacked encoded (blank for manual input)
+encodedUnpackLevel | Level to unpack ENCODED to (negative / 0 for manual input)
 ensureAscii | escape non-ASCII characters with \uXXXX sequences
 indent | Spaces as indent, negative for tab, *null:* no indent
 repairFiles | Repair RTON files that end abruptly

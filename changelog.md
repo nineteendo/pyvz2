@@ -345,3 +345,15 @@ Python3 scripts for modifying Plants VS Zombies 2
 		* Added overrideDataCompression & overrideEncryption & overrideImageDataCompression
 		* Added rsgExtensions & rsgUnpackLevel
 		* Fixed empty rows
+## Beta 1.1.6b (2 May 2022)
+1. OBBEdit:
+	* Improved templates
+	* Fixed patching
+	* Options:
+		* Added smfPacked, smfUnpacked, encryptedPacked, encryptedUnpacked, encodedPacked & encodedUnpacked
+		* Added rsbPacked, rsbPatched, rsbUnpacked, rsgPacked, rsgPatched & rsgUnpacked
+		* renamed some options
+	* README:
+		* Added smfPacked, smfUnpacked, encryptedPacked, encryptedUnpacked, encodedPacked & encodedUnpacked
+		* Added rsbPacked, rsbPatched, rsbUnpacked, rsgPacked, rsgPatched & rsgUnpacked
+		* renamed some options

@@ -50,9 +50,9 @@
 		".rsg",
 		".rsg.smf"
 	],
-	"rsgPacked": "",
-	"rsgPatched": "",
-	"rsgUnpacked": "",
+	"rsgPacked": "/storage/emulated/0/Android/newobb/PVZ2 (1)",
+	"rsgPatched": "/storage/emulated/0/Android/newobb/PVZ2",
+	"rsgUnpacked": "/storage/emulated/0/Android/newobb/PVZ2 (2)",
 	"rsgUnpackLevel": 7,
 
 	"encryptedExtensions": [
