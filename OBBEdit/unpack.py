@@ -257,9 +257,10 @@ def path_input(text, preset):
 # 	#149: XRGB8888_A8,
 # 	#150: ETC1_RGB_A_Palette
 # }
-#def rsgp_extract(RSG_NAME, RSG_OFFSET, IMAGE_FORMATS, image_decoders, file, out, pathout, level):
-def rsgp_extract(RSG_NAME, RSG_OFFSET, file, out, pathout, level):
-	if file.read(4) == b"pgsr":
+#def rsg_extract(RSG_NAME, RSG_OFFSET, IMAGE_FORMATS, image_decoders, file, out, pathout, level):
+def rsg_extract(RSG_NAME, RSG_OFFSET, file, out, pathout, level):
+	HEADER = file.read(4)
+	if HEADER == b"pgsr":
 		try:
 			VERSION = unpack("<I", file.read(4))[0]
 			
@@ -385,6 +386,8 @@ def rsgp_extract(RSG_NAME, RSG_OFFSET, file, out, pathout, level):
 					temp = file.tell()
 		except Exception as e:
 			error_message(type(e).__name__ + " while extracting " + file.name + ":" + RSG_NAME + str(e))
+	else:
+		warning_message("UNKNOWN RSG WITH HEADER " + HEADER.hex())
 
 #def rsb_extract(file, out, level, image_decoders, pathout):
 def rsb_extract(file, out, level, pathout):
@@ -466,8 +469,8 @@ def rsb_extract(file, out, level, pathout):
 				open(osjoin(out, RSG_NAME + ".rsg"), "wb").write(file.read(RSG_LENGTH))
 				print("wrote " + relpath(osjoin(out, RSG_NAME + ".rsg"), pathout))
 			else:
-				rsgp_extract(RSG_NAME, RSG_OFFSET, file, out, pathout, level)
-				#rsgp_extract(RSG_NAME, RSG_OFFSET, TEXTURE_FORMATS[IMAGE_ID:IMAGE_ID + IMAGE_ENTRIES], image_decoders, file, out, pathout, level)
+				rsg_extract(RSG_NAME, RSG_OFFSET, file, out, pathout, level)
+				#rsg_extract(RSG_NAME, RSG_OFFSET, TEXTURE_FORMATS[IMAGE_ID:IMAGE_ID + IMAGE_ENTRIES], image_decoders, file, out, pathout, level)
 			file.seek(temp)
 def file_to_folder(inp, out, level, extensions, pathout):
 # Recursive file convert function
@@ -506,8 +509,10 @@ def file_to_folder(inp, out, level, extensions, pathout):
 			elif HEADER == b"pgsr":
 				makedirs(out, exist_ok = True)
 				file.seek(0)
-				rsgp_extract("data", 0, file, out, pathout, level)
-				#rsgp_extract("data", 0, [], {} file, out, pathout, level)
+				rsg_extract("data", 0, file, out, pathout, level)
+				#rsg_extract("data", 0, [], {} file, out, pathout, level)
+			else:
+				warning_message("UNKNOWN HEADER " + HEADER.hex())
 		except Exception as e:
 			error_message("Failed OBBUnpack: " + type(e).__name__ + " in " + inp + " pos " + str(file.tell()) + ": " + str(e))
 def conversion(inp, out, pathout, extensions, noextensions):

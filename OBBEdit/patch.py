@@ -173,7 +173,8 @@ def extend_to_4096(number):
 	return b"\0" * ((4096 - number) & 4095)
 def rsg_patch_data(RSG_NAME, file, pathout_data, patch, patchout, level):
 # Patch RGSP file
-	if file.read(4) == b"pgsr":
+	HEADER = file.read(4)
+	if HEADER == b"pgsr":
 		VERSION = unpack("<I", file.read(4))[0]
 			
 		file.seek(8, 1)
@@ -389,6 +390,8 @@ def rsg_patch_data(RSG_NAME, file, pathout_data, patch, patchout, level):
 				print("patched " + relpath(osjoin(patch, RSG_NAME + ".section2"), patchout))
 		
 		pathout_data[16:20] = pack("<I", COMPRESSION_FLAGS)
+	else:
+		warning_message("UNKNOWN RSG WITH HEADER " + HEADER.hex())
 	return pathout_data
 def rsb_patch_data(file, pathout_data, patch, patchout, level):
 	VERSION = unpack('<L', file.read(4))[0]
@@ -538,6 +541,8 @@ def file_to_folder(inp, out, patch, level, extensions, pathout, patchout):
 					green_print("wrote " + relpath(out, pathout))
 				except Exception as e:
 					error_message(type(e).__name__ + " while patching " + inp + str(e))
+			else:
+				warning_message("UNKNOWN HEADER " + HEADER.hex())
 		except Exception as e:
 			error_message("Failed OBBPatch " + type(e).__name__ + " in " + inp + " pos " + str(file.tell()) + ": " + str(e))
 def conversion(inp, out, pathout, level, extension):

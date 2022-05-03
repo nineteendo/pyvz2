@@ -357,3 +357,7 @@ Python3 scripts for modifying Plants VS Zombies 2
 		* Added smfPacked, smfUnpacked, encryptedPacked, encryptedUnpacked, encodedPacked & encodedUnpacked
 		* Added rsbPacked, rsbPatched, rsbUnpacked, rsgPacked, rsgPatched & rsgUnpacked
 		* renamed some options
+## Beta 1.1.6c (3 May 2022)
+1. OBBEdit:
+	* More templates
+	* Warning message for unknown headers
