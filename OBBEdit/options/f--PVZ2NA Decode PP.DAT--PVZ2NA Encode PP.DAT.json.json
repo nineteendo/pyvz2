@@ -27,7 +27,7 @@
 	"rsgStartsWithIgnore": false,
 
 	"overrideDataCompression": 1,
-	"overrideEncryption": 1,
+	"overrideEncryption": 2,
 	"overrideImageDataCompression": 1,
 	"pathEndsWith": [
 		".rton"
@@ -69,7 +69,7 @@
 	"encodedUnpacked": "/storage/emulated/0/Android/data/com.ea.game.pvz2_na/files/no_backup/pp.dat.json",
 	"encodedUnpackLevel": 7,
 	"ensureAscii": false,
-	"indent": -1,
+	"indent": 4,
 	"repairFiles": false,
 	"RTONExtensions": [
 		".bin",

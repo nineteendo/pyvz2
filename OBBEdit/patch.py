@@ -3,15 +3,17 @@ import datetime
 from hashlib import md5
 from io import BytesIO
 from json import load
-from libraries.pyvz2rijndael import RijndaelCBC
-from libraries.pyvz2rton import JSONDecoder
 from os import makedirs, listdir, system, getcwd, sep
-from os.path import isdir, isfile, realpath, join as osjoin, dirname, relpath, basename, splitext
+from os.path import isdir, isfile, join as osjoin, dirname, relpath, splitext
 #from PIL import Image
 from struct import pack, unpack
 import sys
-from traceback import format_exc
 from zlib import compress, decompress
+
+# 3th party libraries
+from libraries.pyvz2nineteendo import LogError, blue_print, green_print, bold_input, path_input, list_levels
+from libraries.pyvz2rijndael import RijndaelCBC
+from libraries.pyvz2rton import JSONDecoder
 
 options = {
 # Default options
@@ -44,7 +46,7 @@ options = {
 	"rsgStartsWithIgnore": False,
 	# RSG options
 	"overrideDataCompression": 1,
-	"overrideEncryption": 1,
+	"overrideEncryption": 2,
 	"overrideImageDataCompression": 1,
 	"pathEndsWith": (
 		".rton",
@@ -86,7 +88,7 @@ options = {
 	"encodedUnpacked": "",
 	"encodedUnpackLevel": 6,
 	"ensureAscii": False,
-	"indent": -1,
+	"indent": 4,
 	"repairFiles": False,
 	"RTONExtensions": (
 		".bin",
@@ -104,68 +106,6 @@ options = {
 	"sortKeys": False,
 	"sortValues": False
 }
-def error_message(string):
-# Print & log error
-	string += "\n" + format_exc()
-	fail.write(string + "\n")
-	fail.flush()
-	print("\033[91m" + string + "\033[0m")
-def warning_message(string):
-# Print & log warning
-	fail.write("\t" + string + "\n")
-	fail.flush()
-	print("\33[93m" + string + "\33[0m")
-def blue_print(text):
-# Print in blue text
-	print("\033[94m"+ text + "\033[0m")
-def green_print(text):
-# Print in green text
-	print("\033[32m"+ text + "\033[0m")
-def bold_input(text):
-# Input in bold text
-	return input("\033[1m"+ text + "\033[0m: ")
-def path_input(text, preset):
-# Input hybrid path
-	if preset != "":
-		print("\033[1m"+ text + "\033[0m: " + preset)
-		return preset
-	else:
-		string = ""
-		newstring = bold_input(text)
-		while newstring or string == "":
-			string = ""
-			quoted = 0
-			escaped = False
-			temp_string = ""
-			confirm = False
-			for char in newstring:
-				if escaped:
-					if quoted != 1 and char == "'" or quoted != 2 and char == '"' or quoted == 0 and char in "\\ ":
-						string += temp_string + char
-						confirm = True
-					else:
-						string += temp_string + "\\" + char
-					temp_string = ""
-					escaped = False
-				elif char == "\\":
-					escaped = True
-				elif quoted != 2 and char == "'":
-					quoted = 1 - quoted
-				elif quoted != 1 and char == '"':
-					quoted = 2 - quoted
-				elif quoted != 0 or char != " ":
-					string += temp_string + char
-					temp_string = ""
-				else:
-					temp_string += " "
-			if string == "":
-				newstring = bold_input("\033[91mEnter a path")
-			else:
-				newstring = ""
-				string = realpath(string)
-				if confirm:
-					newstring = bold_input("Confirm \033[100m" + string)
-		return string
 # RSG Patch functions
 class SectionError(Exception):
 	pass
@@ -174,259 +114,255 @@ def extend_to_4096(number):
 def rsg_patch_data(RSG_NAME, file, pathout_data, patch, patchout, level):
 # Patch RGSP file
 	HEADER = file.read(4)
-	if HEADER == b"pgsr":
-		VERSION = unpack("<I", file.read(4))[0]
-			
-		file.seek(8, 1)
-		COMPRESSION_FLAGS = unpack("<I", file.read(4))[0]
-		HEADER_LENGTH = unpack("<I", file.read(4))[0]
-
-		DATA_OFFSET = unpack("<I", file.read(4))[0]
-		COMPRESSED_DATA_SIZE = unpack("<I", file.read(4))[0]
-		DECOMPRESSED_DATA_SIZE = unpack("<I", file.read(4))[0]
+	VERSION = unpack("<I", file.read(4))[0]
 		
-		file.seek(4, 1)
-		IMAGE_DATA_OFFSET = unpack("<I", file.read(4))[0]
-		COMPRESSED_IMAGE_DATA_SIZE = unpack("<I", file.read(4))[0]
-		DECOMPRESSED_IMAGE_DATA_SIZE = unpack("<I", file.read(4))[0]
-		
-		file.seek(20, 1)
-		INFO_SIZE = unpack("<I", file.read(4))[0]
-		INFO_OFFSET = unpack("<I", file.read(4))[0]
-		INFO_LIMIT = INFO_OFFSET + INFO_SIZE
+	file.seek(8, 1)
+	COMPRESSION_FLAGS = unpack("<I", file.read(4))[0]
+	HEADER_LENGTH = unpack("<I", file.read(4))[0]
 
-		data = None
+	DATA_OFFSET = unpack("<I", file.read(4))[0]
+	COMPRESSED_DATA_SIZE = unpack("<I", file.read(4))[0]
+	DECOMPRESSED_DATA_SIZE = unpack("<I", file.read(4))[0]
+	
+	file.seek(4, 1)
+	IMAGE_DATA_OFFSET = unpack("<I", file.read(4))[0]
+	COMPRESSED_IMAGE_DATA_SIZE = unpack("<I", file.read(4))[0]
+	DECOMPRESSED_IMAGE_DATA_SIZE = unpack("<I", file.read(4))[0]
+	
+	file.seek(20, 1)
+	INFO_SIZE = unpack("<I", file.read(4))[0]
+	INFO_OFFSET = unpack("<I", file.read(4))[0]
+	INFO_LIMIT = INFO_OFFSET + INFO_SIZE
+
+	data = None
+	if level < 5:
+		try:
+			patch_data = open(osjoin(patch, RSG_NAME + ".section"), "rb").read()
+			patch_length = len(patch_data)
+			if patch_length == DECOMPRESSED_DATA_SIZE:
+				data = patch_data
+			else:
+				raise SectionError("Incompatible section size, found " + repr(patch_length) + ", expected: " + repr(DECOMPRESSED_DATA_SIZE))
+		except FileNotFoundError:
+			pass
+	elif COMPRESSION_FLAGS & 2 == 0: # Decompressed files
+		data = bytearray(pathout_data[DATA_OFFSET: DATA_OFFSET + COMPRESSED_DATA_SIZE])
+	elif COMPRESSED_DATA_SIZE != 0: # Compressed files
+		data = bytearray(decompress(pathout_data[DATA_OFFSET: DATA_OFFSET + COMPRESSED_DATA_SIZE]))
+		
+	image_data = None
+	if DECOMPRESSED_IMAGE_DATA_SIZE != 0:
 		if level < 5:
 			try:
-				patch_data = open(osjoin(patch, RSG_NAME + ".section"), "rb").read()
+				patch_data = open(osjoin(patch, RSG_NAME + ".section2"), "rb").read()
 				patch_length = len(patch_data)
-				if patch_length == DECOMPRESSED_DATA_SIZE:
-					data = patch_data
+				if len(patch_data) == DECOMPRESSED_IMAGE_DATA_SIZE:
+					image_data = patch_data
 				else:
-					raise SectionError("Incompatible section size, found " + repr(patch_length) + ", expected: " + repr(DECOMPRESSED_DATA_SIZE))
+					raise SectionError("Incompatible section size, found " + repr(patch_length) + ", expected: " + repr(DECOMPRESSED_IMAGE_DATA_SIZE))
 			except FileNotFoundError:
 				pass
-		elif COMPRESSION_FLAGS & 2 == 0: # Decompressed files
-			data = bytearray(pathout_data[DATA_OFFSET: DATA_OFFSET + COMPRESSED_DATA_SIZE])
-		elif COMPRESSED_DATA_SIZE != 0: # Compressed files
-			blue_print("Decompressing...")
-			data = bytearray(decompress(pathout_data[DATA_OFFSET: DATA_OFFSET + COMPRESSED_DATA_SIZE]))
-			
-		image_data = None
-		if DECOMPRESSED_IMAGE_DATA_SIZE != 0:
-			if level < 5:
-				try:
-					patch_data = open(osjoin(patch, RSG_NAME + ".section2"), "rb").read()
-					patch_length = len(patch_data)
-					if len(patch_data) == DECOMPRESSED_IMAGE_DATA_SIZE:
-						image_data = patch_data
-					else:
-						raise SectionError("Incompatible section size, found " + repr(patch_length) + ", expected: " + repr(DECOMPRESSED_IMAGE_DATA_SIZE))
-				except FileNotFoundError:
-					pass
-			elif COMPRESSION_FLAGS & 1 == 0: # Decompressed files
-				image_data = bytearray(pathout_data[IMAGE_DATA_OFFSET: IMAGE_DATA_OFFSET + COMPRESSED_IMAGE_DATA_SIZE])
-			else: # Compressed files
-				blue_print("Decompressing...")
-				image_data = bytearray(decompress(pathout_data[IMAGE_DATA_OFFSET: IMAGE_DATA_OFFSET + COMPRESSED_IMAGE_DATA_SIZE]))
+		elif COMPRESSION_FLAGS & 1 == 0: # Decompressed files
+			image_data = bytearray(pathout_data[IMAGE_DATA_OFFSET: IMAGE_DATA_OFFSET + COMPRESSED_IMAGE_DATA_SIZE])
+		else: # Compressed files
+			image_data = bytearray(decompress(pathout_data[IMAGE_DATA_OFFSET: IMAGE_DATA_OFFSET + COMPRESSED_IMAGE_DATA_SIZE]))
 
-		if 4 < level:
-			DATA_DICT = {
-				"": {
-					"FILE_OFFSET": DECOMPRESSED_DATA_SIZE
-				}
+	if 4 < level:
+		DATA_DICT = {
+			"": {
+				"FILE_OFFSET": DECOMPRESSED_DATA_SIZE
 			}
-			IMAGE_DATA_DICT = {
-				"": {
-					"FILE_OFFSET": DECOMPRESSED_IMAGE_DATA_SIZE
-				}
+		}
+		IMAGE_DATA_DICT = {
+			"": {
+				"FILE_OFFSET": DECOMPRESSED_IMAGE_DATA_SIZE
 			}
-			NAME_DICT = {}
-			temp = INFO_OFFSET
-			file.seek(INFO_OFFSET)
-			while temp < INFO_LIMIT:
-				FILE_NAME = b""
-				for key in list(NAME_DICT.keys()):
-					if NAME_DICT[key] + INFO_OFFSET < temp:
-						NAME_DICT.pop(key)
-					else:
-						FILE_NAME = key
-				BYTE = b""
-				while BYTE != b"\0":
-					FILE_NAME += BYTE
-					BYTE = file.read(1)
-					LENGTH = 4 * unpack("<I", file.read(3) + b"\0")[0]
-					if LENGTH != 0:
-						NAME_DICT[FILE_NAME] = LENGTH
-
-				DECODED_NAME = FILE_NAME.decode().replace("\\", sep)
-				IS_IMAGE = unpack("<I", file.read(4))[0] == 1
-				FILE_OFFSET = unpack("<I", file.read(4))[0]
-				FILE_SIZE = unpack("<I", file.read(4))[0]
-				if IS_IMAGE:
-					file.seek(20, 1)
-					#IMAGE_ENTRY = unpack("<I", file.read(4))[0]
-					#file.seek(8, 1)
-					#WIDHT = unpack("<I", file.read(4))[0]
-					#HEIGHT = unpack("<I", file.read(4))[0]
-					temp = file.tell()
-					IMAGE_DATA_DICT[DECODED_NAME] = {
-						"FILE_INFO": temp,
-						"FILE_OFFSET": FILE_OFFSET
-					}
+		}
+		NAME_DICT = {}
+		temp = INFO_OFFSET
+		file.seek(INFO_OFFSET)
+		while temp < INFO_LIMIT:
+			FILE_NAME = b""
+			for key in list(NAME_DICT.keys()):
+				if NAME_DICT[key] + INFO_OFFSET < temp:
+					NAME_DICT.pop(key)
 				else:
-					temp = file.tell()
-					DATA_DICT[DECODED_NAME] = {
-						"FILE_INFO": temp,
-						"FILE_OFFSET": FILE_OFFSET
-					}
-			
-			DECODED_NAME = ""
-			DATA_SHIFT = 0
-			for DECODED_NAME_NEW in sorted(DATA_DICT, key = lambda key: DATA_DICT[key]["FILE_OFFSET"]):
-				FILE_OFFSET_NEW = DATA_SHIFT + DATA_DICT[DECODED_NAME_NEW]["FILE_OFFSET"]
-				if DECODED_NAME:
-					NAME_CHECK = DECODED_NAME.replace("\\", "/").lower()
-					FILE_INFO = DATA_DICT[DECODED_NAME]["FILE_INFO"]
-					if NAME_CHECK.startswith(pathStartsWith) and NAME_CHECK.endswith(pathEndsWith):
-						try:
-							if level < 7:
-								file_name = osjoin(patch, DECODED_NAME)
-								patch_data = open(file_name, "rb").read()
-							elif NAME_CHECK[-5:] == ".rton":
-								file_name = osjoin(patch, DECODED_NAME[:-5] + ".JSON")
-								patch_data = parse_json(open(file_name, "rb"))
-							else:
-								raise FileNotFoundError
+					FILE_NAME = key
+			BYTE = b""
+			while BYTE != b"\0":
+				FILE_NAME += BYTE
+				BYTE = file.read(1)
+				LENGTH = 4 * unpack("<I", file.read(3) + b"\0")[0]
+				if LENGTH != 0:
+					NAME_DICT[FILE_NAME] = LENGTH
 
-							if NAME_CHECK[-5:] == ".rton" and 5 < level and (overrideEncryption == 1 or overrideEncryption < 0 and data[FILE_OFFSET: FILE_OFFSET + 2] == b"\x10\0") and patch_data[0:2] != b"\x10\0":
-								patch_data = b'\x10\0' + rijndael_cbc.encrypt(patch_data)
-							
-							FILE_SIZE = len(patch_data)
+			DECODED_NAME = FILE_NAME.decode().replace("\\", sep)
+			IS_IMAGE = unpack("<I", file.read(4))[0] == 1
+			FILE_OFFSET = unpack("<I", file.read(4))[0]
+			FILE_SIZE = unpack("<I", file.read(4))[0]
+			if IS_IMAGE:
+				file.seek(20, 1)
+				#IMAGE_ENTRY = unpack("<I", file.read(4))[0]
+				#file.seek(8, 1)
+				#WIDHT = unpack("<I", file.read(4))[0]
+				#HEIGHT = unpack("<I", file.read(4))[0]
+				temp = file.tell()
+				IMAGE_DATA_DICT[DECODED_NAME] = {
+					"FILE_INFO": temp,
+					"FILE_OFFSET": FILE_OFFSET
+				}
+			else:
+				temp = file.tell()
+				DATA_DICT[DECODED_NAME] = {
+					"FILE_INFO": temp,
+					"FILE_OFFSET": FILE_OFFSET
+				}
+		
+		DECODED_NAME = ""
+		DATA_SHIFT = 0
+		for DECODED_NAME_NEW in sorted(DATA_DICT, key = lambda key: DATA_DICT[key]["FILE_OFFSET"]):
+			FILE_OFFSET_NEW = DATA_SHIFT + DATA_DICT[DECODED_NAME_NEW]["FILE_OFFSET"]
+			if DECODED_NAME:
+				NAME_CHECK = DECODED_NAME.replace("\\", "/").lower()
+				FILE_INFO = DATA_DICT[DECODED_NAME]["FILE_INFO"]
+				if NAME_CHECK.startswith(pathStartsWith) and NAME_CHECK.endswith(pathEndsWith):
+					try:
+						if level < 7:
+							file_name = osjoin(patch, DECODED_NAME)
+							patch_data = open(file_name, "rb").read()
+						elif NAME_CHECK[-5:] == ".rton":
+							file_name = osjoin(patch, DECODED_NAME[:-5] + ".JSON")
+							patch_data = parse_json(open(file_name, "rb"))
+						else:
+							raise FileNotFoundError
+
+						if NAME_CHECK[-5:] == ".rton" and 5 < level and (overrideEncryption == 1 or overrideEncryption < 0 and data[FILE_OFFSET: FILE_OFFSET + 2] == b"\x10\0") and patch_data[0:2] != b"\x10\0":
+							patch_data = b'\x10\0' + rijndael_cbc.encrypt(patch_data)
+						
+						FILE_SIZE = len(patch_data)
+						patch_data += extend_to_4096(FILE_SIZE)
+						data[FILE_OFFSET: FILE_OFFSET_NEW] = patch_data
+						pathout_data[FILE_INFO - 4: FILE_INFO] = pack("<I", FILE_SIZE)
+						DATA_SHIFT += FILE_OFFSET + len(patch_data) - FILE_OFFSET_NEW
+						FILE_OFFSET_NEW = FILE_OFFSET + len(patch_data)
+						print("patched " + relpath(file_name, patchout))
+					except FileNotFoundError:
+						pass
+					except Exception as e:
+						error_message(type(e).__name__ + " while patching " + file_name + ": " + str(e))	
+				pathout_data[FILE_INFO - 8: FILE_INFO - 4] = pack("<I", FILE_OFFSET)
+			FILE_OFFSET = FILE_OFFSET_NEW
+			DECODED_NAME = DECODED_NAME_NEW
+		
+		DECODED_NAME = ""
+		IMAGE_DATA_SHIFT = 0
+		for DECODED_NAME_NEW in sorted(IMAGE_DATA_DICT, key = lambda key: IMAGE_DATA_DICT[key]["FILE_OFFSET"]):
+			FILE_OFFSET_NEW = IMAGE_DATA_SHIFT + IMAGE_DATA_DICT[DECODED_NAME_NEW]["FILE_OFFSET"]
+			if DECODED_NAME:
+				NAME_CHECK = DECODED_NAME.replace("\\", "/").lower()
+				FILE_INFO = IMAGE_DATA_DICT[DECODED_NAME]["FILE_INFO"]
+				if NAME_CHECK.startswith(pathStartsWith) and NAME_CHECK.endswith(pathEndsWith):
+					try:
+						#if level < 7:
+						file_name = osjoin(patch, DECODED_NAME)
+						patch_data = open(file_name, "rb").read()
+						#else:
+						#	raise FileNotFoundError
+
+						FILE_SIZE = len(patch_data)
+						if FILE_SIZE == 0:
+							warning_message("No PTX: " + file_name)
+						else:
 							patch_data += extend_to_4096(FILE_SIZE)
-							data[FILE_OFFSET: FILE_OFFSET_NEW] = patch_data
-							pathout_data[FILE_INFO - 4: FILE_INFO] = pack("<I", FILE_SIZE)
-							DATA_SHIFT += FILE_OFFSET + len(patch_data) - FILE_OFFSET_NEW
+							image_data[FILE_OFFSET: FILE_OFFSET_NEW] = patch_data
+							pathout_data[FILE_INFO - 24: FILE_INFO - 20] = pack("<I", FILE_SIZE)
+							IMAGE_DATA_SHIFT += FILE_OFFSET + len(patch_data) - FILE_OFFSET_NEW
 							FILE_OFFSET_NEW = FILE_OFFSET + len(patch_data)
 							print("patched " + relpath(file_name, patchout))
-						except FileNotFoundError:
-							pass
-						except Exception as e:
-							error_message(type(e).__name__ + " while patching " + file_name + ": " + str(e))	
-					pathout_data[FILE_INFO - 8: FILE_INFO - 4] = pack("<I", FILE_OFFSET)
-				FILE_OFFSET = FILE_OFFSET_NEW
-				DECODED_NAME = DECODED_NAME_NEW
-			
-			DECODED_NAME = ""
-			IMAGE_DATA_SHIFT = 0
-			for DECODED_NAME_NEW in sorted(IMAGE_DATA_DICT, key = lambda key: IMAGE_DATA_DICT[key]["FILE_OFFSET"]):
-				FILE_OFFSET_NEW = IMAGE_DATA_SHIFT + IMAGE_DATA_DICT[DECODED_NAME_NEW]["FILE_OFFSET"]
-				if DECODED_NAME:
-					NAME_CHECK = DECODED_NAME.replace("\\", "/").lower()
-					FILE_INFO = IMAGE_DATA_DICT[DECODED_NAME]["FILE_INFO"]
-					if NAME_CHECK.startswith(pathStartsWith) and NAME_CHECK.endswith(pathEndsWith):
-						try:
-							if level < 7:
-								file_name = osjoin(patch, DECODED_NAME)
-								patch_data = open(file_name, "rb").read()
-							else:
-								raise FileNotFoundError
+					except FileNotFoundError:
+						pass
+					except Exception as e:
+						error_message(type(e).__name__ + " while patching " + file_name + ": " + str(e))
+				pathout_data[FILE_INFO - 28: FILE_INFO - 24] = pack("<I", FILE_OFFSET)
+			FILE_OFFSET = FILE_OFFSET_NEW
+			DECODED_NAME = DECODED_NAME_NEW
+	
+	if data != None:
+		if overrideDataCompression >= 0:
+			COMPRESSION_FLAGS += overrideDataCompression - (COMPRESSION_FLAGS & 2)
 
-							FILE_SIZE = len(patch_data)
-							if FILE_SIZE == 0:
-								warning_message("No PTX: " + file_name)
-							else:
-								patch_data += extend_to_4096(FILE_SIZE)
-								image_data[FILE_OFFSET: FILE_OFFSET_NEW] = patch_data
-								pathout_data[FILE_INFO - 24: FILE_INFO - 20] = pack("<I", FILE_SIZE)
-								IMAGE_DATA_SHIFT += FILE_OFFSET + len(patch_data) - FILE_OFFSET_NEW
-								FILE_OFFSET_NEW = FILE_OFFSET + len(patch_data)
-								print("patched " + relpath(file_name, patchout))
-						except FileNotFoundError:
-							pass
-						except Exception as e:
-							error_message(type(e).__name__ + " while patching " + file_name + ": " + str(e))
-					pathout_data[FILE_INFO - 28: FILE_INFO - 24] = pack("<I", FILE_OFFSET)
-				FILE_OFFSET = FILE_OFFSET_NEW
-				DECODED_NAME = DECODED_NAME_NEW
-		
-		if data != None:
-			if overrideDataCompression >= 0:
-				COMPRESSION_FLAGS += overrideDataCompression - (COMPRESSION_FLAGS & 2)
-
+		data += extend_to_4096(len(data))
+		DECOMPRESSED_DATA_SIZE = len(data)
+		if COMPRESSION_FLAGS & 2 == 0: # Decompressed files
+			COMPRESSED_DATA_SIZE = DECOMPRESSED_DATA_SIZE
+		else:
+			data = compress(data, 9)
 			data += extend_to_4096(len(data))
-			DECOMPRESSED_DATA_SIZE = len(data)
-			if COMPRESSION_FLAGS & 2 == 0: # Decompressed files
-				COMPRESSED_DATA_SIZE = DECOMPRESSED_DATA_SIZE
-			else:
-				blue_print("Compressing...")
-				data = compress(data, 9)
-				data += extend_to_4096(len(data))
-				COMPRESSED_DATA_SIZE = len(data)
-				
-			pathout_data[DATA_OFFSET: IMAGE_DATA_OFFSET] = data
-			pathout_data[28:36] = pack("<I", COMPRESSED_DATA_SIZE) + pack("<I", DECOMPRESSED_DATA_SIZE)
-			pathout_data[40:44] = pack("<I", DATA_OFFSET + COMPRESSED_DATA_SIZE)
-			if level < 5:
-				print("patched " + relpath(osjoin(patch, RSG_NAME + ".section"), patchout))
+			COMPRESSED_DATA_SIZE = len(data)
 			
-		if image_data != None:
-			if overrideImageDataCompression >= 0:
-				COMPRESSION_FLAGS += overrideImageDataCompression - (COMPRESSION_FLAGS & 1)
-
-			image_data += extend_to_4096(len(image_data))
-			DECOMPRESSED_IMAGE_DATA_SIZE = len(image_data)
-			if COMPRESSION_FLAGS & 1 == 0: # Decompressed files
-				COMPRESSED_IMAGE_DATA_SIZE = DECOMPRESSED_IMAGE_DATA_SIZE
-			else:
-				blue_print("Compressing...")
-				image_data = compress(image_data, 9)
-				image_data += extend_to_4096(len(image_data))
-				COMPRESSED_IMAGE_DATA_SIZE = len(image_data)
-			
-			pathout_data[IMAGE_DATA_OFFSET:] = image_data
-			pathout_data[44:52] = pack("<I", COMPRESSED_IMAGE_DATA_SIZE) + pack("<I", DECOMPRESSED_IMAGE_DATA_SIZE)
-			if level < 5:
-				print("patched " + relpath(osjoin(patch, RSG_NAME + ".section2"), patchout))
+		pathout_data[DATA_OFFSET: IMAGE_DATA_OFFSET] = data
+		pathout_data[28:36] = pack("<I", COMPRESSED_DATA_SIZE) + pack("<I", DECOMPRESSED_DATA_SIZE)
+		pathout_data[40:44] = pack("<I", DATA_OFFSET + COMPRESSED_DATA_SIZE)
+		if level < 5:
+			print("patched " + relpath(osjoin(patch, RSG_NAME + ".section"), patchout))
 		
-		pathout_data[16:20] = pack("<I", COMPRESSION_FLAGS)
-	else:
-		warning_message("UNKNOWN RSG WITH HEADER " + HEADER.hex())
+	if image_data != None:
+		if overrideImageDataCompression >= 0:
+			COMPRESSION_FLAGS += overrideImageDataCompression - (COMPRESSION_FLAGS & 1)
+
+		image_data += extend_to_4096(len(image_data))
+		DECOMPRESSED_IMAGE_DATA_SIZE = len(image_data)
+		if COMPRESSION_FLAGS & 1 == 0: # Decompressed files
+			COMPRESSED_IMAGE_DATA_SIZE = DECOMPRESSED_IMAGE_DATA_SIZE
+		else:
+			image_data = compress(image_data, 9)
+			image_data += extend_to_4096(len(image_data))
+			COMPRESSED_IMAGE_DATA_SIZE = len(image_data)
+		
+		pathout_data[IMAGE_DATA_OFFSET:] = image_data
+		pathout_data[44:52] = pack("<I", COMPRESSED_IMAGE_DATA_SIZE) + pack("<I", DECOMPRESSED_IMAGE_DATA_SIZE)
+		if level < 5:
+			print("patched " + relpath(osjoin(patch, RSG_NAME + ".section2"), patchout))
+	
+	pathout_data[16:20] = pack("<I", COMPRESSION_FLAGS)
 	return pathout_data
 def rsb_patch_data(file, pathout_data, patch, patchout, level):
 	VERSION = unpack('<L', file.read(4))[0]
 
 	file.seek(4, 1)
-	FILE_DATA_OFFSET = unpack('<L', file.read(4))[0]
+	HEADER_SIZE = unpack('<L', file.read(4))[0]
 
-	DIRECTORY_0_LENGTH = unpack('<L', file.read(4))[0]
-	DIRECTORY_0_OFFSET = unpack('<L', file.read(4))[0]
+	FILE_LIST_SIZE = unpack('<L', file.read(4))[0]
+	FILE_LIST_OFFSET = unpack('<L', file.read(4))[0]
 
 	file.seek(8, 1)
-	DIRECTORY_1_LENGTH = unpack('<L', file.read(4))[0]
-	DIRECTORY_1_OFFSET = unpack('<L', file.read(4))[0]
-	DIRECTORY_4_ENTRIES = unpack("<I", file.read(4))[0]
-	DIRECTORY_4_OFFSET = unpack("<I", file.read(4))[0]
-	DIRECTORY_4_ENTRY_SIZE = unpack('<L', file.read(4))[0]
+	SUBGROUP_LIST_SIZE = unpack('<L', file.read(4))[0]
+	SUBGROUP_LIST_OFFSET = unpack('<L', file.read(4))[0]
+	SUBGROUP_INFO_ENTRIES = unpack("<I", file.read(4))[0]
+	SUBGROUP_INFO_OFFSET = unpack("<I", file.read(4))[0]
+	SUBGROUP_INFO_ENTRY_SIZE = unpack('<L', file.read(4))[0]
 
-	DIRECTORY_2_ENTRIES = unpack('<L', file.read(4))[0]
-	DIRECTORY_2_OFFSET = unpack('<L', file.read(4))[0]
-	DIRECTORY_2_ENTRY_SIZE = unpack('<L', file.read(4))[0]
+	GROUP_INFO_ENTRIES = unpack('<L', file.read(4))[0]
+	GROUP_INFO_OFFSET = unpack('<L', file.read(4))[0]
+	GROUP_INFO_ENTRY_SIZE = unpack('<L', file.read(4))[0]
 
-	DIRECTORY_3_LENGTH = unpack('<L', file.read(4))[0]
-	DIRECTORY_3_OFFSET = unpack('<L', file.read(4))[0]
+	GROUP_LIST_SIZE = unpack('<L', file.read(4))[0]
+	GROUP_LIST_OFFSET = unpack('<L', file.read(4))[0]
 
-	DIRECTORY_5_ENTRIES = unpack('<L', file.read(4))[0]
-	DIRECTORY_5_OFFSET = unpack('<L', file.read(4))[0]
-	DIRECTORY_5_ENTRY_SIZE = unpack('<L', file.read(4))[0]
+	AUTOPOOL_INFO_ENTRIES = unpack('<L', file.read(4))[0]
+	AUTOPOOL_INFO_OFFSET = unpack('<L', file.read(4))[0]
+	AUTOPOOL_INFO_ENTRY_SIZE = unpack('<L', file.read(4))[0]
 
-	DIRECTORY_6_ENTRIES = unpack('<L', file.read(4))[0]
-	DIRECTORY_6_OFFSET = unpack('<L', file.read(4))[0]
-	DIRECTORY_6_ENTRY_SIZE = unpack('<L', file.read(4))[0]
+	PTX_INFO_ENTRIES = unpack('<L', file.read(4))[0]
+	PTX_INFO_OFFSET = unpack('<L', file.read(4))[0]
+	PTX_INFO_ENTRY_SIZE = unpack('<L', file.read(4))[0]
 
 	DIRECTORY_7_OFFSET = unpack('<L', file.read(4))[0]
 	DIRECTORY_8_OFFSET = unpack('<L', file.read(4))[0]
 	DIRECTORY_9_OFFSET = unpack('<L', file.read(4))[0]
+
+	if VERSION == 4:
+		HEADER_SIZE_2 = unpack('<L', file.read(4))[0]
 
 	# TEXTURE_FORMATS = []
 	# file.seek(DIRECTORY_6_OFFSET)
@@ -441,45 +377,60 @@ def rsb_patch_data(file, pathout_data, patch, patchout, level):
 
 	# 	TEXTURE_FORMATS.append(TEXTURE_FORMAT)
 	
-	RSG_SHIFT = 0
-	file.seek(DIRECTORY_4_OFFSET)
-	for i in range(0, DIRECTORY_4_ENTRIES):
-		info_start = file.tell()
+	file.seek(SUBGROUP_INFO_OFFSET)
+	SUBGROUP_LIST = {}
+	for i in range(0, SUBGROUP_INFO_ENTRIES):
+		RSG_INFO = file.tell()
 		RSG_NAME = file.read(128).strip(b"\0").decode()
-		RSG_OFFSET = RSG_SHIFT + unpack("<I", file.read(4))[0]
+		RSG_OFFSET = unpack("<I", file.read(4))[0]
 		RSG_SIZE = unpack("<I", file.read(4))[0]
-		
-		RSG_ID = unpack("<I", file.read(4))[0]
+		SUBGROUP_ID = unpack("<I", file.read(4))[0]
 
-		COMPRESSION_FLAGS = unpack("<I", file.read(4))[0]
-		HEADER_LENGTH = unpack("<I", file.read(4))[0]
+		RSG_COMPRESSION_FLAGS = unpack("<I", file.read(4))[0]
+		RSG_HEADER_LENGTH = unpack("<I", file.read(4))[0]
 
-		DATA_OFFSET = unpack("<I", file.read(4))[0]
-		COMPRESSED_DATA_SIZE = unpack("<I", file.read(4))[0]
-		DECOMPRESSED_DATA_SIZE = unpack("<I", file.read(4))[0]
-		DECOMPRESSED_DATA_SIZE_B = unpack("<I", file.read(4))[0]
+		RSG_DATA_OFFSET = unpack("<I", file.read(4))[0]
+		RSG_COMPRESSED_DATA_SIZE = unpack("<I", file.read(4))[0]
+		RSG_DECOMPRESSED_DATA_SIZE = unpack("<I", file.read(4))[0]
+		RSG_DECOMPRESSED_DATA_SIZE_B = unpack("<I", file.read(4))[0]
 		
-		IMAGE_DATA_OFFSET = unpack("<I", file.read(4))[0]
-		COMPRESSED_IMAGE_DATA_SIZE = unpack("<I", file.read(4))[0]
-		DECOMPRESSED_IMAGE_DATA_SIZE = unpack("<I", file.read(4))[0]
+		RSG_IMAGE_DATA_OFFSET = unpack("<I", file.read(4))[0]
+		RSG_COMPRESSED_IMAGE_DATA_SIZE = unpack("<I", file.read(4))[0]
+		RSG_DECOMPRESSED_IMAGE_DATA_SIZE = unpack("<I", file.read(4))[0]
 
 		file.seek(20, 1)
 		IMAGE_ENTRIES = unpack("<I", file.read(4))[0]
 		IMAGE_ID = unpack("<I", file.read(4))[0]
-		RSG_NAME_TESTS = RSG_NAME.lower()
-		if RSG_NAME_TESTS.startswith(rsgStartsWith) and RSG_NAME_TESTS.endswith(rsgEndsWith):
+		
+		SUBGROUP_LIST[RSG_NAME] = {
+			"RSG_OFFSET": RSG_OFFSET,
+			"RSG_SIZE": RSG_IMAGE_DATA_OFFSET + RSG_COMPRESSED_IMAGE_DATA_SIZE,
+			"RSG_INFO": RSG_INFO
+		}
+	
+	RSG_SHIFT = 0
+	for RSG_NAME in sorted(SUBGROUP_LIST, key = lambda key: SUBGROUP_LIST[key]["RSG_OFFSET"]):
+		RSG_OFFSET = RSG_SHIFT + SUBGROUP_LIST[RSG_NAME]["RSG_OFFSET"]
+		RSG_SIZE = SUBGROUP_LIST[RSG_NAME]["RSG_SIZE"]
+		info_start = SUBGROUP_LIST[RSG_NAME]["RSG_INFO"]
+		RSG_CHECK = RSG_NAME.lower()
+		if RSG_CHECK.startswith(rsgStartsWith) and RSG_CHECK.endswith(rsgEndsWith):
 			try:
 				if level < 4:
 					file_path = osjoin(patch, RSG_NAME + ".rsg")
-					patch_data = open(file_path, "rb").read()
+					subdata = bytearray(open(file_path, "rb").read())
 				else:
-					patch_data = rsg_patch_data(RSG_NAME, BytesIO(pathout_data[RSG_OFFSET: RSG_OFFSET + RSG_SIZE]), pathout_data[RSG_OFFSET: RSG_OFFSET + RSG_SIZE], patch, patchout, level)
+					subdata = pathout_data[RSG_OFFSET: RSG_OFFSET + RSG_SIZE]
+					subdata[16:36] = pathout_data[info_start + 140:info_start + 160]
+					subdata[40:52] = pathout_data[info_start + 164:info_start + 176]
+					subdata = rsg_patch_data(RSG_NAME, BytesIO(subdata), subdata, patch, patchout, level)
 				
-				patch_data += extend_to_4096(len(patch_data))
-				pathout_data[RSG_OFFSET: RSG_OFFSET + RSG_SIZE] = patch_data
-				pathout_data[info_start + 132:info_start + 136] = pack("<I", len(patch_data)) #RSG_SIZE
-				pathout_data[info_start + 140:info_start + 176] = patch_data[16:36] + patch_data[32:36] + patch_data[40:52]
-				RSG_SHIFT += len(patch_data) - RSG_SIZE
+				subdata[:4] = b"pgsr"
+				subdata += extend_to_4096(len(subdata))
+				pathout_data[RSG_OFFSET: RSG_OFFSET + RSG_SIZE] = subdata
+				pathout_data[info_start + 132:info_start + 136] = pack("<I", len(subdata)) #RSG_SIZE
+				pathout_data[info_start + 140:info_start + 176] = subdata[16:36] + subdata[32:36] + subdata[40:52]
+				RSG_SHIFT += len(subdata) - RSG_SIZE
 				if level < 4:
 					print("applied " + relpath(file_path, patchout))
 			except FileNotFoundError:
@@ -490,19 +441,7 @@ def rsb_patch_data(file, pathout_data, patch, patchout, level):
 	return pathout_data
 def file_to_folder(inp, out, patch, level, extensions, pathout, patchout):
 # Recursive file convert function
-	check = inp.lower()
-	if isdir(inp):
-		makedirs(out, exist_ok = True)
-		makedirs(patch, exist_ok = True)
-		for entry in sorted(listdir(inp)):
-			input_file = osjoin(inp, entry)
-			output_file = osjoin(out, entry)
-			patch_file = osjoin(patch, entry)
-			if isfile(input_file):
-				file_to_folder(input_file, output_file, splitext(patch_file)[0], level, extensions, pathout, patchout)
-			elif input_file != pathout and inp != patchout:
-				file_to_folder(input_file, output_file, patch_file, level, extensions, pathout, patchout)
-	elif isfile(inp) and check.endswith(extensions):
+	if isfile(inp):
 		try:
 			file = open(inp, "rb")
 			HEADER = file.read(4)
@@ -519,9 +458,7 @@ def file_to_folder(inp, out, patch, level, extensions, pathout, patchout):
 					pathout_data = HEADER + file.read()
 					file.seek(4)
 				
-				if level < 3:
-					out += ".smf"
-				else:
+				if level > 2:
 					pathout_data = rsb_patch_data(file, bytearray(pathout_data), patch, patchout, level)
 				if level < 3 or COMPRESSED:
 					tag, extension = splitext(out)
@@ -545,23 +482,33 @@ def file_to_folder(inp, out, patch, level, extensions, pathout, patchout):
 				warning_message("UNKNOWN HEADER " + HEADER.hex())
 		except Exception as e:
 			error_message("Failed OBBPatch " + type(e).__name__ + " in " + inp + " pos " + str(file.tell()) + ": " + str(e))
-def conversion(inp, out, pathout, level, extension):
+	elif isdir(inp):
+		makedirs(out, exist_ok = True)
+		makedirs(patch, exist_ok = True)
+		for entry in sorted(listdir(inp)):
+			input_file = osjoin(inp, entry)
+			output_file = osjoin(out, entry)
+			patch_file = osjoin(patch, entry)
+			if isfile(input_file):
+				if level < 3:
+					output_file += ".smf"
+				if entry.lower().endswith(extensions):
+					file_to_folder(input_file, output_file, splitext(patch_file)[0], level, extensions, pathout, patchout)
+			elif input_file != pathout and inp != patchout:
+				file_to_folder(input_file, output_file, patch_file, level, extensions, pathout, patchout)
+def conversion(inp, out, level, extensions, pathout):
 # Convert file
-	if isfile(inp) and inp.lower()[-5:] == extension:
+	if isfile(inp):
 		try:
 			file = open(inp, "rb")
-			if file.read(4) != b"RTON": # Ignore CDN files
+			if file.read(4) == b"RTON":
+				if level < 7:
+					open(out,"wb").write(b'\x10\0' + rijndael_cbc.encrypt(b"RTON" + file.read()))
+					print("wrote " + relpath(out, pathout))
+			elif level > 6:
 				file.seek(0)
 				encoded_data = parse_json(file)
-				# No extension
-				if out.lower()[-5:] == ".json":
-					out = out[:-5]
-				if "" == splitext(out)[1] and not basename(out).lower().startswith(RTONNoExtensions):
-					out += ".rton"
 				open(out, "wb").write(encoded_data)
-				print("wrote " + relpath(out, pathout))
-			elif level < 7:
-				open(out,"wb").write(b'\x10\0' + rijndael_cbc.encrypt(b"RTON" + file.read()))
 				print("wrote " + relpath(out, pathout))
 		except Exception as e:
 			error_message(type(e).__name__ + " in " + inp + ": " + str(e))
@@ -569,18 +516,17 @@ def conversion(inp, out, pathout, level, extension):
 		makedirs(out, exist_ok = True)
 		for entry in listdir(inp):
 			input_file = osjoin(inp, entry)
-			if isfile(input_file) or input_file != pathout:
-				conversion(input_file, osjoin(out, entry), pathout, level, extension)
-def list_levels(levels):
-	blue_print(" ".join([repr(i) + "-" + levels[i] for i in range(len(levels))]))
-def input_level(text, minimum, maximum):
-# Set input level for conversion
-	try:
-		return max(minimum, min(maximum, int(bold_input(text + " (" + str(minimum) + "-" + str(maximum) + ")"))))
-	except Exception as e:
-		error_message(type(e).__name__ + " : " + str(e))
-		warning_message("Defaulting to " + str(minimum))
-		return minimum
+			output_file = osjoin(out, entry)
+			if isfile(input_file):
+				check = entry.lower()
+				if level > 6:
+					output_file = output_file[:-5]
+					if "" == splitext(output_file)[1] and not check.startswith(RTONNoExtensions):
+						output_file += ".rton"
+				if check[-5:] == extensions:
+					conversion(input_file, output_file, level, extensions, pathout)
+			elif input_file != pathout:
+				conversion(input_file, output_file, level, extensions, pathout)
 # Start of the code
 try:
 	system("")
@@ -589,10 +535,19 @@ try:
 	else:
 		application_path = sys.path[0]
 	fail = open(osjoin(application_path, "fail.txt"), "w")
+	logerror = LogError(fail)
+	error_message = logerror.error_message
+	warning_message = logerror.warning_message
+	input_level = logerror.input_level
 	if sys.version_info[0] < 3:
 		raise RuntimeError("Must be using Python 3")
 	
-	print("\033[95m\033[1mOBBUnpacker v1.1.6b (C) 2022 by Nineteendo\nCode based on: Luigi Auriemma, Small Pea & 1Zulu\nDocumentation: Watto Studios, YingFengTingYu & h3x4n1um\033[0m\n")
+	print("""\033[95m
+\033[1mOBBPatcher v1.1.6d (c) 2022 Nineteendo\033[22m
+\033[1mCode based on:\033[22m Luigi Auriemma, Small Pea & 1Zulu
+\033[1mDocumentation:\033[22m Watto Studios, YingFengTingYu, TwinKleS-C & h3x4n1um
+\033[1mFollow PyVZ2 development:\033[22m \033[4mdiscord.gg/CVZdcGKVSw\033[24m
+\033[0m""")
 	try:
 		folder = osjoin(application_path, "options")
 		templates = {}
@@ -630,18 +585,12 @@ try:
 		warning_message("Falling back to default options.")
 	
 	level_to_name = ["SPECIFY", "SMF", "RSB", "RSG", "SECTION", "ENCRYPTED", "ENCODED", "DECODED"]
-	if options["smfUnpackLevel"] <= 0 or options["rsbUnpackLevel"] <= 1 or options["rsgUnpackLevel"] <= 2 or options["encryptedUnpackLevel"] <= 4 or options["encodedUnpackLevel"] <= 5:
-		list_levels(level_to_name)
-	if options["encodedUnpackLevel"] <= 5:
-		options["encodedUnpackLevel"] = input_level("ENCODED Unpack Level", 6, 7)
-	if options["encryptedUnpackLevel"] <= 4:
-		options["encodedUnpackLevel"] = input_level("ENCRYPTED Unpack Level", 5, 6)
-	if options["rsgUnpackLevel"] <= 2:
-		options["rsgUnpackLevel"] = input_level("RSG/RSB/SMF Unpack Level", 3, 7)
-	if options["rsbUnpackLevel"] <= 1:
-		options["rsbUnpackLevel"] = input_level("RSB/SMF Unpack Level", 2, 3)
-	if options["smfUnpackLevel"] <= 0:
-		options["smfUnpackLevel"] = input_level("SMF Unpack Level", 1, 2)
+	list_levels(level_to_name)
+	options["encodedUnpackLevel"] = input_level("ENCODED Unpack Level", 6, 7, options["encodedUnpackLevel"])
+	options["encryptedUnpackLevel"] = input_level("ENCRYPTED Unpack Level", 5, 6, options["encryptedUnpackLevel"])
+	options["rsgUnpackLevel"] = input_level("RSG/RSB/SMF Unpack Level", 3, 7, options["rsgUnpackLevel"])
+	options["rsbUnpackLevel"] = input_level("RSB/SMF Unpack Level", 2, 3, options["rsbUnpackLevel"])
+	options["smfUnpackLevel"] = input_level("SMF Unpack Level", 1, 2, options["smfUnpackLevel"])
 	
 	if options["rsgStartsWithIgnore"]:
 		rsgStartsWith = ""
@@ -653,17 +602,13 @@ try:
 		rsgEndsWith = options["rsgEndsWith"]
 	
 	rijndael_cbc = RijndaelCBC(str.encode(options["encryptionKey"]), 24)
-	if options["overrideDataCompression"] <= 0 or options["overrideImageDataCompression"] <= 0 or options["overrideEncryption"] <= 0:
-		list_levels(["DEFAULT", "DISABLE", "ENABLE"])
-	if options["overrideDataCompression"] <= 0:
-		options["overrideDataCompression"] = input_level("Compress Data Override", 1, 3)
-	overrideDataCompression = 2 * (options["overrideDataCompression"] - 2)
-	if options["overrideImageDataCompression"] <= 0:
-		options["overrideImageDataCompression"] = input_level("Compress Image Data Override", 1, 3)
-	overrideImageDataCompression = options["overrideImageDataCompression"] - 2
-	if options["overrideEncryption"] <= 0:
-		options["overrideEncryption"] = input_level("Encrypt Override", 1, 3)
-	overrideEncryption = options["overrideEncryption"] - 2
+	if 7 >= options["rsgUnpackLevel"] > 3:
+		list_levels(["SPECIFY", "DEFAULT", "DISABLE", "ENABLE"])
+		overrideDataCompression = 2 * (input_level("Compress Data Override", 1, 3, options["overrideDataCompression"]) - 2)
+		overrideImageDataCompression = input_level("Compress Image Data Override", 1, 3, options["overrideImageDataCompression"]) - 2
+	if 7 >= options["rsgUnpackLevel"] > 5:
+		overrideEncryption = input_level("Encrypt Override", 1, 3, options["overrideEncryption"]) - 2
+	
 	if options["pathEndsWithIgnore"]:
 		pathEndsWith = ""
 	else:
@@ -675,13 +620,11 @@ try:
 	RTONNoExtensions = options["RTONNoExtensions"]
 	parse_json = JSONDecoder().parse_json
 
-	blue_print("Working directory: " + getcwd())
+	blue_print("\nWorking directory: " + getcwd())
 	if 7 >= options["encodedUnpackLevel"] > 6:
 		encoded_input = path_input("ENCODED " + level_to_name[options["encodedUnpackLevel"]] + " Input file or directory", options["encodedUnpacked"])
 		if isfile(encoded_input):
 			encoded_output = path_input("ENCODED Output file", options["encodedPacked"])
-			if encoded_output.lower()[:-5] == ".json":
-				encoded_output = encoded_output[:-5]
 		else:
 			encoded_output = path_input("ENCODED Output directory", options["encodedPacked"])
 	if 6 >= options["encryptedUnpackLevel"] > 5:
@@ -716,9 +659,9 @@ try:
 	# Start file_to_folder
 	start_time = datetime.datetime.now()
 	if 7 >= options["encodedUnpackLevel"] > 6:
-		conversion(encoded_input, encoded_output, dirname(encoded_output), options["encodedUnpackLevel"], ".json")
+		conversion(encoded_input, encoded_output, options["encodedUnpackLevel"], ".json", dirname(encoded_output))
 	if 6 >= options["encryptedUnpackLevel"] > 5:
-		conversion(encrypted_input, encrypted_output, dirname(encrypted_output), options["encryptedUnpackLevel"], ".rton")
+		conversion(encrypted_input, encrypted_output, options["encryptedUnpackLevel"], ".rton", dirname(encrypted_output))
 	if 7 >= options["rsgUnpackLevel"] > 3:
 		file_to_folder(rsg_input, rsg_output, rsg_patch, options["rsgUnpackLevel"], options["rsgExtensions"], dirname(rsg_output), rsg_patch)
 	if 3 >= options["rsbUnpackLevel"] > 2:

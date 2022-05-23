@@ -14,7 +14,8 @@ Python3 scripts for modifying Plants VS Zombies 2
 ## Credits to these people for documentation:
 1. Watto Studios for documenting RSB/1BSR: http://www.watto.org/specs.html?specs=Archive_RSB_1BSR
 2. YingFengTingYu for documenting the RSB.SMF format: https://github.com/YingFengTingYu/PopStudio
-3. H3x4n1um for the documentating the RTON format: https://github.com/h3x4n1um/RETON
+3. TwinKleS-C for documenting RSB/1BSR: https://github.com/TwinKleS-C/PvZTool/blob/main/src/pvztool.c
+4. H3x4n1um for the documentating the RTON format: https://github.com/h3x4n1um/RETON
 
 ## MODDING SUPPORT
 https://discord.gg/CVZdcGKVSw

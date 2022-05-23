@@ -218,29 +218,30 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* Renamed from RTON Converter
 	* Fixed wrong encoding on Windows
 # Release 1.2.0 (The future)
-## Beta 1.1.0b (12 Feb 2022)
+## Master 1.1.4 (29 Mar 2022)
+### Beta 1.1.0b (12 Feb 2022)
 1. OBBEdit:
 	* Decoding some PTX files
-## Beta 1.1.0c (16 Feb 2022)
+### Beta 1.1.0c (16 Feb 2022)
 1. OBBEdit:
 	* Converting to same folder
 2. RTON-OFF:
 	* Converting to same folder
-## Beta 1.1.0d (17 Feb 2022)
+### Beta 1.1.0d (17 Feb 2022)
 1. OBBEdit:
 	* Fixed outputting invalid obbs
 2. RTON-OFF:
 	* Fixed RTID()
-## Beta 1.1.0e (22 Feb 2022)
+### Beta 1.1.0e (22 Feb 2022)
 1. OBBEdit:
 	* Fixed DEBUG MODE, import error
 2. RTON-OFF:
 	* Fixed DEBUG MODE
-## Beta 1.1.0f (23 Feb 2022)
+### Beta 1.1.0f (23 Feb 2022)
 1. README:
 	* Crediting h3x4n1um
 	* Issues?
-## Beta 1.1.0g (4 Mar 2022)
+### Beta 1.1.0g (4 Mar 2022)
 1. OBBEdit:
 	* Disabled PTX decoding 
 	* Warning for BaseExceptions
@@ -250,46 +251,46 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* Options:
 		* Added ensureAscii
 	* Warning for BaseExceptions
-## Beta 1.1.0h (12 Mar 2022)
+### Beta 1.1.0h (12 Mar 2022)
 1. RTON-OFF:
 	* CDN support
 	* Options:
 		* Removed allowAllJSON & cachKeyLimit & cachKeyLimit
 	* README:
 		* Removed allowAllJSON & cachKeyLimit & cachKeyLimit
-## Beta 1.1.1 (15 Mar 2022)
+### Beta 1.1.1 (15 Mar 2022)
 1. OBBEdit:
 	* Preparing merge with RTON-OFF
-## Beta 1.1.2 (15 Mar 2022)
+### Beta 1.1.2 (15 Mar 2022)
 1. OBBEdit:
 	* **Merged with RTON-OFF**
 	* Unpack json from obb
-## Beta 1.1.2b (17 Mar 2022)
+### Beta 1.1.2b (17 Mar 2022)
 1. OBBEdit:
 	* Tweaked conversion to better match PVZ2Tool
 	* README:
 		* **Merged OBBEdit & RTON-OFF**
-## Beta 1.1.2c (19 Mar 2022)
+### Beta 1.1.2c (19 Mar 2022)
 1. OBBEdit:
 	* RTON conversion is sligthly faster
-## Beta 1.1.2c (19 Mar 2022)
+### Beta 1.1.2c (19 Mar 2022)
 1. OBBEdit:
 	* Synced different configurations
 2. RTONCrypto:
 	* **Forked RTONCrypto from SmallPea**
 	* Added options
-## Beta 1.1.2d (22 Mar 2022)
+### Beta 1.1.2d (22 Mar 2022)
 1. OBBEdit:
 	* Compressed rsb support
 2. README:
 	* Creditted Small Pea
-## Beta 1.1.3 (22 Mar 2022)
+### Beta 1.1.3 (22 Mar 2022)
 1. OBBEdit:
 	* Preparing merge of OBBEdit & RTONCrypto
 	* Unpacking decrypted files
 	* Options:
 		* Removed Universal options
-## Beta 1.1.4 (28 Mar 2022)
+### Beta 1.1.4 (28 Mar 2022)
 1. OBBEdit:
 	* **Merged OBBEdit & RTONCrypto**
 	* Added Smf decompressing
@@ -301,8 +302,6 @@ Python3 scripts for modifying Plants VS Zombies 2
 		* Renamed some options
 	* README:
 		* Removed Universal options
-## Master 1.1.4 (29 Mar 2022)
-1. **ALL CHANGES FROM BETA**
 ## Master 1.1.4b (4 Apr 2022)
 1. OBBEdit:
 	* Creditted YingFengTingYu
@@ -311,7 +310,7 @@ Python3 scripts for modifying Plants VS Zombies 2
 2. README:
 	* Split up credits in Code & Documentation
 	* Creditted YingFengTingYu & Watto Studios
-## Beta 1.1.4b (6 Apr 2022)
+### Beta 1.1.4b (6 Apr 2022)
 1. OBBEdit:
 	* Removed rsgp unpacking
 	* Moved encryption to custom library
@@ -321,7 +320,7 @@ Python3 scripts for modifying Plants VS Zombies 2
 		* Removed rsgpExtensions & rsgpUnpackLevel
 	* README:
 		* Removed rsgpExtensions & rsgpUnpackLevel
-## Beta 1.1.5 (16 Apr 2022)
+### Beta 1.1.5 (16 Apr 2022)
 1. OBBEdit:
 	* Added templates to make multiple custom settings easier.
 	* Moved RTON conversions to custom library
@@ -330,7 +329,7 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* README:
 		* Split up credits in Code & Documentation
 		* Creditted YingFengTingYu & Watto Studios
-## Beta 1.1.6 (1 May 2022)
+### Beta 1.1.6 (1 May 2022)
 1. OBBEdit:
 	* Added changelog
 	* Resupported rsg unpacking
@@ -345,7 +344,7 @@ Python3 scripts for modifying Plants VS Zombies 2
 		* Added overrideDataCompression & overrideEncryption & overrideImageDataCompression
 		* Added rsgExtensions & rsgUnpackLevel
 		* Fixed empty rows
-## Beta 1.1.6b (2 May 2022)
+### Beta 1.1.6b (2 May 2022)
 1. OBBEdit:
 	* Improved templates
 	* Fixed patching
@@ -357,7 +356,23 @@ Python3 scripts for modifying Plants VS Zombies 2
 		* Added smfPacked, smfUnpacked, encryptedPacked, encryptedUnpacked, encodedPacked & encodedUnpacked
 		* Added rsbPacked, rsbPatched, rsbUnpacked, rsgPacked, rsgPatched & rsgUnpacked
 		* renamed some options
-## Beta 1.1.6c (3 May 2022)
+### Beta 1.1.6c (3 May 2022)
 1. OBBEdit:
 	* More templates
 	* Warning message for unknown headers
+### Beta 1.1.6d (22 May 2022)
+1. OBBEdit:
+	* Conversion following more closely the official data format
+	* Fixed unpack everything (level 6 instead of 7)
+	* More control of paths for single file conversions
+	* Show preset unpack level & overrides
+	* Credited TwinKleS-C
+	* Link to Discord server
+	* Moved custom command line input & output to custom library
+	* Updated changelog format
+	* Options:
+		* RTON conversion more closely to PVZ2Tool
+		* Override encryption for patching
+	* README:
+		* More accurate depiction of data format
+		* Credited TwinKleS-C

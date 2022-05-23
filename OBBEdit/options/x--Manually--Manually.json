@@ -27,7 +27,7 @@
 	"rsgStartsWithIgnore": true,
 
 	"overrideDataCompression": 0,
-	"overrideEncryption": 1,
+	"overrideEncryption": 0,
 	"overrideImageDataCompression": 0,
 	"pathEndsWith": [
 		".rton"
@@ -69,7 +69,7 @@
 	"encodedUnpacked": "",
 	"encodedUnpackLevel": 5,
 	"ensureAscii": false,
-	"indent": -1,
+	"indent": 4,
 	"repairFiles": false,
 	"RTONExtensions": [
 		".bin",
