@@ -376,3 +376,6 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* README:
 		* More accurate depiction of data format
 		* Credited TwinKleS-C
+### Beta 1.1.6e (28 May 2022)
+1. OBBEdit:
+	* Sped up JSON conversion after a report of plant16gamer on Discord

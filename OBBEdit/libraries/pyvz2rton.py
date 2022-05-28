@@ -283,12 +283,12 @@ class JSONDecoder():
 	# JSON -> RTON
 		data = load(file, object_pairs_hook = self.encode_object_pairs)
 		cached_strings = {}
-		string = b"RTON\x01\x00\x00\x00"
+		items = []
 		for key, value in data.data:
 			key, cached_strings = self.encode_string(key, cached_strings)
 			value, cached_strings = self.encode_data(value, cached_strings)
-			string += key + value
-		return string + b"\xffDONE"
+			items.append(key + value)
+		return b"RTON\x01\x00\x00\x00" + b"".join(items) + b"\xffDONE"
 	def encode_object_pairs(self, pairs):
 	# Object to list of tuples
 		return list2(pairs)
@@ -368,19 +368,19 @@ class JSONDecoder():
 		return (data, cached_strings)
 	def encode_array(self, data, cached_strings):
 	# Array
-		string = self.encode_number(len(data))
+		items = []
 		for v in data:
 			v, cached_strings = self.encode_data(v, cached_strings)
-			string += v
-		return (b"\x86\xfd" + string + b"\xfe", cached_strings)
+			items.append(v)
+		return (b"\x86\xfd" + self.encode_number(len(data)) + b"".join(items) + b"\xfe", cached_strings)
 	def encode_object(self, data, cached_strings):
 	# Object
-		string = b"\x85"
+		items = []
 		for key, value in data:
 			key, cached_strings = self.encode_string(key, cached_strings)
 			value, cached_strings = self.encode_data(value, cached_strings)
-			string += key + value
-		return (string + b"\xff", cached_strings)
+			items.append(key + value)
+		return (b"\x85" + b"".join(items) + b"\xff", cached_strings)
 	def encode_data(self, data, cached_strings):
 	# Data
 		if isinstance(data, str):
