@@ -379,3 +379,6 @@ Python3 scripts for modifying Plants VS Zombies 2
 ### Beta 1.1.6e (28 May 2022)
 1. OBBEdit:
 	* Sped up JSON conversion after a report of plant16gamer on Discord
+### Beta 1.1.7 (29 May 2022)
+1. OBBEdit:
+	* Sped up RTON conversion

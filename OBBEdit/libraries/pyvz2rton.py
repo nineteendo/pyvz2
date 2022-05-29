@@ -10,8 +10,9 @@ cached_codes = [
 ]
 
 class RTONDecoder():
-	def __init__(self, comma = b",", doublePoint = b":", ensureAscii = False, fail = BytesIO(), indent = b"    ", repairFiles = True, sortKeys = False, sortValues = False):
+	def __init__(self, comma = b",", currrent_indent = b"\r\n", doublePoint = b":", ensureAscii = False, fail = BytesIO(), indent = b"  ", repairFiles = True, sortKeys = False, sortValues = False):
 		self.comma = comma
+		self.currrent_indent = currrent_indent
 		self.doublePoint = doublePoint
 		self.ensureAscii = ensureAscii
 		self.fail = fail
@@ -19,21 +20,41 @@ class RTONDecoder():
 		self.repairFiles = repairFiles
 		self.sortKeys = sortKeys
 		self.sortValues = sortValues
-	def root_object(self, fp, currrent_indent = b"\r\n"):
+	def root_object(self, fp):
 		VER = unpack("<I", fp.read(4))[0]
 		string = b"{"
+		currrent_indent = self.currrent_indent
 		new_indent = currrent_indent + self.indent
+		cached_strings = []
+		cached_printable_strings = []
 		items = []
-		end = b"}"
 		try:
-			key, chached_strings, chached_printable_strings = self.parse(fp, new_indent, [], [])
-			value, chached_strings, chached_printable_strings = self.parse(fp, new_indent, chached_strings, chached_printable_strings)
-			string += new_indent 
-			items = [key + self.doublePoint + value]
-			end = currrent_indent + end
 			while True:
-				key, chached_strings, chached_printable_strings = self.parse(fp, new_indent, chached_strings, chached_printable_strings)
-				value, chached_strings, chached_printable_strings = self.parse(fp, new_indent, chached_strings, chached_printable_strings)
+				code = fp.read(1)
+				if code == b"\xff":
+					break
+				elif code == b"\x90":
+					key = self.parse_str(fp)
+					cached_strings.append(key)
+				elif code in b"\x91":
+					key = cached_strings[self.parse_number(fp)]
+				elif code in b"\x92":
+					key = self.parse_printable_str(fp)
+					cached_printable_strings.append(key)
+				elif code in b"\x93":
+					key = cached_printable_strings[self.parse_number(fp)]
+				else:
+					raise KeyError(code)
+
+				code = fp.read(1)
+				if code == b"\x85":
+					value, cached_strings, cached_printable_strings = self.encode_object(fp, new_indent, cached_strings, cached_printable_strings)
+				elif code == b"\x86":
+					value, cached_strings, cached_printable_strings = self.parse_list(fp, new_indent, cached_strings, cached_printable_strings)
+				elif code in cached_codes:
+					value, cached_strings, cached_printable_strings = self.parse_cached_str(fp, code, cached_strings, cached_printable_strings)
+				else:
+					value = self.mappings[code](self, fp)
 				items.append(key + self.doublePoint + value)
 		except KeyError as k:
 			if str(k) == 'b""':
@@ -41,16 +62,19 @@ class RTONDecoder():
 					self.warning_message("SilentError: " + fp.name + " pos " + str(fp.tell() - 1) + ": end of file")
 				else:
 					raise EOFError
-			elif k.args[0] != b'\xff':
+			else:
 				raise TypeError("unknown tag " + k.args[0].hex())
 		except (error, IndexError):
 			if self.repairFiles:
 				self.warning_message("SilentError: " + fp.name + " pos " + str(fp.tell() - 1) + ": end of file")
 			else:
 				raise EOFError
+		i2 = len(items)
 		if self.sortKeys:
 			items = sorted(items)
-		return string + (self.comma + new_indent).join(items) + end
+		if i2 > 0:
+			string += new_indent + (self.comma + new_indent).join(items) + currrent_indent
+		return string + b"}"
 	def warning_message(self, string):
 	# Print & log warning
 		self.fail.write("\t" + string + "\n")
@@ -122,19 +146,19 @@ class RTONDecoder():
 		if i1 != i2:
 			self.warning_message("SilentError: " + fp.name + " pos " + str(fp.tell() - 1) + ": Unicode string of character length " + str(i2) + " found, expected " + str(i1))
 		return string
-	def parse_cached_str(self, fp, code, chached_strings, chached_printable_strings):
+	def parse_cached_str(self, fp, code, cached_strings, cached_printable_strings):
 	# types 90, 91, 92, 93
 		if code == b"\x90":
 			result = self.parse_str(fp)
-			chached_strings.append(result)
+			cached_strings.append(result)
 		elif code in b"\x91":
-			result = chached_strings[self.parse_number(fp)]
+			result = cached_strings[self.parse_number(fp)]
 		elif code in b"\x92":
 			result = self.parse_printable_str(fp)
-			chached_printable_strings.append(result)
+			cached_printable_strings.append(result)
 		elif code in b"\x93":
-			result = chached_printable_strings[self.parse_number(fp)]
-		return (result, chached_strings, chached_printable_strings)
+			result = cached_printable_strings[self.parse_number(fp)]
+		return (result, cached_strings, cached_printable_strings)
 	def parse_ref(self, fp):
 	# type 83
 		ch = fp.read(1)
@@ -150,21 +174,38 @@ class RTONDecoder():
 			return dumps("RTID(" + self.parse_utf8_str(fp) + "@" + p1 + ")", ensure_ascii = self.ensureAscii).encode()
 		else:
 			raise TypeError("unexpected subtype for type 83, found: " + ch.hex())
-	def encode_object(self, fp, currrent_indent, chached_strings, chached_printable_strings):
+	def encode_object(self, fp, currrent_indent, cached_strings, cached_printable_strings):
 	# type 85
 		string = b"{"
 		new_indent = currrent_indent + self.indent
 		items = []
-		end = b"}"
 		try:
-			key, chached_strings, chached_printable_strings = self.parse(fp, new_indent, chached_strings, chached_printable_strings)
-			value, chached_strings, chached_printable_strings = self.parse(fp, new_indent, chached_strings, chached_printable_strings)
-			string += new_indent 
-			items = [key + self.doublePoint + value]
-			end = currrent_indent + end
 			while True:
-				key, chached_strings, chached_printable_strings = self.parse(fp, new_indent, chached_strings, chached_printable_strings)
-				value, chached_strings, chached_printable_strings = self.parse(fp, new_indent, chached_strings, chached_printable_strings)
+				code = fp.read(1)
+				if code == b"\xff":
+					break
+				elif code == b"\x90":
+					key = self.parse_str(fp)
+					cached_strings.append(key)
+				elif code in b"\x91":
+					key = cached_strings[self.parse_number(fp)]
+				elif code in b"\x92":
+					key = self.parse_printable_str(fp)
+					cached_printable_strings.append(key)
+				elif code in b"\x93":
+					key = cached_printable_strings[self.parse_number(fp)]
+				else:
+					raise KeyError(code)
+					
+				code = fp.read(1)
+				if code == b"\x85":
+					value, cached_strings, cached_printable_strings = self.encode_object(fp, new_indent, cached_strings, cached_printable_strings)
+				elif code == b"\x86":
+					value, cached_strings, cached_printable_strings = self.parse_list(fp, new_indent, cached_strings, cached_printable_strings)
+				elif code in cached_codes:
+					value, cached_strings, cached_printable_strings = self.parse_cached_str(fp, code, cached_strings, cached_printable_strings)
+				else:
+					value = self.mappings[code](self, fp)
 				items.append(key + self.doublePoint + value)
 		except KeyError as k:
 			if str(k) == 'b""':
@@ -172,17 +213,20 @@ class RTONDecoder():
 					self.warning_message("SilentError: " + fp.name + " pos " + str(fp.tell() - 1) + ": end of file")
 				else:
 					raise EOFError
-			elif k.args[0] != b'\xff':
+			else:
 				raise TypeError("unknown tag " + k.args[0].hex())
 		except (error, IndexError):
 			if self.repairFiles:
 				self.warning_message("SilentError: " + fp.name + " pos " + str(fp.tell() - 1) + ": end of file")
 			else:
 				raise EOFError
+		i2 = len(items)
 		if self.sortKeys:
 			items = sorted(items)
-		return (string + (self.comma + new_indent).join(items) + end, chached_strings, chached_printable_strings)
-	def parse_list(self, fp, currrent_indent, chached_strings, chached_printable_strings):
+		if i2 > 0:
+			string += new_indent + (self.comma + new_indent).join(items) + currrent_indent
+		return (string + b"}", cached_strings, cached_printable_strings)
+	def parse_list(self, fp, currrent_indent, cached_strings, cached_printable_strings):
 	# type 86
 		code = fp.read(1)
 		if code == b"":
@@ -195,15 +239,20 @@ class RTONDecoder():
 		string = b"["
 		new_indent = currrent_indent + self.indent
 		items = []
-		end = b"]"
 		i1 = self.parse_number(fp)
 		try:
-			value, chached_strings, chached_printable_strings = self.parse(fp, new_indent, chached_strings, chached_printable_strings)
-			string += new_indent
-			items = [value]
-			end = currrent_indent + end
 			while True:
-				value, chached_strings, chached_printable_strings = self.parse(fp, new_indent, chached_strings, chached_printable_strings)
+				code = fp.read(1)
+				if code == b"\xfe":
+					break
+				elif code == b"\x85":
+					value, cached_strings, cached_printable_strings = self.encode_object(fp, new_indent, cached_strings, cached_printable_strings)
+				elif code == b"\x86":
+					value, cached_strings, cached_printable_strings = self.parse_list(fp, new_indent, cached_strings, cached_printable_strings)
+				elif code in cached_codes:
+					value, cached_strings, cached_printable_strings = self.parse_cached_str(fp, code, cached_strings, cached_printable_strings)
+				else:
+					value = self.mappings[code](self, fp)
 				items.append(value)
 		except KeyError as k:
 			if str(k) == 'b""':
@@ -211,7 +260,7 @@ class RTONDecoder():
 					self.warning_message("SilentError: " + fp.name + " pos " + str(fp.tell() - 1) + ": end of file")
 				else:
 					raise EOFError
-			elif k.args[0] != b'\xfe':
+			else:
 				raise TypeError("unknown tag " + k.args[0].hex())
 		except (error, IndexError):
 			if self.repairFiles:
@@ -224,25 +273,18 @@ class RTONDecoder():
 		if self.sortValues:
 			items = sorted(sorted(items), key = lambda key : len(key))
 		
-		return (string + (self.comma + new_indent).join(items) + end, chached_strings, chached_printable_strings)
-	def parse(self, fp, current_indent, chached_strings, chached_printable_strings):
-		code = fp.read(1)
-		if code == b"\x85":
-			return self.encode_object(fp, current_indent, chached_strings, chached_printable_strings)
-		elif code == b"\x86":
-			return self.parse_list(fp, current_indent, chached_strings, chached_printable_strings)
-		elif code in cached_codes:
-			return self.parse_cached_str(fp, code, chached_strings, chached_printable_strings)
-		return (self.mappings[code](self, fp), chached_strings, chached_printable_strings)
+		if i2 > 0:
+			string += new_indent + (self.comma + new_indent).join(items) + currrent_indent
+		return (string + b"]", cached_strings, cached_printable_strings)
 	mappings = {
 		b"\x00": lambda self, x: b"false",
 		b"\x01": lambda self, x: b"true",
-		b"\x08": parse_int8,  
+		b"\x08": parse_int8, 
 		b"\x09": lambda self, x: b"0", # int8_zero
 		b"\x0a": parse_uint8,
 		b"\x0b": lambda self, x: b"0", # uint8_zero
 		b"\x10": parse_int16,
-		b"\x11": lambda self, x: b"0",  # int16_zero
+		b"\x11": lambda self, x: b"0", # int16_zero
 		b"\x12": parse_uint16,
 		b"\x13": lambda self, x: b"0", # uint16_zero
 		b"\x20": parse_int32,
@@ -254,7 +296,6 @@ class RTONDecoder():
 		b"\x26": parse_uint32,
 		b"\x27": lambda self, x: b"0", #uint_32_zero
 		b"\x28": parse_uvarint, # uint32_uvarint
-		b"\x29": parse_varint, # uint32_varint?
 		b"\x40": parse_int64,
 		b"\x41": lambda self, x: b"0", #int64_zero
 		b"\x42": parse_double,
@@ -264,7 +305,6 @@ class RTONDecoder():
 		b"\x46": parse_uint64,
 		b"\x47": lambda self, x: b"0", # uint64_zero
 		b"\x48": parse_uvarint, # uint64_uvarint
-		b"\x49": parse_varint, # uint64_varint
 		b"\x81": parse_str, # uncached string
 		b"\x82": parse_printable_str, # uncached printable string
 		b"\x83": parse_ref,
