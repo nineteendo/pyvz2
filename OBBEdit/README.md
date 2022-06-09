@@ -1,14 +1,44 @@
 # OBBEdit
+## Folders
+- libraries: 3th party libraries from PyVZ2. **GPL-3.0 LICENCE**
+- options: templates (see below)
+- options_unused: unused templates
 ## Files
 - fail.txt: file with the last errors
-- options.json: settings for unpacking (see below)
 - patch.py a tool to patch 1bsr and pgsr
 - README.md: this file
 - unpack.py a tool to unpack 1bsr and pgsr
 - versions.cfg (old configuration file)
 
-## options.json
-key | purpose
+## Templates
+All info is sorted alphabetically on **FILE NAME**
+### Group Format:
+```
+[KEY]--[INFO]
+````
+* [KEY], **case-sensitive**, is the key for selecting a template
+* [INFO], is the info displayed about the group
+* Example:
+	```
+	a--Android Templates
+	```
+* Displayed: `Android Templates`
+
+### Naming Format:
+```
+[KEY]--[UNPACK_INFO]--[PATCH_INFO].json
+````
+* [KEY], **case-sensitive**, is the key for selecting a template
+* [UNPACK_INFO], is the info displayed during unpacking
+* [PATCH_INFO], is the info displayed during patching
+* Example:
+	```
+	5--Decode RTON--Encode JSON.json
+	```
+* Displayed: `5: Decode RTON`
+
+### JSON options
+Key | Purpose
 --- | ---
 smfExtensions | Only unpack SMFs with these extensions
 smfPacked | path to packed smf (blank for manual input)
@@ -93,7 +123,7 @@ Byte | what
 4 | HEADER_SIZE_2 #obsr__size
 
 ### 1BSR smart pathnames -> GET_NAME()
-what | type | purpose
+What | Type | Purpose
 --- | --- | ---
 CHAR | string 1 | character of path name
 END_OFFSET | < 3 bytes | offset after which the current read characters expire

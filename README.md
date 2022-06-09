@@ -2,8 +2,8 @@
 Python3 scripts for modifying Plants VS Zombies 2
 
 ## Files:
-- LICENCE, this tool is licenced under GPL-3.0, for more information read it.
-- OBBEdit, a tool to unpack and patch PVZ2 resources
+- LICENCE, this tool is licenced under GPL-3.0, read it for more information.
+- OBBEdit, a tool to unpack and patch PVZ2's resources
 - README.md, this file
 
 ## Credits to these people for code:

@@ -382,3 +382,12 @@ Python3 scripts for modifying Plants VS Zombies 2
 ### Beta 1.1.7 (29 May 2022)
 1. OBBEdit:
 	* Sped up RTON conversion
+### Beta 1.1.7b (9 June 2022)
+1. OBBEdit:
+	* Sped up RTON conversion
+	* Fixed self.Infinity as number
+	* README:
+		* Files & Foldes
+		* Templates
+2. README:
+	* Fixed wording choice
