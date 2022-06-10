@@ -293,7 +293,7 @@ def rsg_extract(RSG_NAME, file, pathout_data, out, pathout, level):
 									source = BytesIO(file_data)
 									source.name = file.name + ":" + DECODED_NAME
 									RTON_HEADER = source.read(4)
-									file_data = root_object(source)
+									file_data = parse_root_object(source)
 									open(file_path, "wb").write(file_data)
 									print("wrote " + relpath(file_path, pathout))
 								except Exception as e:
@@ -449,7 +449,7 @@ def file_to_folder(inp, out, level, extensions, pathout):
 				rsg_extract("data", 0, file, out, pathout, level)
 				#rsg_extract("data", 0, [], {} file, out, pathout, level)
 			else:
-				warning_message("UNKNOWN HEADER " + HEADER.hex())
+				warning_message("UNKNOWN HEADER " + HEADER.hex() + inp)
 		except Exception as e:
 			error_message("Failed OBBUnpack: " + type(e).__name__ + " in " + inp + " pos " + str(file.tell()) + ": " + str(e))
 	elif isdir(inp):
@@ -474,7 +474,7 @@ def conversion(inp, out, level, extensions, noextensions, pathout):
 					print("wrote " + relpath(out, pathout))
 			elif HEADER == b"RT" and file.read(2) == b"ON":
 				if level > 6:
-					data = root_object(file)
+					data = parse_root_object(file)
 					open(out, "wb").write(data)
 					print("wrote " + relpath(out, pathout))
 			elif check[-5:] != ".json":
@@ -512,7 +512,7 @@ try:
 		raise RuntimeError("Must be using Python 3")
 	
 	print("""\033[95m
-\033[1mOBBUnpacker v1.1.7b (c) 2022 Nineteendo\033[22m
+\033[1mOBBUnpacker v1.1.7c (c) 2022 Nineteendo\033[22m
 \033[1mCode based on:\033[22m Luigi Auriemma, Small Pea & 1Zulu
 \033[1mDocumentation:\033[22m Watto Studios, YingFengTingYu, TwinKleS-C & h3x4n1um
 \033[1mFollow PyVZ2 development:\033[22m \033[4mdiscord.gg/CVZdcGKVSw\033[24m
@@ -600,7 +600,7 @@ try:
 	repairFiles = options["repairFiles"]
 	sortKeys = options["sortKeys"]
 	sortValues = options["sortValues"]
-	root_object = RTONDecoder(comma, current_indent, doublePoint, ensureAscii, fail, indent, repairFiles, sortKeys, sortValues).root_object
+	parse_root_object = RTONDecoder(comma, current_indent, doublePoint, ensureAscii, fail, indent, repairFiles, sortKeys, sortValues).parse_root_object
 	
 	blue_print("\nWorking directory: " + getcwd())
 	if 2 >= options["smfUnpackLevel"] > 1:

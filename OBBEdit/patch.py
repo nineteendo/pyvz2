@@ -232,7 +232,7 @@ def rsg_patch_data(RSG_NAME, file, pathout_data, patch, patchout, level):
 							patch_data = open(file_name, "rb").read()
 						elif NAME_CHECK[-5:] == ".rton":
 							file_name = osjoin(patch, DECODED_NAME[:-5] + ".JSON")
-							patch_data = parse_json(open(file_name, "rb"))
+							patch_data = encode_root_object(open(file_name, "rb"))
 						else:
 							raise FileNotFoundError
 
@@ -507,7 +507,7 @@ def conversion(inp, out, level, extensions, pathout):
 					print("wrote " + relpath(out, pathout))
 			elif level > 6:
 				file.seek(0)
-				encoded_data = parse_json(file)
+				encoded_data = encode_root_object(file)
 				open(out, "wb").write(encoded_data)
 				print("wrote " + relpath(out, pathout))
 		except Exception as e:
@@ -543,7 +543,7 @@ try:
 		raise RuntimeError("Must be using Python 3")
 	
 	print("""\033[95m
-\033[1mOBBPatcher v1.1.7b (c) 2022 Nineteendo\033[22m
+\033[1mOBBPatcher v1.1.7c (c) 2022 Nineteendo\033[22m
 \033[1mCode based on:\033[22m Luigi Auriemma, Small Pea & 1Zulu
 \033[1mDocumentation:\033[22m Watto Studios, YingFengTingYu, TwinKleS-C & h3x4n1um
 \033[1mFollow PyVZ2 development:\033[22m \033[4mdiscord.gg/CVZdcGKVSw\033[24m
@@ -618,7 +618,7 @@ try:
 	else:
 		pathStartsWith = options["pathStartsWith"]
 	RTONNoExtensions = options["RTONNoExtensions"]
-	parse_json = JSONDecoder().parse_json
+	encode_root_object = JSONDecoder().encode_root_object
 
 	blue_print("\nWorking directory: " + getcwd())
 	if 7 >= options["encodedUnpackLevel"] > 6:

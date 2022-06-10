@@ -1,6 +1,7 @@
 from io import BytesIO
 from struct import unpack, pack, error
 from json import dumps, load
+from types import NoneType
 
 class RTONDecoder():
 	def __init__(self, comma = b",", currrent_indent = b"\r\n", doublePoint = b": ", ensureAscii = False, fail = BytesIO(), indent = b"    ", repairFiles = True, sortKeys = False, sortValues = False):
@@ -67,7 +68,7 @@ class RTONDecoder():
 	def parse_int32(self, fp, currrent_indent, cached_strings, cached_printable_strings):
 	# type 20
 		return repr(unpack("<i", fp.read(4))[0]).encode()
-	def parse_float(self, fp, currrent_indent, cached_strings, cached_printable_strings):
+	def parse_float32(self, fp, currrent_indent, cached_strings, cached_printable_strings):
 	# type 22
 		return repr(unpack("<f", fp.read(4))[0]).replace("inf", "Infinity").replace("nan", "NaN").encode()
 	def parse_zero_point_zero(self, fp, currrent_indent, cached_strings, cached_printable_strings):
@@ -88,38 +89,38 @@ class RTONDecoder():
 	def parse_int64(self, fp, currrent_indent, cached_strings, cached_printable_strings):
 	# type 40
 		return repr(unpack("<q", fp.read(8))[0]).encode()
-	def parse_double(self, fp, currrent_indent, cached_strings, cached_printable_strings):
+	def parse_float64(self, fp, currrent_indent, cached_strings, cached_printable_strings):
 	# type 42
 		return repr(unpack("<d", fp.read(8))[0]).replace("inf", "Infinity").replace("nan", "NaN").encode()
 	def parse_uint64(self, fp, currrent_indent, cached_strings, cached_printable_strings):
 	# type 46
 		return repr(unpack("<Q", fp.read(8))[0]).encode()
 	def parse_str(self, fp, currrent_indent, cached_strings, cached_printable_strings):
-	# types 81, 90
+	# types 81
 		return dumps(self.parse_text(fp), ensure_ascii = self.ensureAscii).encode()
 	def parse_printable_str(self, fp, currrent_indent, cached_strings, cached_printable_strings):
-	# type 82, 92
+	# type 82
 		return dumps(self.parse_utf8_text(fp), ensure_ascii = self.ensureAscii).encode()
-	def parse_ref(self, fp, currrent_indent, cached_strings, cached_printable_strings):
+	def parse_rtid(self, fp, currrent_indent, cached_strings, cached_printable_strings):
 	# type 83
-		return self.ref_mappings[b"\x83" + fp.read(1)](self, fp)
-	def parse_ref_zero(self, fp):
+		return self.rtid_mappings[b"\x83" + fp.read(1)](self, fp)
+	def parse_rtid_zero(self, fp):
 	# type 8300
 		return b'"RTID(0)"'
-	def parse_ref_uid(self, fp):
+	def parse_rtid_uid(self, fp):
 	# type 8302
 		p1 = self.parse_utf8_text(fp)
 		i2 = repr(self.parse_number(fp))
 		i1 = repr(self.parse_number(fp))
 		return dumps("RTID(" + i1 + "." + i2 + "." + fp.read(4)[::-1].hex() + "@" + p1 + ")", ensure_ascii = self.ensureAscii).encode()
-	def parse_ref_ref(self, fp):
+	def parse_rtid_ref(self, fp):
 	# type 8303
 		p1 = self.parse_utf8_text(fp)
 		return dumps("RTID(" + self.parse_utf8_text(fp) + "@" + p1 + ")", ensure_ascii = self.ensureAscii).encode()
-	def parse_rtid_zero(self, fp, currrent_indent, cached_strings, cached_printable_strings):
+	def parse_zero_ref(self, fp, currrent_indent, cached_strings, cached_printable_strings):
 	# type 84
 		return b'"RTID(0)"'
-	def root_object(self, fp):
+	def parse_root_object(self, fp):
 	# type 85*
 		VERSION = unpack("<I", fp.read(4))[0]
 		return self.parse_object(fp, self.currrent_indent, [], [])
@@ -187,17 +188,26 @@ class RTONDecoder():
 			return b"[" + new_indent + (self.comma + new_indent).join(items) + currrent_indent + b"]"
 		return b"[]"
 	def parse_cached_str(self, fp, currrent_indent, cached_strings, cached_printable_strings):
+	# type 90
 		value = dumps(self.parse_text(fp), ensure_ascii = self.ensureAscii).encode()
 		cached_strings.append(value)
 		return value
 	def parse_cached_str_recall(self, fp, currrent_indent, cached_strings, cached_printable_strings):
+	# type 91
 		return cached_strings[self.parse_number(fp)]
 	def parse_cached_printable_str(self, fp, currrent_indent, cached_strings, cached_printable_strings):
+	# type 92
 		value = dumps(self.parse_utf8_text(fp), ensure_ascii = self.ensureAscii).encode()
 		cached_printable_strings.append(value)
 		return value
 	def parse_cached_printable_str_recall(self, fp, currrent_indent, cached_strings, cached_printable_strings):
+	# type 93
 		return cached_printable_strings[self.parse_number(fp)]
+	rtid_mappings = {
+		b"\x83\0": parse_rtid_zero,
+		b"\x83\x02": parse_rtid_uid,
+		b"\x83\x03": parse_rtid_ref
+	}
 	key_mappings = {
 		b"\x81": parse_str,
 		b"\x82": parse_printable_str,
@@ -223,7 +233,7 @@ class RTONDecoder():
 
 		b" ": parse_int32,
 		b"!": parse_zero, # int32_zero
-		b'"': parse_float,
+		b'"': parse_float32,
 		b"#": parse_zero_point_zero, # float_zero
 		b"$": parse_uvarint, # int32_uvarint
 		b"%": parse_varint, # int32_varint
@@ -233,7 +243,7 @@ class RTONDecoder():
 
 		b"@": parse_int64,
 		b"A": parse_zero, #int64_zero
-		b"B": parse_double,
+		b"B": parse_float64,
 		b"C": parse_zero_point_zero, # double_zero
 		b"D": parse_uvarint, # int64_uvarint
 		b"E": parse_varint, # int64_varint
@@ -243,8 +253,8 @@ class RTONDecoder():
 
 		b"\x81": parse_str,
 		b"\x82": parse_printable_str,
-		b"\x83": parse_ref,
-		b"\x84": parse_rtid_zero,
+		b"\x83": parse_rtid,
+		b"\x84": parse_zero_ref,
 		b"\x85": parse_object,
 		b"\x86": parse_list,
 
@@ -253,42 +263,22 @@ class RTONDecoder():
 		b"\x92": parse_cached_printable_str,
 		b"\x93": parse_cached_printable_str_recall,
 	}
-	ref_mappings = {
-		b"\x83\0": parse_ref_zero,
-		b"\x83\x02": parse_ref_uid,
-		b"\x83\x03": parse_ref_ref
-	}
 	list_mappings = {
 		b"\x86\xfd": None
 	}
 
 class list2:
-	# Extra list class
+# Extra list class
 	def __init__(self, data):
 		self.data = data
 
 class JSONDecoder():
 	def __init__(self):
 		self.Infinity = [float("Infinity"), float("-Infinity")] # Inf and -Inf values
-	def parse_json(self, file):
-	# JSON -> RTON
-		data = load(file, object_pairs_hook = self.parse_object_pairs)
-		cached_strings = {}
-		items = []
-		for key, value in data.data:
-			key, cached_strings = self.encode_string(key, cached_strings)
-			value, cached_strings = self.encode_data(value, cached_strings)
-			items.append(key + value)
-		return b"RTON\x01\0\0\0" + b"".join(items) + b"\xffDONE"
-	def parse_object_pairs(self, pairs):
+	
+	def encode_object_pairs(self, pairs):
 	# Object to list of tuples
 		return list2(pairs)
-	def encode_bool(self, boolean):
-	# Boolian
-		if boolean:
-			return b"\x01"
-		else:
-			return b"\0"
 	def encode_number(self, integ):
 	# Number with variable length
 		integ, i = divmod(integ, 128)
@@ -301,23 +291,25 @@ class JSONDecoder():
 				i += 128
 			string += pack("B", i)
 		return string
-	def encode_unicode(self, string):
-	# Unicode string
+	def encode_text(self, string, cached_strings):
+	# text to rtid or string
+		if "RTID()" != string[:5] + string[-1:]:
+			return self.encode_cached_string(string, cached_strings)
+		else:
+			return self.encode_rtid(string)
+	def encode_utf8_text(self, string):
+	# unicode text in rtid
 		encoded_string = string.encode()
 		return self.encode_number(len(string)) + self.encode_number(len(encoded_string)) + encoded_string
-	def encode_rtid(self, string):
-	# RTID
-		if "@" in string:
-			name, type = string[5:-1].split("@")
-			if name.count(".") == 2:
-				i2, i1, i3 = name.split(".")
-				return b"\x83\x02" + self.encode_unicode(type) + self.encode_number(int(i1)) + self.encode_number(int(i2)) + bytes.fromhex(i3)[::-1]
-			else:
-				return b"\x83\x03" + self.encode_unicode(type) + self.encode_unicode(name)
+
+	def encode_bool(self, boolean, cached_strings):
+	# type 00, 01
+		if boolean:
+			return b"\x01"
 		else:
-			return b"\x84"
-	def encode_int(self, integ):
-	# Number
+			return b"\x00"
+	def encode_int(self, integ, cached_strings):
+	# type 08, 0a, 10, 12, 20, 21, 25, 26, 29, 40, 45, 46, 49
 		if integ == 0:
 			return b"!"
 		elif 0 <= integ <= 2097151:
@@ -340,56 +332,66 @@ class JSONDecoder():
 			return b"D" + self.encode_number(integ)
 		else:
 			return b"E" + self.encode_number(-1 - 2 * integ)
-	def encode_float(self, dec):
-	# Float
+	def encode_float(self, dec, cached_strings):
+	# type 22, 42
 		if dec == 0:
 			return b"#"
 		elif dec != dec or dec in self.Infinity or -340282346638528859811704183484516925440 <= dec <= 340282346638528859811704183484516925440 and dec == unpack("<f", pack("<f", dec))[0]:
 			return b'"' + pack("<f", dec)
 		else:
 			return b"B" + pack("<d", dec)
-	def encode_string(self, string, cached_strings):
-	# String
+	def encode_rtid(self, string):
+	# type 83
+		if "@" in string:
+			name, type = string[5:-1].split("@")
+			if name.count(".") == 2:
+				i2, i1, i3 = name.split(".")
+				return b"\x83\x02" + self.encode_utf8_text(type) + self.encode_number(int(i1)) + self.encode_number(int(i2)) + bytes.fromhex(i3)[::-1]
+			else:
+				return b"\x83\x03" + self.encode_utf8_text(type) + self.encode_utf8_text(name)
+		else:
+			return b"\x84"
+	def encode_root_object(self, file):
+	# type 85*
+		cached_strings = {}
+		items = []
+		for key, value in load(file, object_pairs_hook = self.encode_object_pairs).data:
+			key = self.encode_cached_string(key, cached_strings)
+			value = self.value_mappings[type(value)](self, value, cached_strings)
+			items.append(key + value)
+		return b"RTON\x01\0\0\0" + b"".join(items) + b"\xffDONE"
+	def encode_object(self, data, cached_strings):
+	# type 85
+		items = []
+		for key, value in data.data:
+			key = self.encode_cached_string(key, cached_strings)
+			value = self.value_mappings[type(value)](self, value, cached_strings)
+			items.append(key + value)
+		return b"\x85" + b"".join(items) + b"\xff"
+	def encode_array(self, data, cached_strings):
+	# type 86
+		items = []
+		for value in data:
+			value = self.value_mappings[type(value)](self, value, cached_strings)
+			items.append(value)
+		return b"\x86\xfd" + self.encode_number(len(data)) + b"".join(items) + b"\xfe"
+	def encode_cached_string(self, string, cached_strings):
+	# type 90, 91
 		if string in cached_strings:
-			data = b"\x91" + self.encode_number(cached_strings[string])
+			return b"\x91" + self.encode_number(cached_strings[string])
 		else:
 			cached_strings[string] = len(cached_strings)
 			encoded_string = string.encode()
-			data = b"\x90" + self.encode_number(len(encoded_string)) + encoded_string
-		return (data, cached_strings)
-	def encode_array(self, data, cached_strings):
-	# Array
-		items = []
-		for v in data:
-			v, cached_strings = self.encode_data(v, cached_strings)
-			items.append(v)
-		return (b"\x86\xfd" + self.encode_number(len(data)) + b"".join(items) + b"\xfe", cached_strings)
-	def parse_object(self, data, cached_strings):
-	# Object
-		items = []
-		for key, value in data:
-			key, cached_strings = self.encode_string(key, cached_strings)
-			value, cached_strings = self.encode_data(value, cached_strings)
-			items.append(key + value)
-		return (b"\x85" + b"".join(items) + b"\xff", cached_strings)
-	def encode_data(self, data, cached_strings):
-	# Data
-		if isinstance(data, str):
-			if "RTID()" == data[:5] + data[-1:]:
-				return (self.encode_rtid(data), cached_strings)
-			else:
-				return self.encode_string(data, cached_strings)
-		elif isinstance(data, bool):
-			return (self.encode_bool(data), cached_strings)
-		elif isinstance(data, int):
-			return (self.encode_int(data), cached_strings)
-		elif isinstance(data, float):
-			return (self.encode_float(data), cached_strings)
-		elif isinstance(data, list):
-			return self.encode_array(data, cached_strings)
-		elif isinstance(data, list2):
-			return self.parse_object(data.data, cached_strings)
-		elif data == None:
-			return (b"\x84", cached_strings)
-		else:
-			raise TypeError(type(data))
+			return b"\x90" + self.encode_number(len(encoded_string)) + encoded_string
+	def encode_none(self, string, cached_strings):
+	# none
+		return b"\x84"
+	value_mappings = {
+		str: encode_text,
+		bool: encode_bool,
+		int: encode_int,
+		float: encode_float,
+		list2: encode_object,
+		list: encode_array,
+		NoneType: encode_none
+	}
