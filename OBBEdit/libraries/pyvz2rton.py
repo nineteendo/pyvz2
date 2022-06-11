@@ -1,7 +1,6 @@
 from io import BytesIO
 from struct import unpack, pack, error
 from json import dumps, load
-from types import NoneType
 
 class RTONDecoder():
 	def __init__(self, comma = b",", currrent_indent = b"\r\n", doublePoint = b": ", ensureAscii = False, fail = BytesIO(), indent = b"    ", repairFiles = True, sortKeys = False, sortValues = False):
@@ -291,24 +290,18 @@ class JSONDecoder():
 				i += 128
 			string += pack("B", i)
 		return string
-	def encode_text(self, string, cached_strings):
-	# text to rtid or string
-		if "RTID()" != string[:5] + string[-1:]:
-			return self.encode_cached_string(string, cached_strings)
-		else:
-			return self.encode_rtid(string)
 	def encode_utf8_text(self, string):
 	# unicode text in rtid
 		encoded_string = string.encode()
 		return self.encode_number(len(string)) + self.encode_number(len(encoded_string)) + encoded_string
 
-	def encode_bool(self, boolean, cached_strings):
+	def encode_bool(self, boolean):
 	# type 00, 01
 		if boolean:
 			return b"\x01"
 		else:
 			return b"\x00"
-	def encode_int(self, integ, cached_strings):
+	def encode_int(self, integ):
 	# type 08, 0a, 10, 12, 20, 21, 25, 26, 29, 40, 45, 46, 49
 		if integ == 0:
 			return b"!"
@@ -332,7 +325,7 @@ class JSONDecoder():
 			return b"D" + self.encode_number(integ)
 		else:
 			return b"E" + self.encode_number(-1 - 2 * integ)
-	def encode_float(self, dec, cached_strings):
+	def encode_float(self, dec):
 	# type 22, 42
 		if dec == 0:
 			return b"#"
@@ -357,7 +350,25 @@ class JSONDecoder():
 		items = []
 		for key, value in load(file, object_pairs_hook = self.encode_object_pairs).data:
 			key = self.encode_cached_string(key, cached_strings)
-			value = self.value_mappings[type(value)](self, value, cached_strings)
+			if isinstance(value, str):
+				if "RTID()" == value[:5] + value[-1:]:
+					value = self.encode_rtid(value)
+				else:
+					value = self.encode_cached_string(value, cached_strings)
+			elif isinstance(value, bool):
+				value = self.encode_bool(value)
+			elif isinstance(value, int):
+				value = self.encode_int(value)
+			elif isinstance(value, float):
+				value = self.encode_float(value)
+			elif isinstance(value, list):
+				value = self.encode_array(value, cached_strings)
+			elif isinstance(value, list2):
+				value = self.encode_object(value, cached_strings)
+			elif value == None:
+				value = b"\x84"
+			else:
+				raise TypeError(type(value))
 			items.append(key + value)
 		return b"RTON\x01\0\0\0" + b"".join(items) + b"\xffDONE"
 	def encode_object(self, data, cached_strings):
@@ -365,14 +376,50 @@ class JSONDecoder():
 		items = []
 		for key, value in data.data:
 			key = self.encode_cached_string(key, cached_strings)
-			value = self.value_mappings[type(value)](self, value, cached_strings)
+			if isinstance(value, str):
+				if "RTID()" == value[:5] + value[-1:]:
+					value = self.encode_rtid(value)
+				else:
+					value = self.encode_cached_string(value, cached_strings)
+			elif isinstance(value, bool):
+				value = self.encode_bool(value)
+			elif isinstance(value, int):
+				value = self.encode_int(value)
+			elif isinstance(value, float):
+				value = self.encode_float(value)
+			elif isinstance(value, list):
+				value = self.encode_array(value, cached_strings)
+			elif isinstance(value, list2):
+				value = self.encode_object(value, cached_strings)
+			elif value == None:
+				value = b"\x84"
+			else:
+				raise TypeError(type(value))
 			items.append(key + value)
 		return b"\x85" + b"".join(items) + b"\xff"
 	def encode_array(self, data, cached_strings):
 	# type 86
 		items = []
 		for value in data:
-			value = self.value_mappings[type(value)](self, value, cached_strings)
+			if isinstance(value, str):
+				if "RTID()" == value[:5] + value[-1:]:
+					value = self.encode_rtid(value)
+				else:
+					value = self.encode_cached_string(value, cached_strings)
+			elif isinstance(value, bool):
+				value = self.encode_bool(value)
+			elif isinstance(value, int):
+				value = self.encode_int(value)
+			elif isinstance(value, float):
+				value = self.encode_float(value)
+			elif isinstance(value, list):
+				value = self.encode_array(value, cached_strings)
+			elif isinstance(value, list2):
+				value = self.encode_object(value, cached_strings)
+			elif value == None:
+				value = b"\x84"
+			else:
+				raise TypeError(type(value))
 			items.append(value)
 		return b"\x86\xfd" + self.encode_number(len(data)) + b"".join(items) + b"\xfe"
 	def encode_cached_string(self, string, cached_strings):
@@ -383,15 +430,3 @@ class JSONDecoder():
 			cached_strings[string] = len(cached_strings)
 			encoded_string = string.encode()
 			return b"\x90" + self.encode_number(len(encoded_string)) + encoded_string
-	def encode_none(self, string, cached_strings):
-	# none
-		return b"\x84"
-	value_mappings = {
-		str: encode_text,
-		bool: encode_bool,
-		int: encode_int,
-		float: encode_float,
-		list2: encode_object,
-		list: encode_array,
-		NoneType: encode_none
-	}

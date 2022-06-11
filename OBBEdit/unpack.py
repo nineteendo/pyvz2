@@ -512,7 +512,7 @@ try:
 		raise RuntimeError("Must be using Python 3")
 	
 	print("""\033[95m
-\033[1mOBBUnpacker v1.1.7c (c) 2022 Nineteendo\033[22m
+\033[1mOBBUnpacker v1.1.7d (c) 2022 Nineteendo\033[22m
 \033[1mCode based on:\033[22m Luigi Auriemma, Small Pea & 1Zulu
 \033[1mDocumentation:\033[22m Watto Studios, YingFengTingYu, TwinKleS-C & h3x4n1um
 \033[1mFollow PyVZ2 development:\033[22m \033[4mdiscord.gg/CVZdcGKVSw\033[24m

@@ -391,6 +391,10 @@ Python3 scripts for modifying Plants VS Zombies 2
 		* Templates
 2. README:
 	* Fixed wording choice
-### Beta 1.1.7c (9 June 2022)
+### Beta 1.1.7c (10 June 2022)
 1. OBBEdit:
 	* Sped up JSON conversion slightly
+### Beta 1.1.7d (11 June 2022)
+1. OBBEdit:
+	* Reverted faster JSON conversion.
+	* Tweaked JSON conversion
