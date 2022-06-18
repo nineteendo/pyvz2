@@ -398,3 +398,6 @@ Python3 scripts for modifying Plants VS Zombies 2
 1. OBBEdit:
 	* Reverted faster JSON conversion.
 	* Tweaked JSON conversion
+### Beta 1.1.7e (18 June 2022)
+1. OBBEdit:
+	* Moved more code to custom library

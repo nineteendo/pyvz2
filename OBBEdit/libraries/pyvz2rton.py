@@ -3,21 +3,16 @@ from struct import unpack, pack, error
 from json import dumps, load
 
 class RTONDecoder():
-	def __init__(self, comma = b",", currrent_indent = b"\r\n", doublePoint = b": ", ensureAscii = False, fail = BytesIO(), indent = b"    ", repairFiles = True, sortKeys = False, sortValues = False):
+	def __init__(self, comma = b",", currrent_indent = b"\r\n", doublePoint = b": ", ensureAscii = False, indent = b"    ", repairFiles = True, sortKeys = False, sortValues = False, warning_message = lambda x: None):
 		self.comma = comma
 		self.currrent_indent = currrent_indent
 		self.doublePoint = doublePoint
 		self.ensureAscii = ensureAscii
-		self.fail = fail
+		self.warning_message = warning_message
 		self.indent = indent
 		self.repairFiles = repairFiles
 		self.sortKeys = sortKeys
 		self.sortValues = sortValues
-	def warning_message(self, string):
-	# Print & log warning
-		self.fail.write("\t" + string + "\n")
-		self.fail.flush()
-		print("\33[93m" + string + "\33[0m")
 
 	def parse_number(self, fp):
 		num = fp.read(1)[0]

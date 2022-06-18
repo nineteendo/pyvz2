@@ -2,16 +2,14 @@
 import datetime
 
 from io import BytesIO
-from json import load
-from os import makedirs, listdir, system, getcwd, sep
+from os import makedirs, listdir, getcwd, sep
 from os.path import isdir, isfile, join as osjoin, dirname, relpath, splitext
 #from PIL import Image
 from struct import unpack
-import sys
 from zlib import decompress
 
 # 3th party libraries
-from libraries.pyvz2nineteendo import LogError, blue_print, green_print, bold_input, path_input, list_levels
+from libraries.pyvz2nineteendo import LogError, blue_print, initialize, path_input, list_levels
 from libraries.pyvz2rijndael import RijndaelCBC
 from libraries.pyvz2rton import RTONDecoder
 
@@ -498,61 +496,20 @@ def conversion(inp, out, level, extensions, noextensions, pathout):
 				conversion(input_file, output_file, level, extensions, noextensions, pathout)
 # Start of the code
 try:
-	system("")
-	if getattr(sys, "frozen", False):
-		application_path = dirname(sys.executable)
-	else:
-		application_path = sys.path[0]
-	fail = open(osjoin(application_path, "fail.txt"), "w")
-	logerror = LogError(fail)
+	application_path = initialize()
+	logerror = LogError(osjoin(application_path, "fail.txt"))
 	error_message = logerror.error_message
 	warning_message = logerror.warning_message
 	input_level = logerror.input_level
-	if sys.version_info[0] < 3:
-		raise RuntimeError("Must be using Python 3")
-	
+	logerror.check_version(3, 9, 0)
+
 	print("""\033[95m
-\033[1mOBBUnpacker v1.1.7d (c) 2022 Nineteendo\033[22m
+\033[1mOBBUnpacker v1.1.7e (c) 2022 Nineteendo\033[22m
 \033[1mCode based on:\033[22m Luigi Auriemma, Small Pea & 1Zulu
 \033[1mDocumentation:\033[22m Watto Studios, YingFengTingYu, TwinKleS-C & h3x4n1um
 \033[1mFollow PyVZ2 development:\033[22m \033[4mdiscord.gg/CVZdcGKVSw\033[24m
 \033[0m""")
-	try:
-		folder = osjoin(application_path, "options")
-		templates = {}
-		blue_print("\033[1mTEMPLATES:\033[0m")
-		for entry in sorted(listdir(folder)):
-			if isfile(osjoin(folder, entry)):
-				file, extension = splitext(entry)
-				if extension == ".json" and entry.count("--") == 2:
-					key, unpack_name, patch_name = file.split("--")
-					if not key in templates:
-						blue_print("\033[1m" + key + "\033[0m: " + unpack_name)
-						templates[key] = unpack_name + "--" + patch_name + ".json"
-				elif entry.count("--") > 0:
-					print("--".join(file.split("--")[1:]))
-		length = len(templates)
-		if length == 0:
-			green_print("Loaded default template")
-		else:
-			if length > 1:
-				key = bold_input("Choose template")
-			
-			name = key + "--" + templates[key]
-			newoptions = load(open(osjoin(folder, name), "rb"))
-			for key in options:
-				if key in newoptions and newoptions[key] != options[key]:
-					if type(options[key]) == type(newoptions[key]):
-						options[key] = newoptions[key]
-					elif isinstance(options[key], tuple) and isinstance(newoptions[key], list):
-						options[key] = tuple([str(i).lower() for i in newoptions[key]])
-					elif key == "indent" and newoptions[key] == None:
-						options[key] = newoptions[key]
-			green_print("Loaded template " + name)
-	except Exception as e:
-		error_message(type(e).__name__ + " while loading options: " + str(e))
-		warning_message("Falling back to default options.")
-	
+	options = logerror.load_template(options, osjoin(application_path, "options"), 1)
 	level_to_name = ["SPECIFY", "SMF", "RSB", "RSG", "SECTION", "ENCRYPTED", "ENCODED", "DECODED"]
 	list_levels(level_to_name)
 	options["smfUnpackLevel"] = input_level("SMF Unpack Level", 1, 2, options["smfUnpackLevel"])
@@ -600,7 +557,7 @@ try:
 	repairFiles = options["repairFiles"]
 	sortKeys = options["sortKeys"]
 	sortValues = options["sortValues"]
-	parse_root_object = RTONDecoder(comma, current_indent, doublePoint, ensureAscii, fail, indent, repairFiles, sortKeys, sortValues).parse_root_object
+	parse_root_object = RTONDecoder(comma, current_indent, doublePoint, ensureAscii, indent, repairFiles, sortKeys, sortValues, warning_message).parse_root_object
 	
 	blue_print("\nWorking directory: " + getcwd())
 	if 2 >= options["smfUnpackLevel"] > 1:
@@ -641,12 +598,9 @@ try:
 	if 7 >= options["encodedUnpackLevel"] > 6:
 		conversion(encoded_input, encoded_output, options["encodedUnpackLevel"], options["RTONExtensions"], options["RTONNoExtensions"], dirname(encoded_output))
 
-	green_print("finished unpacking in " + str(datetime.datetime.now() - start_time))
-	if fail.tell() > 0:
-		print("\33[93mErrors occured, check: " + fail.name + "\33[0m")
-	bold_input("\033[95mPRESS [ENTER]")
+	logerror.finish_program("finished patching in", start_time)
 except Exception as e:
 	error_message(type(e).__name__ + " : " + str(e))
 except BaseException as e:
 	warning_message(type(e).__name__ + " : " + str(e))
-fail.close() # Close log
+logerror.close() # Close log
