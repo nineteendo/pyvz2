@@ -401,3 +401,10 @@ Python3 scripts for modifying Plants VS Zombies 2
 ### Beta 1.1.7e (18 June 2022)
 1. OBBEdit:
 	* Moved more code to custom library
+### Beta 1.1.7f (19 June 2022)
+1. OBBEdit:
+	* Fixed version check
+	* Dump fail.txt to custom file when failed to edit
+	* Reorganized templates
+	* No case-sensite keys
+	* Added https:// to invite link

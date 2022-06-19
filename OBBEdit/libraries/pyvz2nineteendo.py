@@ -1,5 +1,5 @@
 import datetime
-
+from io import StringIO
 from json import load
 from os import listdir, system
 from os.path import dirname, isfile, join as osjoin, realpath, splitext
@@ -13,10 +13,15 @@ def initialize():
 		return sys.path[0]
 class LogError:
 	def __init__(self, fail):
-		self.fail = open(fail, "w")
-	def error_message(self, string):
+		try:
+			self.fail = open(fail, "w")
+		except PermissionError as e:
+			self.fail = StringIO()
+			self.fail.name = None
+			self.error_message(e)
+	def error_message(self, e, sub = "", string = ""):
 	# Print & log error
-		string += "\n" + format_exc()
+		string += type(e).__name__ + sub + ": " + str(e) + "\n" + format_exc()
 		self.fail.write(string + "\n")
 		self.fail.flush()
 		print("\033[91m" + string + "\033[0m")
@@ -26,9 +31,9 @@ class LogError:
 		self.fail.flush()
 		print("\33[93m" + string + "\33[0m")
 	
-	def check_version(self, *version):
-		if sys.version_info[:3] < version:
-			raise RuntimeError("Must be using Python " + ".".join(version))
+	def check_version(self, mayor = 2, minor = 0, micro = 0):
+		if sys.version_info[:3] < (mayor, minor, micro):
+			raise BaseException("Must be using Python " + repr(mayor) + "." + repr(minor) + "." + repr(micro) + " or newer")
 	def input_level(self, text, minimum, maximum, preset):
 	# Set input level for conversion
 		try:
@@ -38,7 +43,7 @@ class LogError:
 				print("\033[1m"+ text + "\033[0m: " + repr(preset))
 			return preset
 		except Exception as e:
-			self.error_message(type(e).__name__ + " : " + str(e))
+			self.error_message(e)
 			self.warning_message("Defaulting to " + str(minimum))
 			return minimum
 	def load_template(self, options, folder, index):
@@ -51,18 +56,18 @@ class LogError:
 					file, extension = splitext(entry)
 					if extension == ".json" and entry.count("--") == 2:
 						dash_list = file.split("--")
-						key = dash_list[0]
+						key = dash_list[0].lower()
 						if not key in templates:
 							blue_print("\033[1m" + key + "\033[0m: " + dash_list[index])
-							templates[key] = file
+							templates[key] = entry
 					elif entry.count("--") > 0:
-						print("--".join(file.split("--")[1:]))
+						print("\033[1m"+ "--".join(file.split("--")[1:]) + "\033[0m")
 			length = len(templates)
 			if length == 0:
 				green_print("Loaded default template")
 			else:
 				if length > 1:
-					key = bold_input("Choose template")
+					key = bold_input("Choose template").lower()
 				
 				name = templates[key]
 				newoptions = load(open(osjoin(folder, name), "rb"))
@@ -76,13 +81,17 @@ class LogError:
 							options[key] = newoptions[key]
 				green_print("Loaded template " + name)
 		except Exception as e:
-			self.error_message(type(e).__name__ + " while loading options: " + str(e))
+			self.error_message(e, "while loading options: ")
 			self.warning_message("Falling back to default options.")
 		return options
 	def finish_program(self, message, start):
 		green_print(message + " " + str(datetime.datetime.now() - start))
 		if self.fail.tell() > 0:
-			print("\33[93mErrors occured, check: " + self.fail.name + "\33[0m")
+			name = self.fail.name
+			if name == None:
+				open(path_input("\33[93mErrors occured, dump to\33[0m", ""), "w").write(self.fail.getvalue())
+			else:
+				print("\33[93mErrors occured, check: " + self.fail.name + "\33[0m")
 		bold_input("\033[95mPRESS [ENTER]")
 	def close(self):
 	# Close fail file

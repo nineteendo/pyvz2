@@ -247,7 +247,7 @@ def rsg_patch_data(RSG_NAME, file, pathout_data, patch, patchout, level):
 					except FileNotFoundError:
 						pass
 					except Exception as e:
-						error_message(type(e).__name__ + " while patching " + file_name + ": " + str(e))	
+						error_message(e, " while patching " + file_name)
 				pathout_data[FILE_INFO - 8: FILE_INFO - 4] = pack("<I", FILE_OFFSET)
 			FILE_OFFSET = FILE_OFFSET_NEW
 			DECODED_NAME = DECODED_NAME_NEW
@@ -280,7 +280,7 @@ def rsg_patch_data(RSG_NAME, file, pathout_data, patch, patchout, level):
 					except FileNotFoundError:
 						pass
 					except Exception as e:
-						error_message(type(e).__name__ + " while patching " + file_name + ": " + str(e))
+						error_message(e, " while patching " + file_name)
 				pathout_data[FILE_INFO - 28: FILE_INFO - 24] = pack("<I", FILE_OFFSET)
 			FILE_OFFSET = FILE_OFFSET_NEW
 			DECODED_NAME = DECODED_NAME_NEW
@@ -434,7 +434,7 @@ def rsb_patch_data(file, pathout_data, patch, patchout, level):
 			except FileNotFoundError:
 				pass
 			except Exception as e:
-				error_message(type(e).__name__ + " while patching " + RSG_NAME + ".rsg: " + str(e))
+				error_message(e, " while patching " + RSG_NAME + ".rsg")
 		pathout_data[info_start + 128:info_start + 132] = pack("<I", RSG_OFFSET)
 	return pathout_data
 def file_to_folder(inp, out, patch, level, extensions, pathout, patchout):
@@ -475,11 +475,11 @@ def file_to_folder(inp, out, patch, level, extensions, pathout, patchout):
 					open(out, "wb").write(pathout_data)
 					green_print("wrote " + relpath(out, pathout))
 				except Exception as e:
-					error_message(type(e).__name__ + " while patching " + inp + str(e))
+					error_message(e, " while patching " + inp)
 			else:
 				warning_message("UNKNOWN HEADER " + HEADER.hex())
 		except Exception as e:
-			error_message("Failed OBBPatch " + type(e).__name__ + " in " + inp + " pos " + str(file.tell()) + ": " + str(e))
+			error_message(e, " in " + inp + " pos " + str(file.tell()), "Failed OBBPatch: ")
 	elif isdir(inp):
 		makedirs(out, exist_ok = True)
 		makedirs(patch, exist_ok = True)
@@ -509,7 +509,7 @@ def conversion(inp, out, level, extensions, pathout):
 				open(out, "wb").write(encoded_data)
 				print("wrote " + relpath(out, pathout))
 		except Exception as e:
-			error_message(type(e).__name__ + " in " + inp + ": " + str(e))
+			error_message(e, " in " + inp)
 	elif isdir(inp):
 		makedirs(out, exist_ok = True)
 		for entry in listdir(inp):
@@ -535,10 +535,10 @@ try:
 	logerror.check_version(3, 9, 0)
 	
 	print("""\033[95m
-\033[1mOBBPatcher v1.1.7e (c) 2022 Nineteendo\033[22m
+\033[1mOBBPatcher v1.1.7f (c) 2022 Nineteendo\033[22m
 \033[1mCode based on:\033[22m Luigi Auriemma, Small Pea & 1Zulu
 \033[1mDocumentation:\033[22m Watto Studios, YingFengTingYu, TwinKleS-C & h3x4n1um
-\033[1mFollow PyVZ2 development:\033[22m \033[4mdiscord.gg/CVZdcGKVSw\033[24m
+\033[1mFollow PyVZ2 development:\033[22m \033[4mhttps://discord.gg/CVZdcGKVSw\033[24m
 \033[0m""")
 	options = logerror.load_template(options, osjoin(application_path, "options"), 2)
 	level_to_name = ["SPECIFY", "SMF", "RSB", "RSG", "SECTION", "ENCRYPTED", "ENCODED", "DECODED"]
@@ -628,7 +628,7 @@ try:
 
 	logerror.finish_program("finished patching in", start_time)
 except Exception as e:
-	error_message(type(e).__name__ + " : " + str(e))
+	error_message(e)
 except BaseException as e:
 	warning_message(type(e).__name__ + " : " + str(e))
 logerror.close() # Close log
