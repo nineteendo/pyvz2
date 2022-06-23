@@ -476,10 +476,10 @@ def file_to_folder(inp, out, patch, level, extensions, pathout, patchout):
 					green_print("wrote " + relpath(out, pathout))
 				except Exception as e:
 					error_message(e, " while patching " + inp)
-			else:
-				warning_message("UNKNOWN HEADER " + HEADER.hex())
+			elif 2 < level:
+				warning_message("UNKNOWN 1BSR HEADER (" + HEADER.hex() + ") in " + inp)
 		except Exception as e:
-			error_message(e, " in " + inp + " pos " + str(file.tell()), "Failed OBBPatch: ")
+			error_message(e, " in " + inp + " pos " + repr(file.tell()), "Failed OBBPatch: ")
 	elif isdir(inp):
 		makedirs(out, exist_ok = True)
 		makedirs(patch, exist_ok = True)
@@ -535,7 +535,7 @@ try:
 	logerror.check_version(3, 9, 0)
 	
 	print("""\033[95m
-\033[1mOBBPatcher v1.1.7f (c) 2022 Nineteendo\033[22m
+\033[1mOBBPatcher v1.2.0 (c) 2022 Nineteendo\033[22m
 \033[1mCode based on:\033[22m Luigi Auriemma, Small Pea & 1Zulu
 \033[1mDocumentation:\033[22m Watto Studios, YingFengTingYu, TwinKleS-C & h3x4n1um
 \033[1mFollow PyVZ2 development:\033[22m \033[4mhttps://discord.gg/CVZdcGKVSw\033[24m
@@ -607,9 +607,9 @@ try:
 		rsb_patch = path_input("RSB/SMF " + level_to_name[options["rsbUnpackLevel"]] + " Patch directory", options["rsbUnpacked"])
 	
 	if 2 >= options["smfUnpackLevel"] > 1:
-		smf_input = path_input("SMF " + level_to_name[options["smfUnpackLevel"]] + " Input file or directory")
+		smf_input = path_input("SMF " + level_to_name[options["smfUnpackLevel"]] + " Input file or directory", options["smfUnpacked"])
 		if isfile(smf_input):
-			smf_output = path_input("SMF Output file", options["smfUnpacked"])
+			smf_output = path_input("SMF Output file", options["smfPacked"])
 		else:
 			smf_output = path_input("SMF Output directory", options["smfPacked"])
 

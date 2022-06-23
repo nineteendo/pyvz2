@@ -408,3 +408,12 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* Reorganized templates
 	* No case-sensite keys
 	* Added https:// to invite link
+### Beta 1.1.7g (23 June 2022)
+1. OBBEdit:
+	* Confirm relatives paths.
+	* Added unused template with default encryption
+	* Fixed UnboundLocalError for RTONDecoding after a report of Earth2888 on Discord.
+	* Fixed TypeError for SMFCompressing
+	* Fixed AttributeError for RSGUnpacking
+	* Fixed 1BSR & RTON HEADER info
+	* Finished "Unpacking"

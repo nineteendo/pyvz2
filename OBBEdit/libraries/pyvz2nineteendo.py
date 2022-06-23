@@ -143,10 +143,10 @@ def path_input(text, preset):
 				newstring = bold_input("\033[91mEnter a path")
 			else:
 				newstring = ""
-				string = realpath(string)
-				if confirm:
-					newstring = bold_input("Confirm \033[100m" + string)
-		return string
+				processed_string = realpath(string)
+				if confirm or processed_string != string:
+					newstring = bold_input("Confirm \033[100m" + processed_string)
+		return processed_string
 def list_levels(levels):
 	blue_print("""
 """ +  " ".join([repr(i) + "-" + levels[i] for i in range(len(levels))]))

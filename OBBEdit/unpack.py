@@ -442,14 +442,15 @@ def file_to_folder(inp, out, level, extensions, pathout):
 				rsb_extract(file, bytearray(pathout_data), out, level, pathout)
 				#rsb_extract(file, out, level, image_decoders, pathout)
 			elif HEADER == b"pgsr":
+				pathout_data = HEADER + file.read()
 				makedirs(out, exist_ok = True)
 				file.seek(0)
-				rsg_extract("data", 0, file, out, pathout, level)
+				rsg_extract("data", file, pathout_data, out, pathout, level)
 				#rsg_extract("data", 0, [], {} file, out, pathout, level)
-			else:
-				warning_message("UNKNOWN HEADER " + HEADER.hex() + inp)
+			elif 2 < level:
+				warning_message("UNKNOWN 1BSR HEADER (" + HEADER.hex() + ") in " + inp)
 		except Exception as e:
-			error_message(e, " in " + inp + " pos " + str(file.tell()), "Failed OBBUnpack: ")
+			error_message(e, " in " + inp + " pos " + repr(file.tell()), "Failed OBBUnpack: ")
 	elif isdir(inp):
 		makedirs(out, exist_ok = True)
 		for entry in sorted(listdir(inp)):
@@ -470,15 +471,17 @@ def conversion(inp, out, level, extensions, noextensions, pathout):
 				if level < 7:
 					open(out,"wb").write(rijndael_cbc.decrypt(file.read()))
 					print("wrote " + relpath(out, pathout))
-			elif HEADER == b"RT" and file.read(2) == b"ON":
-				if level > 6:
-					data = parse_root_object(file)
-					open(out, "wb").write(data)
-					print("wrote " + relpath(out, pathout))
-			elif check[-5:] != ".json":
-				warning_message("No RTON " + inp)
+			else:
+				HEADER += file.read(2)
+				if HEADER == b"RTON":
+					if level > 6:
+						data = parse_root_object(file)
+						open(out, "wb").write(data)
+						print("wrote " + relpath(out, pathout))
+				elif inp.lower()[-5:] != ".json":
+					warning_message("UNKNOWN RTON HEADER (" + HEADER.hex() + ") in " + inp)
 		except Exception as e:
-			error_message(e, " in " + inp + " pos " + str(file.tell()))
+			error_message(e, " in " + inp + " pos " + repr(file.tell()))
 	elif isdir(inp):
 		makedirs(out, exist_ok = True)
 		for entry in listdir(inp):
@@ -504,7 +507,7 @@ try:
 	logerror.check_version(3, 9, 0)
 
 	print("""\033[95m
-\033[1mOBBUnpacker v1.1.7f (c) 2022 Nineteendo\033[22m
+\033[1mOBBUnpacker v1.2.0 (c) 2022 Nineteendo\033[22m
 \033[1mCode based on:\033[22m Luigi Auriemma, Small Pea & 1Zulu
 \033[1mDocumentation:\033[22m Watto Studios, YingFengTingYu, TwinKleS-C & h3x4n1um
 \033[1mFollow PyVZ2 development:\033[22m \033[4mhttps://discord.gg/CVZdcGKVSw\033[24m
@@ -598,7 +601,7 @@ try:
 	if 7 >= options["encodedUnpackLevel"] > 6:
 		conversion(encoded_input, encoded_output, options["encodedUnpackLevel"], options["RTONExtensions"], options["RTONNoExtensions"], dirname(encoded_output))
 
-	logerror.finish_program("finished patching in", start_time)
+	logerror.finish_program("finished unpacking in", start_time)
 except Exception as e:
 	error_message(e)
 except BaseException as e:
