@@ -1,0 +1,89 @@
+{
+	"smfExtensions": [
+		".rsb.smf"
+	],
+	"smfPacked": "",
+	"smfUnpacked": "",
+	"smfUnpackLevel": 0,
+
+	"rsbExtensions": [
+		".rsb.smf",
+		
+		".1bsr",
+		".rsb1",
+		".rsb",
+		".obb"
+	],
+	"rsbPacked": "",
+	"rsbPatched": "",
+	"rsbUnpacked": "",
+	"rsbUnpackLevel": 1,
+	"rsgEndsWith": [],
+	"rsgEndsWithIgnore": true,
+	"rsgStartsWith": [
+		"packages",
+		"worldpackages_"
+	],
+	"rsgStartsWithIgnore": true,
+
+	"overrideDataCompression": 0,
+	"overrideEncryption": 0,
+	"overrideImageDataCompression": 0,
+	"pathEndsWith": [
+		".rton"
+	],
+	"pathEndsWithIgnore": true,
+	"pathStartsWith": [
+		"packages/"
+	],
+	"pathStartsWithIgnore": true,
+	"rsgExtensions": [
+		".rsb.smf",
+		
+		".1bsr",
+		".rsb1",
+		".rsb",
+		".obb",
+		
+		".pgsr",
+		".rsgp",
+		".rsg",
+		".rsg.smf"
+	],
+	"rsgPacked": "",
+	"rsgPatched": "",
+	"rsgUnpacked": "",
+	"rsgUnpackLevel": 2,
+
+	"encryptedExtensions": [
+		".rton"
+	],
+	"encryptedPacked": "",
+	"encryptedUnpacked": "",
+	"encryptedUnpackLevel": 4,
+	"encryptionKey": "00000000000000000000000000000000",
+
+	"comma": 0,
+	"doublePoint": 1,
+	"encodedPacked": "",
+	"encodedUnpacked": "",
+	"encodedUnpackLevel": 5,
+	"ensureAscii": false,
+	"indent": 4,
+	"repairFiles": false,
+	"RTONExtensions": [
+		".bin",
+		".dat",
+		".json",
+		".rton",
+		".section"
+	],
+	"RTONNoExtensions": [
+		"draper_",
+		"local_profiles",
+		"loot",
+		"_saveheader_rton"
+	],
+	"sortKeys": false,
+	"sortValues": false
+}

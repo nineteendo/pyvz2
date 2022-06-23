@@ -2,11 +2,8 @@
 Python3 scripts for modifying Plants VS Zombies 2
 
 ## Files:
-- LICENCE, this tool is licenced under GPL-3.0, for more information read it.
-- OBBEdit, a tool to unpack and decode OBBs and RSGPs
-- OBBEdit 3-6, a tool to unpack OBBs and RSGPs
-- OBBEdit 5-6, a tool to decrypt RTONs
-- OBBEdit 6-7, a tool to decode RTONs
+- LICENCE, this tool is licenced under GPL-3.0, read it for more information.
+- OBBEdit, a tool to unpack and patch PVZ2's resources
 - README.md, this file
 
 ## Credits to these people for code:
@@ -17,7 +14,11 @@ Python3 scripts for modifying Plants VS Zombies 2
 ## Credits to these people for documentation:
 1. Watto Studios for documenting RSB/1BSR: http://www.watto.org/specs.html?specs=Archive_RSB_1BSR
 2. YingFengTingYu for documenting the RSB.SMF format: https://github.com/YingFengTingYu/PopStudio
-3. H3x4n1um for the documentating the RTON format: https://github.com/h3x4n1um/RETON
+3. TwinKleS-C for documenting RSB/1BSR: https://github.com/TwinKleS-C/PvZTool/blob/main/src/pvztool.c
+4. H3x4n1um for the documentating the RTON format: https://github.com/h3x4n1um/RETON
+
+## MODDING SUPPORT
+https://discord.gg/CVZdcGKVSw
 
 ## REPORT ISSUES ON GITHUB:
 https://github.com/Nineteendo/PVZ2tools
