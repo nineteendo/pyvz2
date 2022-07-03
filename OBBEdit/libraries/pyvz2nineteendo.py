@@ -1,10 +1,13 @@
 import datetime
 from io import StringIO
 from json import load
-from os import listdir, system
-from os.path import dirname, isfile, join as osjoin, realpath, splitext
+from os import listdir, makedirs, system
+from os.path import dirname, exists, isfile, join as osjoin, realpath, splitext
 import sys
 from traceback import format_exc
+def mkdirs(file_path):
+	if not exists(file_path):
+		makedirs(file_path, exist_ok = True)
 def initialize():
 	system("")
 	if getattr(sys, "frozen", False):
@@ -121,7 +124,7 @@ def path_input(text, preset):
 			confirm = False
 			for char in newstring:
 				if escaped:
-					if quoted != 1 and char == "'" or quoted != 2 and char == '"' or quoted == 0 and char in "\\ ":
+					if quoted != 1 and char == "'" or quoted != 2 and char == '"' or quoted == 0 and char in "\\ ()":
 						string += temp_string + char
 						confirm = True
 					else:

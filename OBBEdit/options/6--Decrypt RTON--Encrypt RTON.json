@@ -1,12 +1,42 @@
 {
+	"archiveExtensions": [
+		".rsb.smf",
+		
+		".1bsr",
+		".rsb1",
+		".rsb",
+		".obb",
+		
+		".pgsr",
+		".rsgp",
+		".rsg",
+		".rsg.smf"
+	],
+	"encodedExtensions": [
+		".rton"
+	],
+	"zipExtensions": [
+		".apk",
+		".zip"
+	],
+	"zipPacked": "",
+	"zipUnpacked": "",
+	"zipUnpackLevel": 1,
+
 	"smfExtensions": [
+		".apk",
+		".zip",
+		
 		".rsb.smf"
 	],
 	"smfPacked": "",
 	"smfUnpacked": "",
-	"smfUnpackLevel": 1,
+	"smfUnpackLevel": 2,
 
 	"rsbExtensions": [
+		".apk",
+		".zip",
+		
 		".rsb.smf",
 		
 		".1bsr",
@@ -17,7 +47,7 @@
 	"rsbPacked": "",
 	"rsbPatched": "",
 	"rsbUnpacked": "",
-	"rsbUnpackLevel": 2,
+	"rsbUnpackLevel": 3,
 	"rsgEndsWith": [],
 	"rsgEndsWithIgnore": true,
 	"rsgStartsWith": [
@@ -38,6 +68,9 @@
 	],
 	"pathStartsWithIgnore": false,
 	"rsgExtensions": [
+		".apk",
+		".zip",
+		
 		".rsb.smf",
 		
 		".1bsr",
@@ -53,21 +86,21 @@
 	"rsgPacked": "",
 	"rsgPatched": "",
 	"rsgUnpacked": "",
-	"rsgUnpackLevel": 3,
+	"rsgUnpackLevel": 4,
 
 	"encryptedExtensions": [
 		".rton"
 	],
 	"encryptedPacked": "",
 	"encryptedUnpacked": "",
-	"encryptedUnpackLevel": 6,
+	"encryptedUnpackLevel": 7,
 	"encryptionKey": "00000000000000000000000000000000",
 
 	"comma": 0,
 	"doublePoint": 1,
 	"encodedPacked": "",
 	"encodedUnpacked": "",
-	"encodedUnpackLevel": 6,
+	"encodedUnpackLevel": 7,
 	"ensureAscii": false,
 	"indent": 4,
 	"repairFiles": false,
@@ -75,8 +108,7 @@
 		".bin",
 		".dat",
 		".json",
-		".rton",
-		".section"
+		".rton"
 	],
 	"RTONNoExtensions": [
 		"draper_",

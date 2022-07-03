@@ -40,16 +40,23 @@ All info is sorted alphabetically on **FILE NAME**
 ### JSON options
 Key | Purpose
 --- | ---
-smfExtensions | Only unpack SMFs with these extensions
+archiveExtensions | only unpack zipped pvz2 archives with these extensions
+encodedExtensions | only unpack decode pvz2 files with these extensions
+zipExtensions | Only unpack ZIPs with these extensions
+zipPacked | path to packed zip (blank for manual input)
+zipUnpacked | path to unpacked zip (blank for manual input)
+zipUnpackLevel | Level to unpack zip to (negative / 0 for manual input)
+/ | /
+smfExtensions | Only unpack SMFs/ZIPs with these extensions
 smfPacked | path to packed smf (blank for manual input)
 smfUnpacked | path to unpacked smf (blank for manual input)
-smfUnpackLevel | Level to unpack SMFs to (negative / 0 for manual input)
+smfUnpackLevel | Level to unpack SMFs/ZIPs to (negative / 0 for manual input)
 / | /
-rsbExtensions | Only unpack RSBs/SMFs with these extensions
+rsbExtensions | Only unpack RSBs/SMFs/ZIPs with these extensions
 rsbPacked | path to packed rsb (blank for manual input)
 rsbPatched | path to patched rsb (blank for manual input)
 rsbUnpacked | path to unpacked rsb (blank for manual input)
-rsbUnpackLevel | Level to unpack RSBs/SMFs to (negative / 0 for manual input)
+rsbUnpackLevel | Level to unpack RSBs/SMFs/ZIPs to (negative / 0 for manual input)
 rsgpEndsWith | Only unpack RSGPs ending with these strings
 rsgpEndsWithIgnore | Ignore the end of RSGPs
 rsgpStartsWith | Only unpack RSGPs starting with these strings
@@ -62,11 +69,11 @@ pathEndsWith | Only unpack paths ending with these strings
 pathEndsWithIgnore | Ignore the end of the path
 pathStartsWith | Only unpack paths starting with these strings
 pathStartsWithIgnore | Ignore the start of the path
-rsgExtensions | Only encrypt RSG/RSBs/SMFs with these extensions
+rsgExtensions | Only encrypt RSG/RSBs/SMFs/ZIPs with these extensions
 rsgPacked | path to packed rsg (blank for manual input)
 rsgPatched | path to patched rsg (blank for manual input)
 rsgUnpacked | path to unpacked rsg (blank for manual input)
-rsgUnpackLevel | Level to unpack RSG/RSBs/SMFs to (negative / 0 for manual input)
+rsgUnpackLevel | Level to unpack RSG/RSBs/SMFs/ZIPs to (negative / 0 for manual input)
 / | /
 encryptedExtensions | Only encrypt ENCRYPTED with these extensions
 encryptedPacked | path to packed encrypted (blank for manual input)

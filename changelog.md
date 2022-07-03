@@ -56,7 +56,7 @@ Python3 scripts for modifying Plants VS Zombies 2
 2. RTONS PARSER:
 	* More SilentErrors
 	* Tool to check support
-## Master 0.2.9 (24 Jun 2021)
+## Master 1.0.0 (24 Jun 2021)
 1. JSONS PARSER:
 	* Removed jsons.py
 	* Improved consistency
@@ -213,11 +213,11 @@ Python3 scripts for modifying Plants VS Zombies 2
 		* Merged cachKeyLimit & cachValueLimit
 	* README:
 		* Merged cachKeyLimit & cachValueLimit
-## Master 1.0.6d (6 Feb 2022)
+## Master 1.1.0 (6 Feb 2022)
 1. RTON-OFF:
 	* Renamed from RTON Converter
 	* Fixed wrong encoding on Windows
-# Release 1.2.0 (The future)
+# Release 1.2.0 (23 June 2022)
 ## Master 1.1.4 (29 Mar 2022)
 ### Beta 1.1.0b (12 Feb 2022)
 1. OBBEdit:
@@ -310,6 +310,7 @@ Python3 scripts for modifying Plants VS Zombies 2
 2. README:
 	* Split up credits in Code & Documentation
 	* Creditted YingFengTingYu & Watto Studios
+## Master 1.2.0 (23 June 2022)
 ### Beta 1.1.4b (6 Apr 2022)
 1. OBBEdit:
 	* Removed rsgp unpacking
@@ -408,7 +409,7 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* Reorganized templates
 	* No case-sensite keys
 	* Added https:// to invite link
-### Beta 1.1.7g (23 June 2022)
+### Beta 1.2.0 (23 June 2022)
 1. OBBEdit:
 	* Confirm relatives paths.
 	* Added unused template with default encryption
@@ -417,3 +418,14 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* Fixed AttributeError for RSGUnpacking
 	* Fixed 1BSR & RTON HEADER info
 	* Finished "Unpacking"
+# Release 1.3.0 (The future)
+## Master 1.3.x (The future)
+### Beta 1.2.0b (3 July 2022)
+1. OBBEdit
+	* ZIP Support for unpacking
+	* Repack json to encrypted rtons
+	* Options
+		* Added archiveExtensions, encodedExtensions, zipExtensions, zipPacked, zipUnpacked, zipUnpackLevel
+	* README
+		* Added archiveExtensions, encodedExtensions, zipExtensions, zipPacked, zipUnpacked, zipUnpackLevel
+	* Fixed escaped brackets in path names.

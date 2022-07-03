@@ -86,7 +86,7 @@
 	"rsgPacked": "",
 	"rsgPatched": "",
 	"rsgUnpacked": "",
-	"rsgUnpackLevel": 4,
+	"rsgUnpackLevel": 6,
 
 	"encryptedExtensions": [
 		".rton"
@@ -100,7 +100,7 @@
 	"doublePoint": 1,
 	"encodedPacked": "",
 	"encodedUnpacked": "",
-	"encodedUnpackLevel": 8,
+	"encodedUnpackLevel": 7,
 	"ensureAscii": false,
 	"indent": 4,
 	"repairFiles": false,
