@@ -596,7 +596,7 @@ try:
 	logerror.check_version(3, 9, 0)
 
 	print("""\033[95m
-\033[1mOBBUnpacker v1.2.0b (c) 2022 Nineteendo\033[22m
+\033[1mOBBUnpacker v1.2.1 (c) 2022 Nineteendo\033[22m
 \033[1mCode based on:\033[22m Luigi Auriemma, Small Pea & 1Zulu
 \033[1mDocumentation:\033[22m Watto Studios, YingFengTingYu, TwinKleS-C & h3x4n1um
 \033[1mFollow PyVZ2 development:\033[22m \033[4mhttps://discord.gg/CVZdcGKVSw\033[24m

@@ -429,3 +429,8 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* README
 		* Added archiveExtensions, encodedExtensions, zipExtensions, zipPacked, zipUnpacked, zipUnpackLevel
 	* Fixed escaped brackets in path names.
+### Beta 1.2.1 (17 July 2022)
+1. OBBEdit
+	* Fixed patch.py
+2. SaveMaxer
+	* Generate pp.dat
