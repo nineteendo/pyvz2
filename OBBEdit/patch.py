@@ -2,14 +2,14 @@
 import datetime
 from hashlib import md5
 from io import BytesIO
-from os import listdir, getcwd, sep
+from os import listdir, getcwd, makedirs, sep
 from os.path import isdir, isfile, join as osjoin, dirname, relpath, splitext
 #from PIL import Image
 from struct import pack, unpack
 from zlib import compress, decompress
 
 # 3th party libraries
-from libraries.pyvz2nineteendo import LogError, blue_print, green_print, initialize, mkdirs, path_input, list_levels
+from libraries.pyvz2nineteendo import LogError, blue_print, green_print, path_input, list_levels
 from libraries.pyvz2rijndael import RijndaelCBC
 from libraries.pyvz2rton import JSONDecoder
 
@@ -539,8 +539,8 @@ def file_to_folder(inp, out, patch, unpack_level, extensions, pathout, patchout)
 		except Exception as e:
 			error_message(e, " in " + inp, "Failed OBBPatch: ")
 	elif isdir(inp):
-		mkdirs(out)
-		mkdirs(patch)
+		makedirs(out, exist_ok = True)
+		makedirs(patch, exist_ok = True)
 		for entry in sorted(listdir(inp)):
 			input_file = osjoin(inp, entry)
 			output_file = osjoin(out, entry)
@@ -561,7 +561,7 @@ def conversion(inp, out, unpack_level, repack_level, extensions, pathout):
 		except Exception as e:
 			error_message(e, " in " + inp)
 	elif isdir(inp):
-		mkdirs(out)
+		makedirs(out, exist_ok = True)
 		for entry in listdir(inp):
 			input_file = osjoin(inp, entry)
 			output_file = osjoin(out, entry)
@@ -577,20 +577,24 @@ def conversion(inp, out, unpack_level, repack_level, extensions, pathout):
 				conversion(input_file, output_file, unpack_level, repack_level, extensions, pathout)
 # Start of the code
 try:
-	application_path = initialize()
-	logerror = LogError(osjoin(application_path, "fail.txt"))
+	logerror = LogError()
 	error_message = logerror.error_message
 	warning_message = logerror.warning_message
 	input_level = logerror.input_level
 	logerror.check_version(3, 9, 0)
-	
+	branches = {
+		"beta": "Beta 1.2.1b Version check",
+		"master": "Merge branch 'beta'"
+	}
+	release_tag = "1.2"
 	print("""\033[95m
-\033[1mOBBPatcher v1.2.1 (c) 2022 Nineteendo\033[22m
+\033[1mOBBPatcher v1.2.1b (c) 2022 Nineteendo\033[22m
 \033[1mCode based on:\033[22m Luigi Auriemma, Small Pea & 1Zulu
 \033[1mDocumentation:\033[22m Watto Studios, YingFengTingYu, TwinKleS-C & h3x4n1um
 \033[1mFollow PyVZ2 development:\033[22m \033[4mhttps://discord.gg/CVZdcGKVSw\033[24m
 \033[0m""")
-	options = logerror.load_template(options, osjoin(application_path, "options"), 2)
+	getupdate = logerror.get_update("Nineteendo/PVZ2tools", branches, release_tag)
+	options = logerror.load_template(options, 2)
 	level_to_name = ["SPECIFY", "ZIP", "SMF", "RSB", "RSG", "SECTION", "ENCRYPTED", "ENCODED", "DECODED"]
 	list_levels(level_to_name)
 	options["encodedUnpackLevel"] = input_level("ENCODED Unpack Level", 7, 8, options["encodedUnpackLevel"])

@@ -434,3 +434,10 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* Fixed patch.py
 2. SaveMaxer
 	* Generate pp.dat
+### Beta 1.2.1b (19 July 2022)
+1. OBBEdit
+	* Version check
+	* Extra template
+2. SaveMaxer
+	* Version check
+	* JSON Output

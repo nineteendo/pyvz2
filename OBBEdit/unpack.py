@@ -2,15 +2,15 @@
 import datetime
 
 from io import BytesIO
-from os import listdir, getcwd, sep
-from os.path import isdir, isfile, join as osjoin, dirname, relpath, splitext
+from os import listdir, getcwd, makedirs, sep
+from os.path import exists, isdir, isfile, join as osjoin, dirname, relpath, splitext
 #from PIL import Image
 from struct import unpack
 from zipfile import ZipFile
 from zlib import decompress
 
 # 3th party libraries
-from libraries.pyvz2nineteendo import LogError, blue_print, green_print, initialize, mkdirs, path_input, list_levels
+from libraries.pyvz2nineteendo import LogError, blue_print, green_print, path_input, list_levels
 from libraries.pyvz2rijndael import RijndaelCBC
 from libraries.pyvz2rton import RTONDecoder
 
@@ -317,7 +317,7 @@ def rsg_extract(RSG_NAME, file, pathout_data, out, pathout, unpack_level):
 						warning_message("No RTON " + file.name + ":" + DECODED_NAME)
 					else:
 						file_path = osjoin(out, DECODED_NAME)
-						mkdirs(dirname(file_path))
+						makedirs(dirname(file_path), exist_ok = True)
 						if unpack_level > 7:
 							if NAME_CHECK[-5:] == ".rton":
 								try:
@@ -474,7 +474,7 @@ def archive_extract(file, out, unpack_level, pathout, allow_copy):
 			# 	image_decoders = obb_image_decoders
 			# else:
 			# 	image_decoders = rsb_image_decoders
-			mkdirs(out)
+			makedirs(out, exist_ok = True)
 			rsb_extract(file, bytearray(pathout_data), out, unpack_level, pathout)
 			green_print("extracted " + relpath(out, pathout))
 			#rsb_extract(file, out, unpack_level, image_decoders, pathout)
@@ -485,7 +485,7 @@ def archive_extract(file, out, unpack_level, pathout, allow_copy):
 		if unpack_level > 4:
 			pathout_data = HEADER + file.read()
 			file.seek(0)
-			mkdirs(out)
+			makedirs(out, exist_ok = True)
 			rsg_extract("data", file, pathout_data, out, pathout, unpack_level)
 			green_print("extracted " + relpath(out, pathout))
 			#rsg_extract("data", 0, [], {} file, out, pathout, unpack_level)
@@ -535,13 +535,15 @@ def file_to_folder(inp, out, unpack_level, extensions, pathout):
 					for name in zipObj.namelist():
 						if name.lower().endswith(options["archiveExtensions"]):
 							file_name = osjoin(out, name)
-							mkdirs(dirname(file_name))
+							if not exists(dirname(file_name)):
+								makedirs(dirname(file_name), exist_ok = True)
 							with zipObj.open(name, "r") as file:
 								file.name = inp + ":" + name
 								archive_extract(file, file_name, unpack_level, pathout, True)
 						elif name.lower().endswith(options["encodedExtensions"]) and unpack_level > 5:
 							file_name = osjoin(out, name)
-							mkdirs(dirname(file_name))
+							if not exists(dirname(file_name)):
+								makedirs(dirname(file_name), exist_ok = True)
 							with zipObj.open(name, "r") as file:
 								file.name = inp + ":" + name
 								file_decode(file, file_name, unpack_level, pathout, True)
@@ -551,7 +553,7 @@ def file_to_folder(inp, out, unpack_level, extensions, pathout):
 		except Exception as e:
 			error_message(e, " in " + inp, "Failed OBBUnpack: ")
 	elif isdir(inp):
-		mkdirs(out)
+		makedirs(out, exist_ok = True)
 		for entry in sorted(listdir(inp)):
 			input_file = osjoin(inp, entry)
 			output_file = osjoin(out, entry)
@@ -572,7 +574,7 @@ def conversion(inp, out, unpack_level, extensions, noextensions, pathout):
 			error_message(e, " in " + inp + " pos " + repr(file.tell()))
 			file.close()
 	elif isdir(inp):
-		mkdirs(out)
+		makedirs(out, exist_ok = True)
 		for entry in listdir(inp):
 			input_file = osjoin(inp, entry)
 			output_file = osjoin(out, entry)
@@ -588,20 +590,24 @@ def conversion(inp, out, unpack_level, extensions, noextensions, pathout):
 				conversion(input_file, output_file, unpack_level, extensions, noextensions, pathout)
 # Start of the code
 try:
-	application_path = initialize()
-	logerror = LogError(osjoin(application_path, "fail.txt"))
+	logerror = LogError()
 	error_message = logerror.error_message
 	warning_message = logerror.warning_message
 	input_level = logerror.input_level
 	logerror.check_version(3, 9, 0)
-
+	branches = {
+		"beta": "Beta 1.2.1b Version check",
+		"master": "Merge branch 'beta'"
+	}
+	release_tag = "1.2"
 	print("""\033[95m
-\033[1mOBBUnpacker v1.2.1 (c) 2022 Nineteendo\033[22m
+\033[1mOBBUnpacker v1.2.1b (c) 2022 Nineteendo\033[22m
 \033[1mCode based on:\033[22m Luigi Auriemma, Small Pea & 1Zulu
 \033[1mDocumentation:\033[22m Watto Studios, YingFengTingYu, TwinKleS-C & h3x4n1um
 \033[1mFollow PyVZ2 development:\033[22m \033[4mhttps://discord.gg/CVZdcGKVSw\033[24m
 \033[0m""")
-	options = logerror.load_template(options, osjoin(application_path, "options"), 1)
+	getupdate = logerror.get_update("Nineteendo/PVZ2tools", branches, release_tag)
+	options = logerror.load_template(options, 1)
 	level_to_name = ["SPECIFY", "ZIP", "SMF", "RSB", "RSG", "SECTION", "ENCRYPTED", "ENCODED", "DECODED"]
 	list_levels(level_to_name)
 	options["zipUnpackLevel"] = input_level("ZIP Unpack Level", 1, 2, options["zipUnpackLevel"])

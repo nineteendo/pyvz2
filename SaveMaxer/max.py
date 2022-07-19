@@ -1,11 +1,10 @@
 from datetime import datetime
-from io import BytesIO
 from os.path import join as osjoin
-from json import dumps, load
+from json import dump
 from struct import pack
 
 # 3th party libraries
-from libraries.pyvz2nineteendo import LogError, initialize
+from libraries.pyvz2nineteendo import LogError
 from libraries.pyvz2rton import JSONDecoder
 
 options = {
@@ -273,24 +272,31 @@ def generate_save_file():
 
 # Start of the code
 try:
-	application_path = initialize()
-	logerror = LogError(osjoin(application_path, "fail.txt"))
+	logerror = LogError()
+	application_path = logerror.application_path
 	error_message = logerror.error_message
 	warning_message = logerror.warning_message
 	logerror.check_version(3, 9, 0)
-	
+	branches = {
+		"beta": "Beta 1.2.1b Version check",
+		"master": "Merge branch 'beta'"
+	}
+	release_tag = "1.2"
 	print("""\033[95m
-\033[1mSaveMaxer v1.2.1 (c) 2022 Nineteendo\033[22m
+\033[1mSaveMaxer v1.2.1b (c) 2022 Nineteendo\033[22m
 \033[1mFollow PyVZ2 development:\033[22m \033[4mhttps://discord.gg/CVZdcGKVSw\033[24m
 \033[0m""")
-	options = logerror.load_template(options, osjoin(application_path, "options"), 2)
+	getupdate = logerror.get_update("Nineteendo/PVZ2tools", branches, release_tag)
+	options = logerror.load_template(options, 2)
 	encode_root_object = JSONDecoder().encode_root_object
+	start_time = datetime.now()
 	json_data = generate_save_file()
-	file = BytesIO(dumps(json_data, ensure_ascii = False).encode())
-	file.name = "pp.dat.json"
-	patch_data = JSONDecoder().encode_root_object(file)
+	dump(json_data, open(osjoin(application_path, "pp.dat.json"), "w"), ensure_ascii = False, indent = 4)
+	print("wrote pp.dat.json")
+	patch_data = JSONDecoder().encode_root_object(open(osjoin(application_path, "pp.dat.json"), "rb"))
 	open(osjoin(application_path, "pp.dat"), "wb").write(patch_data)
 	print("wrote pp.dat")
+	logerror.finish_program("finished generating in", start_time)
 except Exception as e:
 	error_message(e)
 except BaseException as e:
