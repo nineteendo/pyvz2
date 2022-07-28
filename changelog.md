@@ -8,7 +8,7 @@ Python3 scripts for modifying Plants VS Zombies 2
 2. JSON WALKER:
 	* Get depth from JSON file for DIFF TABLE
 3. RTONS PARSER:
-	* **Forked from RTONParser v0.01 by 1Zulu**
+	* **Forked from RTONParser v0.01 by 1Zulu** http://drive.google.com/file/d/0B-SMAZsDM9ERTGwxVkpoN0U0LVE
 	* Convert .rton to .json
 	* Non-command line execution
 ## Master 0.2.0 (18 May 2021)
@@ -29,7 +29,7 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* Disabled other integer types (The game doesn't seem to use them in the packages.)
 ## Master 0.2.4 (2 Jun 2021)
 1. OBBPatcher:
-	* **Forked from OBBPatcher v0.05b by 1Zulu**
+	* **Forked from OBBPatcher v0.05b by 1Zulu** http://drive.google.com/file/d/0B_u59SyYZBrTMExscEpLdlNFVWc
 	* Extract & Patch sections from OBBs
 	* Configured untill v7.8.1
 2. README:
@@ -77,7 +77,7 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* **Merged with JSONS PARSER**
 ## Master 1.0.1 (3 Jan 2022)
 1. OBBUnpacker:
-	* **Forked from 1bsr pgsr v0.2.2 by Luigi Auriemma**
+	* **Forked from 1bsr pgsr v0.2.2 by Luigi Auriemma** http://aluigi.altervista.org/bms/1bsr_pgsr.bms
 	* Unpack obb
 	* Fixed path names
 ## Master 1.0.1b (4 Jan 2022)
@@ -180,7 +180,7 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* Improved objects
 ## Master 1.0.5d (1 Feb 2022)
 1. RTON Converter:
-	* Enforce Python 3.9
+	* Enforce Python 3.9 after a report of mutaqin-hanif on GitHub http://github.com/Nineteendo/PVZ2tools/issues/4
 	* Fixed short names
 ## Master 1.0.6 (2 Feb 2022)
 1. OBBEdit:
@@ -277,7 +277,7 @@ Python3 scripts for modifying Plants VS Zombies 2
 1. OBBEdit:
 	* Synced different configurations
 2. RTONCrypto:
-	* **Forked RTONCrypto from SmallPea**
+	* **Forked RTONCrypto from SmallPea** http://smallpeashared.lanzoul.com/iLqI3ze9qrg
 	* Added options
 ### Beta 1.1.2d (22 Mar 2022)
 1. OBBEdit:
@@ -332,7 +332,6 @@ Python3 scripts for modifying Plants VS Zombies 2
 		* Creditted YingFengTingYu & Watto Studios
 ### Beta 1.1.6 (1 May 2022)
 1. OBBEdit:
-	* Added changelog
 	* Resupported rsg unpacking
 	* Improved templates
 	* Fixed patching
@@ -345,6 +344,8 @@ Python3 scripts for modifying Plants VS Zombies 2
 		* Added overrideDataCompression & overrideEncryption & overrideImageDataCompression
 		* Added rsgExtensions & rsgUnpackLevel
 		* Fixed empty rows
+2. CHANGELOG
+	* Added changelog for PyVZ2 Development
 ### Beta 1.1.6b (2 May 2022)
 1. OBBEdit:
 	* Improved templates
@@ -370,16 +371,17 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* Credited TwinKleS-C
 	* Link to Discord server
 	* Moved custom command line input & output to custom library
-	* Updated changelog format
 	* Options:
 		* RTON conversion more closely to PVZ2Tool
 		* Override encryption for patching
 	* README:
 		* More accurate depiction of data format
 		* Credited TwinKleS-C
+2. CHANGELOG
+	* Updated changelog format
 ### Beta 1.1.6e (28 May 2022)
 1. OBBEdit:
-	* Sped up JSON conversion after a report of plant16gamer on Discord
+	* Sped up JSON conversion after a report of plant16gamer on Discord http://discord.com/users/894919287142232105
 ### Beta 1.1.7 (29 May 2022)
 1. OBBEdit:
 	* Sped up RTON conversion
@@ -408,18 +410,18 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* Dump fail.txt to custom file when failed to edit
 	* Reorganized templates
 	* No case-sensite keys
-	* Added https:// to invite link
+	* Added http:// to invite link
 ### Beta 1.2.0 (23 June 2022)
 1. OBBEdit:
 	* Confirm relatives paths.
 	* Added unused template with default encryption
-	* Fixed UnboundLocalError for RTONDecoding after a report of Earth2888 on Discord.
+	* Fixed UnboundLocalError for RTONDecoding after a report of Earth2888 on Discord. http://discord.com/users/615425385231810560
 	* Fixed TypeError for SMFCompressing
 	* Fixed AttributeError for RSGUnpacking
 	* Fixed 1BSR & RTON HEADER info
 	* Finished "Unpacking"
 # Release 1.3.0 (The future)
-## Master 1.3.x (The future)
+## Master 1.2.x (The future)
 ### Beta 1.2.0b (3 July 2022)
 1. OBBEdit
 	* ZIP Support for unpacking
@@ -436,8 +438,18 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* Generate pp.dat
 ### Beta 1.2.1b (19 July 2022)
 1. OBBEdit
-	* Version check
+	* Version check after a suggestion of TheEarthIsGreenNBlue on Discord http://discord.com/users/615425385231810560
 	* Extra template
 2. SaveMaxer
 	* Version check
 	* JSON Output
+### Beta 1.2.1c (28 July 2022)
+1. OBBEDIT
+	* Progress bar after a suggestion of TheEarthIsGreenNBlue on Discord http://discord.com/users/615425385231810560
+	* Work-around for more mods (SHUTTLE?) after a report of dekiel123 on GitHub http://github.com/Nineteendo/PVZ2tools/issues/17
+2. Savemaxer
+	* Progress bar after a suggestion of TheEarthIsGreenNBlue on Discord http://discord.com/users/615425385231810560
+3. CHANGELOG
+	* Added hyperlinks
+4. README
+	* Sources instead of people

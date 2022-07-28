@@ -205,6 +205,8 @@ class RTONDecoder():
 	key_mappings = {
 		b"\x81": parse_str,
 		b"\x82": parse_printable_str,
+		b"\x83": parse_rtid,
+		b"\x84": parse_zero_ref,
 		
 		b"\x90": parse_cached_str,
 		b"\x91": parse_cached_str_recall,

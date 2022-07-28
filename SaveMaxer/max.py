@@ -225,7 +225,9 @@ def generate_save_file():
 	json_data["version"] = 1
 
 	objects = []
-	for i, profile_options in enumerate(options["profiles"]):
+	entries = options["profiles"]
+	split_task(len(entries))
+	for i, profile_options in enumerate(entries):
 		profile = {}
 		profile["uid"] = get_uid(profile_options["generated_uid"], options["prefix"], i) # Uid
 		profile["objclass"] = "PlayerInfo" # Player Info
@@ -266,8 +268,9 @@ def generate_save_file():
 		profile["objdata"] = objdata # Profile Data
 		
 		objects.append(profile)
-
+		finish_sub_task()
 	json_data["objects"] = objects # Profiles
+	merge_task()
 	return json_data
 
 # Start of the code
@@ -276,9 +279,14 @@ try:
 	application_path = logerror.application_path
 	error_message = logerror.error_message
 	warning_message = logerror.warning_message
+	input_level = logerror.input_level
+	split_task = logerror.split_task
+	merge_task = logerror.merge_task
+	finish_sub_task = logerror.finish_sub_task
+
 	logerror.check_version(3, 9, 0)
 	branches = {
-		"beta": "Beta 1.2.1b Version check",
+		"beta": "Beta 1.2.1c Progress bar after a suggestion of TheEarthIsGreenNBlue",
 		"master": "Merge branch 'beta'"
 	}
 	release_tag = "1.2"
@@ -289,16 +297,22 @@ try:
 	getupdate = logerror.get_update("Nineteendo/PVZ2tools", branches, release_tag)
 	options = logerror.load_template(options, 2)
 	encode_root_object = JSONDecoder().encode_root_object
-	start_time = datetime.now()
+
+	logerror.set_levels(2)
+	split_task(3)
 	json_data = generate_save_file()
+	finish_sub_task()
 	dump(json_data, open(osjoin(application_path, "pp.dat.json"), "w"), ensure_ascii = False, indent = 4)
-	print("wrote pp.dat.json")
+	finish_sub_task()
 	patch_data = JSONDecoder().encode_root_object(open(osjoin(application_path, "pp.dat.json"), "rb"))
 	open(osjoin(application_path, "pp.dat"), "wb").write(patch_data)
-	print("wrote pp.dat")
-	logerror.finish_program("finished generating in", start_time)
+	finish_sub_task()
+	
+	logerror.finish_program()
 except Exception as e:
+	logerror.set_levels(0)
 	error_message(e)
 except BaseException as e:
+	logerror.set_levels(0)
 	warning_message(type(e).__name__ + " : " + str(e))
 logerror.close() # Close log

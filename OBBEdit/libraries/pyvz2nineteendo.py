@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import StringIO
 from json import dump, load
-from os import listdir, system
+from os import get_terminal_size, listdir, system
 from os.path import dirname, isfile, join as osjoin, realpath, splitext
 import sys
 from traceback import format_exc
@@ -14,6 +14,34 @@ version_options = {
 	"outdated": False
 }
 
+def duration(self):
+	ss = self.seconds + self.microseconds / 1000000
+	dd = self.days
+	if ss < 3600:
+		ss = round(ss, 1)
+	elif dd < 1:
+		ss = round(ss)
+	elif dd < 10:
+		dd += round(ss / 86400, 1)
+	else:
+		dd += round(ss / 86400)
+	
+	mm, ss = divmod(ss, 60)
+	hh, mm = divmod(mm, 60)
+	aa, hh = divmod(hh, 24)
+	dd += aa
+	
+	if dd:
+		if dd >= 1000:
+			return "999+days"
+		elif dd >= 10:
+			return "%03d days" % dd
+		else:
+			return "%.1f days" % dd
+	elif hh:
+		return "%02d:%02d:%02d" % (hh, mm, ss)
+	else:
+		return "%02d:%05.2f" % (mm, ss)
 class LogError:
 	def __init__(self):
 		system("")
@@ -27,17 +55,62 @@ class LogError:
 			self.fail = StringIO()
 			self.fail.name = None
 			self.error_message(e)
+		self.levels = 0
+	
+	def set_levels(self, levels = 1):
+		self.level = -1
+		self.levels = levels
+		if levels:
+			self.width = get_terminal_size().columns - 23
+			self.entry = [0] * levels
+			self.ratio = [1] * levels
+			self.start = [datetime.now()] * levels
+			self.warning = 0
+			self.error = 0
+			print("\0337")
+			self.show()
+	def split_task(self, entries = 1):
+		self.level += 1
+		self.start[self.level] = datetime.now()
+		self.entry[self.level] = 0
+		self.ratio[self.level] = 1 / entries
+	def merge_task(self):
+		self.entry[self.level] = 0
+		self.level -= 1
+	def finish_sub_task(self):
+		self.entry[self.level] += 1
+		self.show()
+	def warning_message(self, string):
+		self.fail.write("\t" + string + "\n")
+		self.fail.flush()
+		if self.levels:
+			self.warning += 1
+			self.show()
+		else:
+			print("\33[93m" + string + "\33[0m")
 	def error_message(self, e, sub = "", string = ""):
-	# Print & log error
 		string += type(e).__name__ + sub + ": " + str(e) + "\n" + format_exc()
 		self.fail.write(string + "\n")
 		self.fail.flush()
-		print("\033[91m" + string + "\033[0m")
-	def warning_message(self, string):
-	# Print & log warning
-		self.fail.write("\t" + string + "\n")
-		self.fail.flush()
-		print("\33[93m" + string + "\33[0m")
+		if self.levels:
+			self.error += 1
+			self.show()
+		else:
+			print("\033[91m" + string + "\033[0m")
+	def show(self):
+		width = get_terminal_size().columns - 23
+		temp = 0
+		lines = []
+		now = datetime.now()
+		for level in range(self.levels - 1, -1, -1):
+			temp = self.ratio[level] * (temp + self.entry[level])
+			current = now - self.start[level] if temp else timedelta(0)
+			progress = int(width * temp)
+			lines.append(progress * "#" + (width - progress) * "." + " %03d" % (100 * temp) + "% " + duration(current) + " " + duration(current / temp - current if temp else current))
+		if width != self.width:
+			print(end = "\033c")
+		print("\0338" + "\n".join(lines) + "\n%d warnings" % self.warning + " %d errors" % self.error)
+		self.width = width
 	
 	def update_options(self, options, newoptions):
 		for key in options:
@@ -118,8 +191,7 @@ class LogError:
 			self.error_message(e, "while loading options: ")
 			self.warning_message("Falling back to default options.")
 		return options
-	def finish_program(self, message, start):
-		green_print(message + " " + str(datetime.now() - start))
+	def finish_program(self):
 		if self.fail.tell() > 0:
 			name = self.fail.name
 			if name == None:
