@@ -112,6 +112,7 @@
 	],
 	"RTONNoExtensions": [
 		"draper_",
+		"global_save_data",
 		"local_profiles",
 		"loot",
 		"_saveheader_rton"

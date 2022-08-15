@@ -129,6 +129,7 @@ options = {
 	),
 	"RTONNoExtensions": (
 		"draper_",
+		"global_save_data",
 		"local_profiles",
 		"loot",
 		"_saveheader_rton"
@@ -552,6 +553,8 @@ def get_archives(inp, out, patch, unpack_level, extensions, pathout, patchout):
 		return entries
 	elif isfile(inp):
 		return [(inp, out, patch)]
+	else:
+		return []
 def conversion(inp, out, unpack_level, repack_level, extensions, pathout):
 	entries = get_encoded(inp, out, unpack_level, repack_level, extensions, pathout)
 	split_task(len(entries))
@@ -584,6 +587,8 @@ def get_encoded(inp, out, unpack_level, repack_level, extensions, pathout):
 				entries.extend(get_encoded(input_file, output_file, unpack_level, repack_level, extensions, pathout))
 	elif isfile(inp):
 		return [(inp, out)]
+	else:
+		return []
 # Start of the code
 try:
 	logerror = LogError()
@@ -596,12 +601,12 @@ try:
 	
 	logerror.check_version(3, 9, 0)
 	branches = {
-		"beta": "Beta 1.2.1c Progress bar after a suggestion of TheEarthIsGreenNBlue",
+		"beta": "Beta 1.2.1d Fixed numerous issues",
 		"master": "Merge branch 'beta'"
 	}
 	release_tag = "1.2"
 	print("""\033[95m
-\033[1mOBBPatcher v1.2.1c (c) 2022 Nineteendo\033[22m
+\033[1mOBBPatcher v1.2.1d (c) 2022 Nineteendo\033[22m
 \033[1mCode based on:\033[22m Luigi Auriemma, Small Pea & 1Zulu
 \033[1mDocumentation:\033[22m Watto Studios, YingFengTingYu, TwinKleS-C & h3x4n1um
 \033[1mFollow PyVZ2 development:\033[22m \033[4mhttps://discord.gg/CVZdcGKVSw\033[24m

@@ -67,13 +67,13 @@ class LogError:
 			self.start = [datetime.now()] * levels
 			self.warning = 0
 			self.error = 0
-			print("\0337")
+			print("\n" * levels, end = "\n\0337")
 			self.show()
 	def split_task(self, entries = 1):
 		self.level += 1
 		self.start[self.level] = datetime.now()
 		self.entry[self.level] = 0
-		self.ratio[self.level] = 1 / entries
+		self.ratio[self.level] = 1 / entries if entries else 1
 	def merge_task(self):
 		self.entry[self.level] = 0
 		self.level -= 1
@@ -107,9 +107,9 @@ class LogError:
 			current = now - self.start[level] if temp else timedelta(0)
 			progress = int(width * temp)
 			lines.append(progress * "#" + (width - progress) * "." + " %03d" % (100 * temp) + "% " + duration(current) + " " + duration(current / temp - current if temp else current))
-		if width != self.width:
+		if width < self.width:
 			print(end = "\033c")
-		print("\0338" + "\n".join(lines) + "\n%d warnings" % self.warning + " %d errors" % self.error)
+		print("\0338" + "\033[A" * (self.levels + 1) + "\n".join(lines) + "\n%d warnings" % self.warning + " %d errors" % self.error, end = "\n\0337")
 		self.width = width
 	
 	def update_options(self, options, newoptions):
@@ -134,14 +134,17 @@ class LogError:
 		now = datetime.timestamp(datetime.now())
 		if now < version_options["latest"] or version_options["latest"] + 86400 < now:
 			version_options["latest"] = now
-			if version_options["release"]:
-				with urlopen('https://api.github.com/repos/' + repository + '/releases') as response:
-					open("release", "wb").write(response.read())
-					version_options["outdated"] = release_tag != load(open("release", "rb"))[0]["tag_name"]
-			else:
-				with urlopen('https://api.github.com/repos/' + repository + '/branches/' + branch) as response:
-					open(branch, "wb").write(response.read())
-					version_options["outdated"] = branches[branch] != load(open(branch, "rb"))["commit"]["commit"]["message"]
+			try:
+				if version_options["release"]:
+					with urlopen('https://api.github.com/repos/' + repository + '/releases') as response:
+						open("release", "wb").write(response.read())
+						version_options["outdated"] = release_tag != load(open("release", "rb"))[0]["tag_name"]
+				else:
+					with urlopen('https://api.github.com/repos/' + repository + '/branches/' + branch) as response:
+						open(branch, "wb").write(response.read())
+						version_options["outdated"] = branches[branch] != load(open(branch, "rb"))["commit"]["commit"]["message"]
+			except Exception as e:
+				self.error_message(e, "while getting update: ")
 		if version_options["outdated"]:
 			if version_options["release"]:
 				self.warning_message("Download new update: https://github.com/" + repository + "/releases/latest")

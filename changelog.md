@@ -453,3 +453,10 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* Added hyperlinks
 4. README
 	* Sources instead of people
+### Beta 1.2.1d (15 August 2022)
+1. OBBEDIT
+	* Include "global_save_data" files
+	* Remove extension "again" when unpacking archives
+	* Catch errors while getting a new update
+	* Fixed TypeError & ZeroDivisionError when processing empty tasks
+	* Fixed Progressbar not scrolling on Android
