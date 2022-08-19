@@ -286,12 +286,12 @@ try:
 
 	logerror.check_version(3, 9, 0)
 	branches = {
-		"beta": "Beta 1.2.1d Fixed numerous issues",
+		"beta": "Beta 1.2.2 Halved RAM usage",
 		"master": "Merge branch 'beta'"
 	}
 	release_tag = "1.2"
 	print("""\033[95m
-\033[1mSaveMaxer v1.2.1d (c) 2022 Nineteendo\033[22m
+\033[1mSaveMaxer v1.2.2 (c) 2022 Nineteendo\033[22m
 \033[1mFollow PyVZ2 development:\033[22m \033[4mhttps://discord.gg/CVZdcGKVSw\033[24m
 \033[0m""")
 	getupdate = logerror.get_update("Nineteendo/PVZ2tools", branches, release_tag)

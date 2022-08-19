@@ -480,11 +480,15 @@ def archive_patch(file, out, patch, unpack_level):
 
 	if HEADER == b"1bsr":
 		if not COMPRESSED:
-			pathout_data = HEADER + file.read()
+			pathout_data = bytearray(file.seek(0, 2))
+			file.seek(0)
+			file.raw.readinto(pathout_data)
 			file.seek(4)
+		else:
+			pathout_data = bytearray(pathout_data)
 		
 		if unpack_level > 3:
-			pathout_data = rsb_patch_data(file, bytearray(pathout_data), patch, unpack_level)
+			pathout_data = rsb_patch_data(file, pathout_data, patch, unpack_level)
 		if unpack_level < 4 or COMPRESSED:
 			tag, extension = splitext(out)
 			tag += ".tag" + extension
@@ -492,9 +496,11 @@ def archive_patch(file, out, patch, unpack_level):
 			pathout_data = b"\xD4\xFE\xAD\xDE" + pack("<I", len(pathout_data)) + compress(pathout_data, level = 9)
 		
 		open(out, "wb").write(pathout_data)
-	elif HEADER == b"pgsr":
+	elif HEADER == b"pgsr" and not COMPRESSED:
 		try:
-			pathout_data = bytearray(HEADER + file.read())
+			pathout_data = bytearray(file.seek(0, 2))
+			file.seek(0)
+			file.raw.readinto(pathout_data)
 			file.seek(0)
 			pathout_data = rsg_patch_data("data", file, pathout_data, patch, unpack_level)
 			open(out, "wb").write(pathout_data)
@@ -601,12 +607,12 @@ try:
 	
 	logerror.check_version(3, 9, 0)
 	branches = {
-		"beta": "Beta 1.2.1d Fixed numerous issues",
+		"beta": "Beta 1.2.2 Halved RAM usage",
 		"master": "Merge branch 'beta'"
 	}
 	release_tag = "1.2"
 	print("""\033[95m
-\033[1mOBBPatcher v1.2.1d (c) 2022 Nineteendo\033[22m
+\033[1mOBBPatcher v1.2.2 (c) 2022 Nineteendo\033[22m
 \033[1mCode based on:\033[22m Luigi Auriemma, Small Pea & 1Zulu
 \033[1mDocumentation:\033[22m Watto Studios, YingFengTingYu, TwinKleS-C & h3x4n1um
 \033[1mFollow PyVZ2 development:\033[22m \033[4mhttps://discord.gg/CVZdcGKVSw\033[24m

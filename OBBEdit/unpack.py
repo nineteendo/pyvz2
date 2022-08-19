@@ -488,21 +488,27 @@ def archive_extract(file, out, unpack_level, allow_copy):
 	if HEADER == b"1bsr":
 		if unpack_level > 3:
 			if not COMPRESSED:
-				pathout_data = HEADER + file.read()
+				pathout_data = bytearray(file.seek(0, 2))
+				file.seek(0)
+				file.raw.readinto(pathout_data)
 				file.seek(4)
-			
+			else:
+				pathout_data = bytearray(pathout_data)
+
 			# if file.[-4:] == ".obb":
 			# 	image_decoders = obb_image_decoders
 			# else:
 			# 	image_decoders = rsb_image_decoders
 			makedirs(out, exist_ok = True)
-			rsb_extract(file, bytearray(pathout_data), out, unpack_level)
+			rsb_extract(file, pathout_data, out, unpack_level)
 			#rsb_extract(file, out, unpack_level, image_decoders, pathout)
 		elif allow_copy:
 			open(out, "wb").write(HEADER + file.read())
-	elif HEADER == b"pgsr":
+	elif HEADER == b"pgsr" and not COMPRESSED:
 		if unpack_level > 4:
-			pathout_data = HEADER + file.read()
+			pathout_data = bytearray(file.seek(0, 2))
+			file.seek(0)
+			file.raw.readinto(pathout_data)
 			file.seek(0)
 			makedirs(out, exist_ok = True)
 			rsg_extract("data", file, pathout_data, out, unpack_level)
@@ -641,12 +647,12 @@ try:
 
 	logerror.check_version(3, 9, 0)
 	branches = {
-		"beta": "Beta 1.2.1d Fixed numerous issues",
+		"beta": "Beta 1.2.2 Halved RAM usage",
 		"master": "Merge branch 'beta'"
 	}
 	release_tag = "1.2"
 	print("""\033[95m
-\033[1mOBBUnpacker v1.2.1d (c) 2022 Nineteendo\033[22m
+\033[1mOBBUnpacker v1.2.2 (c) 2022 Nineteendo\033[22m
 \033[1mCode based on:\033[22m Luigi Auriemma, Small Pea & 1Zulu
 \033[1mDocumentation:\033[22m Watto Studios, YingFengTingYu, TwinKleS-C & h3x4n1um
 \033[1mFollow PyVZ2 development:\033[22m \033[4mhttps://discord.gg/CVZdcGKVSw\033[24m

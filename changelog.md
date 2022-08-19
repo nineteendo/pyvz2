@@ -460,3 +460,6 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* Catch errors while getting a new update
 	* Fixed TypeError & ZeroDivisionError when processing empty tasks
 	* Fixed Progressbar not scrolling on Android
+### Beta 1.2.2 (15 August 2022)
+1. OBBEDIT
+	* Halved RAM usage after a suggestion of Aarontal on YouTube http://www.youtube.com/channel/UC7RcYwQ9YQAHeqDoP_GFu3w
