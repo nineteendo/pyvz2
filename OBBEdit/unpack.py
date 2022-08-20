@@ -578,7 +578,8 @@ def file_to_folder(inp, out, unpack_level, extensions, pathout):
 			error_message(e, " in " + inp, "Failed OBBUnpack: ")
 		finish_sub_task()
 	merge_task()
-	finish_sub_task()
+	if conversions > 1:
+		finish_sub_task()
 def get_archives(inp, out, unpack_level, extensions, pathout):
 # Recursive file convert function
 	if isdir(inp):
@@ -611,7 +612,8 @@ def conversion(inp, out, unpack_level, extensions, noextensions, pathout):
 			file.close()
 		finish_sub_task()
 	merge_task()
-	finish_sub_task()
+	if conversions > 1:
+		finish_sub_task()
 def get_encoded(inp, out, unpack_level, extensions, noextensions, pathout):
 # Recursive file convert function
 	if isdir(inp):
@@ -647,12 +649,12 @@ try:
 
 	logerror.check_version(3, 9, 0)
 	branches = {
-		"beta": "Beta 1.2.2 Halved RAM usage",
+		"beta": "Beta 1.2.2b tweaked some things",
 		"master": "Merge branch 'beta'"
 	}
 	release_tag = "1.2"
 	print("""\033[95m
-\033[1mOBBUnpacker v1.2.2 (c) 2022 Nineteendo\033[22m
+\033[1mOBBUnpacker v1.2.2v (c) 2022 Nineteendo\033[22m
 \033[1mCode based on:\033[22m Luigi Auriemma, Small Pea & 1Zulu
 \033[1mDocumentation:\033[22m Watto Studios, YingFengTingYu, TwinKleS-C & h3x4n1um
 \033[1mFollow PyVZ2 development:\033[22m \033[4mhttps://discord.gg/CVZdcGKVSw\033[24m
@@ -710,38 +712,38 @@ try:
 	parse_root_object = RTONDecoder(comma, current_indent, doublePoint, ensureAscii, indent, repairFiles, sortKeys, sortValues, warning_message).parse_root_object
 	
 	blue_print("\nWorking directory: " + getcwd())
-	entries = 0
+	conversions = 0
 	if 2 >= options["zipUnpackLevel"] > 1:
-		entries += 1
+		conversions += 1
 		zip_input = path_input("ZIP Input file or directory", options["zipPacked"])
 		if isfile(zip_input):
 			zip_output = path_input("ZIP " + level_to_name[options["zipUnpackLevel"]] + " Output file", options["zipUnpacked"])
 		else:
 			zip_output = path_input("ZIP " + level_to_name[options["zipUnpackLevel"]] + " Output directory", options["zipUnpacked"])
 	if 3 >= options["smfUnpackLevel"] > 2:
-		entries += 1
+		conversions += 1
 		smf_input = path_input("SMF/ZIP Input file or directory", options["smfPacked"])
 		if isfile(smf_input):
 			smf_output = path_input("SMF/ZIP " + level_to_name[options["smfUnpackLevel"]] + " Output file", options["smfUnpacked"])
 		else:
 			smf_output = path_input("SMF/ZIP " + level_to_name[options["smfUnpackLevel"]] + " Output directory", options["smfUnpacked"])
 	if 4 >= options["rsbUnpackLevel"] > 3:
-		entries += 1
+		conversions += 1
 		rsb_input = path_input("RSB/SMF/ZIP Input file or directory", options["rsbPacked"])
 		rsb_output = path_input("RSB/SMF/ZIP " + level_to_name[options["rsbUnpackLevel"]] + " Output directory", options["rsbUnpacked"])
 	if 8 >= options["rsgUnpackLevel"] > 4:
-		entries += 1
+		conversions += 1
 		rsg_input = path_input("RSG/RSB/SMF/ZIP Input file or directory", options["rsgPacked"])
 		rsg_output = path_input("RSG/RSB/SMF/ZIP " + level_to_name[options["rsgUnpackLevel"]] + " Output directory", options["rsgUnpacked"])
 	if 8 >= options["encryptedUnpackLevel"] > 6:
-		entries += 1
+		conversions += 1
 		encrypted_input = path_input("ENCRYPTED Input file or directory", options["encryptedPacked"])
 		if isfile(encrypted_input):
 			encrypted_output = path_input("ENCRYPTED " + level_to_name[options["encryptedUnpackLevel"]] + " Output file", options["encryptedUnpacked"])
 		else:
 			encrypted_output = path_input("ENCRYPTED " + level_to_name[options["encryptedUnpackLevel"]] + " Output directory", options["encryptedUnpacked"])
 	if 8 >= options["encodedUnpackLevel"] > 7:
-		entries += 1
+		conversions += 1
 		encoded_input = path_input("ENCODED/ENCRYPTED Input file or directory", options["encodedPacked"])
 		if isfile(encoded_input):
 			encoded_output = path_input("ENCODED/ENCRYPTED " + level_to_name[options["encodedUnpackLevel"]] + " Output file", options["encodedUnpacked"])
@@ -749,8 +751,11 @@ try:
 			encoded_output = path_input("ENCODED/ENCRYPTED " + level_to_name[options["encodedUnpackLevel"]] + " Output directory", options["encodedUnpacked"])
 
 	# Start file_to_folder
-	logerror.set_levels(5)
-	split_task(entries)
+	if conversions < 2:
+		logerror.set_levels(4)
+	else:
+		logerror.set_levels(5)
+		split_task(conversions)
 	if 2 >= options["zipUnpackLevel"] > 1:
 		file_to_folder(zip_input, zip_output, options["zipUnpackLevel"], options["zipExtensions"], dirname(zip_output))
 	if 3 >= options["smfUnpackLevel"] > 2:

@@ -17,14 +17,14 @@ version_options = {
 def duration(self):
 	ss = self.seconds + self.microseconds / 1000000
 	dd = self.days
-	if ss < 3600:
-		ss = round(ss, 1)
-	elif dd < 1:
-		ss = round(ss)
-	elif dd < 10:
-		dd += round(ss / 86400, 1)
-	else:
+	if dd >= 10:
 		dd += round(ss / 86400)
+	elif dd >= 1:
+		dd += round(ss / 86400, 1)
+	elif ss >= 3600:
+		ss = round(ss)
+	else:
+		ss = round(ss, 1)
 	
 	mm, ss = divmod(ss, 60)
 	hh, mm = divmod(mm, 60)
@@ -65,8 +65,9 @@ class LogError:
 			self.entry = [0] * levels
 			self.ratio = [1] * levels
 			self.start = [datetime.now()] * levels
-			self.warning = 0
-			self.error = 0
+			self.actions = 0
+			self.warnings = 0
+			self.errors = 0
 			print("\n" * levels, end = "\n\0337")
 			self.show()
 	def split_task(self, entries = 1):
@@ -78,13 +79,14 @@ class LogError:
 		self.entry[self.level] = 0
 		self.level -= 1
 	def finish_sub_task(self):
+		self.actions += 1
 		self.entry[self.level] += 1
 		self.show()
 	def warning_message(self, string):
 		self.fail.write("\t" + string + "\n")
 		self.fail.flush()
 		if self.levels:
-			self.warning += 1
+			self.warnings += 1
 			self.show()
 		else:
 			print("\33[93m" + string + "\33[0m")
@@ -93,7 +95,7 @@ class LogError:
 		self.fail.write(string + "\n")
 		self.fail.flush()
 		if self.levels:
-			self.error += 1
+			self.errors += 1
 			self.show()
 		else:
 			print("\033[91m" + string + "\033[0m")
@@ -109,7 +111,7 @@ class LogError:
 			lines.append(progress * "#" + (width - progress) * "." + " %03d" % (100 * temp) + "% " + duration(current) + " " + duration(current / temp - current if temp else current))
 		if width < self.width:
 			print(end = "\033c")
-		print("\0338" + "\033[A" * (self.levels + 1) + "\n".join(lines) + "\n%d warnings" % self.warning + " %d errors" % self.error, end = "\n\0337")
+		print("\0338" + "\033[A" * (self.levels + 1) + "\n".join(lines) + "\n%d actions %d warnings %d errors" % (self.actions, self.warnings, self.errors), end = "\n\0337")
 		self.width = width
 	
 	def update_options(self, options, newoptions):
@@ -137,12 +139,10 @@ class LogError:
 			try:
 				if version_options["release"]:
 					with urlopen('https://api.github.com/repos/' + repository + '/releases') as response:
-						open("release", "wb").write(response.read())
-						version_options["outdated"] = release_tag != load(open("release", "rb"))[0]["tag_name"]
+						version_options["outdated"] = release_tag != load(response)[0]["tag_name"]
 				else:
 					with urlopen('https://api.github.com/repos/' + repository + '/branches/' + branch) as response:
-						open(branch, "wb").write(response.read())
-						version_options["outdated"] = branches[branch] != load(open(branch, "rb"))["commit"]["commit"]["message"]
+						version_options["outdated"] = branches[branch] != load(response)["commit"]["commit"]["message"]
 			except Exception as e:
 				self.error_message(e, "while getting update: ")
 		if version_options["outdated"]:

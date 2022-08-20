@@ -43,10 +43,10 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* Automatic .dat & .bin extensions
 2. README:
 	* Mardown format
-## Master 0.2.6 (4 Jun 2021)
-1. JSONS PARSER:
-	* No Backup SHOULD be supported
-	* Output file with problematic keys that are configured
+## ~~Master 0.2.6 (4 Jun 2021)~~
+1. ~~JSONS PARSER~~:
+	* ~~No Backup SHOULD be supported~~
+	* ~~Output file with problematic keys that are configured~~
 ## Master 0.2.7 (5 Jun 2021)
 1. JSONS PARSER:
 	* Reverted changes from Master 0.2.6
@@ -221,7 +221,7 @@ Python3 scripts for modifying Plants VS Zombies 2
 ## Master 1.1.4 (29 Mar 2022)
 ### Beta 1.1.0b (12 Feb 2022)
 1. OBBEdit:
-	* Decoding some PTX files
+	* Decoding some PTX files after some help of YingFengTingYu on GitHub https://github.com/Nineteendo/PVZ2tools/issues/10
 ### Beta 1.1.0c (16 Feb 2022)
 1. OBBEdit:
 	* Converting to same folder
@@ -247,7 +247,7 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* Warning for BaseExceptions
 2. RTON-OFF:
 	* Faster conversion
-	* Fixed negative varints
+	* Fixed negative varints after comparing to h3x4n1um
 	* Options:
 		* Added ensureAscii
 	* Warning for BaseExceptions
@@ -281,7 +281,7 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* Added options
 ### Beta 1.1.2d (22 Mar 2022)
 1. OBBEdit:
-	* Compressed rsb support
+	* Compressed rsb support after some help of YingFengTingYu on GitHub https://github.com/Nineteendo/PVZ2tools/issues/8
 2. README:
 	* Creditted Small Pea
 ### Beta 1.1.3 (22 Mar 2022)
@@ -316,7 +316,7 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* Removed rsgp unpacking
 	* Moved encryption to custom library
 	* Decoding all PTX files from PVZfree
-	* Improved unpacking
+	* Unpacking from the data & image data sections after research on PVZFree
 	* Options:
 		* Removed rsgpExtensions & rsgpUnpackLevel
 	* README:
@@ -326,15 +326,17 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* Added templates to make multiple custom settings easier.
 	* Moved RTON conversions to custom library
 	* Writing rsb.tag.smf
-	* Improved patching
+	* patching the data & image data sections after research on PVZFree
 	* README:
 		* Split up credits in Code & Documentation
 		* Creditted YingFengTingYu & Watto Studios
 ### Beta 1.1.6 (1 May 2022)
 1. OBBEdit:
 	* Resupported rsg unpacking
-	* Improved templates
-	* Fixed patching
+	* Fixed template naming after a report of plant16gamer on Discord http://discord.com/users/894919287142232105
+	* Improved templates after a suggestion of suggesion of Sarah Lydia on Discord http://discord.com/users/643026770823610381
+	* Failed to support changing file size
+	* Fixed patching images after a report of Sarah Lydia on Discord http://discord.com/users/643026770823610381
 	* Fixed Encryption
 	* Options:
 		* Added overrideDataCompression & overrideEncryption & overrideImageDataCompression
@@ -349,7 +351,7 @@ Python3 scripts for modifying Plants VS Zombies 2
 ### Beta 1.1.6b (2 May 2022)
 1. OBBEdit:
 	* Improved templates
-	* Fixed patching
+	* Fixed changing file size after a report of Orange Doge on Discord http://discord.com/users/969217714390437930
 	* Options:
 		* Added smfPacked, smfUnpacked, encryptedPacked, encryptedUnpacked, encodedPacked & encodedUnpacked
 		* Added rsbPacked, rsbPatched, rsbUnpacked, rsgPacked, rsgPatched & rsgUnpacked
@@ -361,15 +363,16 @@ Python3 scripts for modifying Plants VS Zombies 2
 ### Beta 1.1.6c (3 May 2022)
 1. OBBEdit:
 	* More templates
-	* Warning message for unknown headers
-### Beta 1.1.6d (22 May 2022)
+	* Warning message for unknown headers after a report of plant16gamer on Discord http://discord.com/users/894919287142232105
+### Beta 1.1.6d (23 May 2022)
 1. OBBEdit:
-	* Conversion following more closely the official data format
+	* Fixed unpacking badly formatted rgs files after a report of plant16gamer on Discord http://discord.com/users/894919287142232105
+	* Conversion following more closely the official data format after a report of Sarah Lydia on Discord http://discord.com/users/643026770823610381
 	* Fixed unpack everything (level 6 instead of 7)
 	* More control of paths for single file conversions
 	* Show preset unpack level & overrides
 	* Credited TwinKleS-C
-	* Link to Discord server
+	* Link to Discord server discord.gg/CVZdcGKVSw
 	* Moved custom command line input & output to custom library
 	* Options:
 		* RTON conversion more closely to PVZ2Tool
@@ -394,12 +397,12 @@ Python3 scripts for modifying Plants VS Zombies 2
 		* Templates
 2. README:
 	* Fixed wording choice
-### Beta 1.1.7c (10 June 2022)
-1. OBBEdit:
-	* Sped up JSON conversion slightly
+### ~~Beta 1.1.7c (10 June 2022)~~
+1. ~~OBBEdit~~:
+	* ~~Sped up JSON conversion slightly~~
 ### Beta 1.1.7d (11 June 2022)
 1. OBBEdit:
-	* Reverted faster JSON conversion.
+	* Reverted faster JSON conversion after a report of Icy Studio http://discord.com/users/969217714390437930
 	* Tweaked JSON conversion
 ### Beta 1.1.7e (18 June 2022)
 1. OBBEdit:
@@ -410,7 +413,7 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* Dump fail.txt to custom file when failed to edit
 	* Reorganized templates
 	* No case-sensite keys
-	* Added http:// to invite link
+	* Added http:// to invite link http://discord.gg/CVZdcGKVSw
 ### Beta 1.2.0 (23 June 2022)
 1. OBBEdit:
 	* Confirm relatives paths.
@@ -460,6 +463,18 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* Catch errors while getting a new update
 	* Fixed TypeError & ZeroDivisionError when processing empty tasks
 	* Fixed Progressbar not scrolling on Android
-### Beta 1.2.2 (15 August 2022)
+### Beta 1.2.2 (19 August 2022)
 1. OBBEDIT
-	* Halved RAM usage after a suggestion of Aarontal on YouTube http://www.youtube.com/channel/UC7RcYwQ9YQAHeqDoP_GFu3w
+	* Halved RAM usage after a report of º on YouTube http://www.youtube.com/channel/UCG84cfOS3RAC_PSPoc0FnNQ
+### Beta 1.2.2 (20 August 2022)
+1. OBBEDIT
+	* Less progressbars when not necessary
+	* Get update no longer creates extra files
+	* Fixed time rounding
+	* Added actions
+2. Savemaxer
+	* Get update no longer creates extra files
+	* Fixed time rounding
+	* Added actions
+3. CHANGELOG
+	* Creditted a bunch of people

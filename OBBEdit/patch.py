@@ -538,7 +538,8 @@ def file_to_folder(inp, out, patch, unpack_level, extensions, pathout, patchout)
 			error_message(e, " in " + inp, "Failed OBBPatch: ")
 		finish_sub_task()
 	merge_task()
-	finish_sub_task()
+	if conversions > 1:
+		finish_sub_task()
 def get_archives(inp, out, patch, unpack_level, extensions, pathout, patchout):
 # Recursive file convert function
 	if isdir(inp):
@@ -572,7 +573,8 @@ def conversion(inp, out, unpack_level, repack_level, extensions, pathout):
 			error_message(e, " in " + inp)
 		finish_sub_task()
 	merge_task()
-	finish_sub_task()
+	if conversions > 1:
+		finish_sub_task()
 def get_encoded(inp, out, unpack_level, repack_level, extensions, pathout):
 # Convert file
 	if isdir(inp):
@@ -607,12 +609,12 @@ try:
 	
 	logerror.check_version(3, 9, 0)
 	branches = {
-		"beta": "Beta 1.2.2 Halved RAM usage",
+		"beta": "Beta 1.2.2b tweaked some things",
 		"master": "Merge branch 'beta'"
 	}
 	release_tag = "1.2"
 	print("""\033[95m
-\033[1mOBBPatcher v1.2.2 (c) 2022 Nineteendo\033[22m
+\033[1mOBBPatcher v1.2.2b (c) 2022 Nineteendo\033[22m
 \033[1mCode based on:\033[22m Luigi Auriemma, Small Pea & 1Zulu
 \033[1mDocumentation:\033[22m Watto Studios, YingFengTingYu, TwinKleS-C & h3x4n1um
 \033[1mFollow PyVZ2 development:\033[22m \033[4mhttps://discord.gg/CVZdcGKVSw\033[24m
@@ -656,23 +658,23 @@ try:
 	encode_root_object = JSONDecoder().encode_root_object
 
 	blue_print("\nWorking directory: " + getcwd())
-	entries = 0
+	conversions = 0
 	if 8 >= options["encodedUnpackLevel"] > 7:
-		entries += 1
+		conversions += 1
 		encoded_input = path_input("ENCODED " + level_to_name[options["encodedUnpackLevel"]] + " Input file or directory", options["encodedUnpacked"])
 		if isfile(encoded_input):
 			encoded_output = path_input("ENCODED Output file", options["encodedPacked"])
 		else:
 			encoded_output = path_input("ENCODED Output directory", options["encodedPacked"])
 	if 7 >= options["encryptedUnpackLevel"] > 6:
-		entries += 1
+		conversions += 1
 		encrypted_input = path_input("ENCRYPTED " + level_to_name[options["encryptedUnpackLevel"]] + " Input file or directory", options["encryptedUnpacked"])
 		if isfile(encrypted_input):
 			encrypted_output = path_input("ENCRYPTED Output file", options["encryptedPacked"])
 		else:
 			encrypted_output = path_input("ENCRYPTED Output directory", options["encryptedPacked"])
 	if 8 >= options["rsgUnpackLevel"] > 4:
-		entries += 1
+		conversions += 1
 		rsg_input = path_input("RSG/RSB/SMF Input file or directory", options["rsgPacked"])
 		if isfile(rsg_input):
 			rsg_output = path_input("RSG/RSB/SMF Modded file", options["rsgPatched"])
@@ -681,7 +683,7 @@ try:
 		rsg_patch = path_input("RSG/RSB/SMF " + level_to_name[options["rsgUnpackLevel"]] + " Patch directory", options["rsgUnpacked"])
 	
 	if 4 >= options["rsbUnpackLevel"] > 3:
-		entries += 1
+		conversions += 1
 		rsb_input = path_input("RSB/SMF Input file or directory", options["rsbPacked"])
 		if isfile(rsb_input):
 			rsb_output = path_input("RSB/SMF Modded file", options["rsbPatched"])
@@ -690,7 +692,7 @@ try:
 		rsb_patch = path_input("RSB/SMF " + level_to_name[options["rsbUnpackLevel"]] + " Patch directory", options["rsbUnpacked"])
 	
 	if 3 >= options["smfUnpackLevel"] > 2:
-		entries += 1
+		conversions += 1
 		smf_input = path_input("SMF " + level_to_name[options["smfUnpackLevel"]] + " Input file or directory", options["smfUnpacked"])
 		if isfile(smf_input):
 			smf_output = path_input("SMF Output file", options["smfPacked"])
@@ -698,8 +700,11 @@ try:
 			smf_output = path_input("SMF Output directory", options["smfPacked"])
 
 	# Start file_to_folder
-	logerror.set_levels(5)
-	split_task(entries)
+	if conversions < 2:
+		logerror.set_levels(4)
+	else:
+		logerror.set_levels(5)
+		split_task(conversions)
 	if 8 >= options["encodedUnpackLevel"] > 7:
 		conversion(encoded_input, encoded_output, options["encodedUnpackLevel"], 7, ".json", dirname(encoded_output))
 	if 7 >= options["encryptedUnpackLevel"] > 6:

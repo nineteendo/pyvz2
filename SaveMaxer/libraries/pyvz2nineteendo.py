@@ -137,12 +137,10 @@ class LogError:
 			try:
 				if version_options["release"]:
 					with urlopen('https://api.github.com/repos/' + repository + '/releases') as response:
-						open("release", "wb").write(response.read())
-						version_options["outdated"] = release_tag != load(open("release", "rb"))[0]["tag_name"]
+						version_options["outdated"] = release_tag != load(response)[0]["tag_name"]
 				else:
 					with urlopen('https://api.github.com/repos/' + repository + '/branches/' + branch) as response:
-						open(branch, "wb").write(response.read())
-						version_options["outdated"] = branches[branch] != load(open(branch, "rb"))["commit"]["commit"]["message"]
+						version_options["outdated"] = branches[branch] != load(response)["commit"]["commit"]["message"]
 			except Exception as e:
 				self.error_message(e, "while getting update: ")
 		if version_options["outdated"]:
