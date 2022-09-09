@@ -8,7 +8,7 @@ from zipfile import ZipFile
 from zlib import decompress
 
 # 3th party libraries
-from libraries.pyvz2nineteendo import LogError, blue_print, path_input, list_levels
+from libraries.pyvz2nineteendo import ProgressBar, LogError, blue_print, path_input, list_levels
 from libraries.pyvz2rijndael import RijndaelCBC
 from libraries.pyvz2rton import RTONDecoder
 
@@ -327,7 +327,7 @@ def rsg_extract(RSG_NAME, file, pathout_data, out, unpack_level):
 						file_data = rijndael_cbc.decrypt(file_data[2:])
 
 					if NAME_CHECK[-5:] == ".rton" and 7 <= unpack_level and file_data[:4] != b"RTON":
-						warning_message("No RTON " + file.name + ":" + DECODED_NAME)
+						silent_warning("No RTON " + file.name + ":" + DECODED_NAME)
 					else:
 						file_path = osjoin(out, DECODED_NAME)
 						makedirs(dirname(file_path), exist_ok = True)
@@ -341,7 +341,7 @@ def rsg_extract(RSG_NAME, file, pathout_data, out, unpack_level):
 									file_data = parse_root_object(source)
 									open(file_path, "wb").write(file_data)
 								except Exception as e:
-									error_message(e, " in " + file.name + ": " + RSG_NAME + ":" + DECODED_NAME + " pos: " + repr(source.tell()))
+									silent_error(e, " in " + file.name + ": " + RSG_NAME + ":" + DECODED_NAME + " pos: " + repr(source.tell()))
 							else:
 								open(file_path, "wb").write(file_data)
 						else:
@@ -369,12 +369,12 @@ def rsg_extract(RSG_NAME, file, pathout_data, out, unpack_level):
 					# 		RGBBlock32x32(image_decoders[IMAGE_FORMAT], file_data, WIDHT, HEIGHT).save(file_path)
 					# 		print("wrote " + relpath(file_path, pathout)
 					# 	except Exception as e:
-					# 		error_message(type(e).__name__ + " in " + file.name + ": " + RSG_NAME + ":" + DECODED_NAME + ": " + str(e))
+					# 		silent_error(type(e).__name__ + " in " + file.name + ": " + RSG_NAME + ":" + DECODED_NAME + ": " + str(e))
 					open(file_path, "wb").write(file_data)
 				finish_sub_task()
 			merge_task()
 	except Exception as e:
-		error_message(e, " while extracting " + file.name)
+		silent_error(e, " while extracting " + file.name)
 
 #def rsb_extract(file, out, unpack_level, image_decoders, pathout):
 def rsb_extract(file, pathout_data, out, unpack_level):
@@ -516,7 +516,7 @@ def archive_extract(file, out, unpack_level, allow_copy):
 		elif allow_copy:
 			open(out, "wb").write(HEADER + file.read())
 	elif not COMPRESSED:
-		warning_message("UNKNOWN HEADER (" + HEADER.hex() + ") in " + file.name)
+		silent_warning("UNKNOWN HEADER (" + HEADER.hex() + ") in " + file.name)
 def file_decode(file, out, unpack_level, allow_copy):
 	HEADER = file.read(2)
 	ENCRYPTED = HEADER == b"\x10\0"
@@ -524,7 +524,7 @@ def file_decode(file, out, unpack_level, allow_copy):
 		if unpack_level > 6:
 			file_data = rijndael_cbc.decrypt(file.read())
 			if file_data[:4] != b"RTON":
-				warning_message("No RTON " + file.name)
+				silent_warning("No RTON " + file.name)
 			elif unpack_level > 7:
 				name = file.name
 				file = BytesIO(file_data)
@@ -544,7 +544,7 @@ def file_decode(file, out, unpack_level, allow_copy):
 		elif allow_copy:
 			open(out, "wb").write(HEADER + file.read())
 	elif file.name.lower()[-5:] in (".json", ".hash") and not ENCRYPTED:
-		warning_message("UNKNOWN RTON HEADER (" + HEADER.hex() + ") in " + file.name)
+		silent_warning("UNKNOWN RTON HEADER (" + HEADER.hex() + ") in " + file.name)
 def file_to_folder(inp, out, unpack_level, extensions, pathout):
 	entries = get_archives(inp, out, unpack_level, extensions, pathout)
 	split_task(len(entries))
@@ -575,7 +575,7 @@ def file_to_folder(inp, out, unpack_level, extensions, pathout):
 				with open(inp, "rb") as file:
 					archive_extract(file, out, unpack_level, False)
 		except Exception as e:
-			error_message(e, " in " + inp, "Failed OBBUnpack: ")
+			silent_error(e, " in " + inp, "Failed OBBUnpack: ")
 		finish_sub_task()
 	merge_task()
 	if conversions > 1:
@@ -608,7 +608,7 @@ def conversion(inp, out, unpack_level, extensions, noextensions, pathout):
 			file_decode(file, out, unpack_level, False)
 			file.close()
 		except Exception as e:
-			error_message(e, " in " + inp + " pos " + repr(file.tell()))
+			silent_error(e, " in " + inp + " pos " + repr(file.tell()))
 			file.close()
 		finish_sub_task()
 	merge_task()
@@ -641,20 +641,17 @@ def get_encoded(inp, out, unpack_level, extensions, noextensions, pathout):
 try:
 	logerror = LogError()
 	error_message = logerror.error_message
-	warning_message = logerror.warning_message
 	input_level = logerror.input_level
-	split_task = logerror.split_task
-	merge_task = logerror.merge_task
-	finish_sub_task = logerror.finish_sub_task
+	warning_message = logerror.warning_message
 
 	logerror.check_version(3, 9, 0)
 	branches = {
-		"beta": "Beta 1.2.2b tweaked some things",
+		"beta": "Beta 1.2.2c fixed patching, json encode & progressbar",
 		"master": "Merge branch 'beta'"
 	}
 	release_tag = "1.2"
 	print("""\033[95m
-\033[1mOBBUnpacker v1.2.2v (c) 2022 Nineteendo\033[22m
+\033[1mOBBUnpacker v1.2.2c (c) 2022 Nineteendo\033[22m
 \033[1mCode based on:\033[22m Luigi Auriemma, Small Pea & 1Zulu
 \033[1mDocumentation:\033[22m Watto Studios, YingFengTingYu, TwinKleS-C & h3x4n1um
 \033[1mFollow PyVZ2 development:\033[22m \033[4mhttps://discord.gg/CVZdcGKVSw\033[24m
@@ -709,8 +706,7 @@ try:
 	repairFiles = options["repairFiles"]
 	sortKeys = options["sortKeys"]
 	sortValues = options["sortValues"]
-	parse_root_object = RTONDecoder(comma, current_indent, doublePoint, ensureAscii, indent, repairFiles, sortKeys, sortValues, warning_message).parse_root_object
-	
+
 	blue_print("\nWorking directory: " + getcwd())
 	conversions = 0
 	if 2 >= options["zipUnpackLevel"] > 1:
@@ -752,10 +748,19 @@ try:
 
 	# Start file_to_folder
 	if conversions < 2:
-		logerror.set_levels(4)
+		progressbar = ProgressBar(levels = 4, fail = logerror.fail)
 	else:
-		logerror.set_levels(5)
-		split_task(conversions)
+		progressbar = ProgressBar(levels = 5, fail = logerror.fail)
+		progressbar.split_task(conversions)
+	
+	silent_error = progressbar.silent_error
+	silent_warning = progressbar.silent_warning
+	split_task = progressbar.split_task
+	merge_task = progressbar.merge_task
+	finish_sub_task = progressbar.finish_sub_task
+	
+	parse_root_object = RTONDecoder(comma, current_indent, doublePoint, ensureAscii, indent, repairFiles, sortKeys, sortValues, silent_warning).parse_root_object
+	
 	if 2 >= options["zipUnpackLevel"] > 1:
 		file_to_folder(zip_input, zip_output, options["zipUnpackLevel"], options["zipExtensions"], dirname(zip_output))
 	if 3 >= options["smfUnpackLevel"] > 2:
@@ -771,9 +776,7 @@ try:
 
 	logerror.finish_program()
 except Exception as e:
-	logerror.set_levels(0)
 	error_message(e)
 except BaseException as e:
-	logerror.set_levels(0)
 	warning_message(type(e).__name__ + " : " + str(e))
 logerror.close() # Close log

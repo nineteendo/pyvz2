@@ -8,7 +8,7 @@ from struct import pack, unpack
 from zlib import compress, decompress
 
 # 3th party libraries
-from libraries.pyvz2nineteendo import LogError, blue_print, path_input, list_levels
+from libraries.pyvz2nineteendo import ProgressBar, LogError, blue_print, path_input, list_levels
 from libraries.pyvz2rijndael import RijndaelCBC
 from libraries.pyvz2rton import JSONDecoder
 
@@ -280,7 +280,7 @@ def rsg_patch_data(RSG_NAME, file, pathout_data, patch, unpack_level):
 					except FileNotFoundError:
 						pass
 					except Exception as e:
-						error_message(e, " while patching " + file_name)
+						silent_error(e, " while patching " + file_name)
 				pathout_data[FILE_INFO - 8: FILE_INFO - 4] = pack("<I", FILE_OFFSET)
 				finish_sub_task()
 			FILE_OFFSET = FILE_OFFSET_NEW
@@ -302,7 +302,7 @@ def rsg_patch_data(RSG_NAME, file, pathout_data, patch, unpack_level):
 
 						FILE_SIZE = len(patch_data)
 						if FILE_SIZE == 0:
-							warning_message("No PTX: " + file_name)
+							silent_warning("No PTX: " + file_name)
 						else:
 							patch_data += extend_to_4096(FILE_SIZE)
 							image_data[FILE_OFFSET: FILE_OFFSET_NEW] = patch_data
@@ -312,7 +312,7 @@ def rsg_patch_data(RSG_NAME, file, pathout_data, patch, unpack_level):
 					except FileNotFoundError:
 						pass
 					except Exception as e:
-						error_message(e, " while patching " + file_name)
+						silent_error(e, " while patching " + file_name)
 				pathout_data[FILE_INFO - 28: FILE_INFO - 24] = pack("<I", FILE_OFFSET)
 				finish_sub_task()
 			FILE_OFFSET = FILE_OFFSET_NEW
@@ -462,7 +462,7 @@ def rsb_patch_data(file, pathout_data, patch, unpack_level):
 			except FileNotFoundError:
 				pass
 			except Exception as e:
-				error_message(e, " while patching " + RSG_NAME + ".rsg")
+				silent_error(e, " while patching " + RSG_NAME + ".rsg")
 		pathout_data[info_start + 128:info_start + 132] = pack("<I", RSG_OFFSET)
 		finish_sub_task()
 	merge_task()
@@ -505,9 +505,9 @@ def archive_patch(file, out, patch, unpack_level):
 			pathout_data = rsg_patch_data("data", file, pathout_data, patch, unpack_level)
 			open(out, "wb").write(pathout_data)
 		except Exception as e:
-			error_message(e, " while patching " + file.name)
+			silent_error(e, " while patching " + file.name)
 	elif not COMPRESSED:
-		warning_message("UNKNOWN HEADER (" + HEADER.hex() + ") in " + file.name)
+		silent_warning("UNKNOWN HEADER (" + HEADER.hex() + ") in " + file.name)
 def file_encode(file, out, unpack_level, repack_level):
 	HEADER = file.read(1)
 	if HEADER == b"{":
@@ -535,7 +535,7 @@ def file_to_folder(inp, out, patch, unpack_level, extensions, pathout, patchout)
 			with open(inp, "rb") as file:
 				archive_patch(file, out, patch, unpack_level)
 		except Exception as e:
-			error_message(e, " in " + inp, "Failed OBBPatch: ")
+			silent_error(e, " in " + inp, "Failed OBBPatch: ")
 		finish_sub_task()
 	merge_task()
 	if conversions > 1:
@@ -554,7 +554,7 @@ def get_archives(inp, out, patch, unpack_level, extensions, pathout, patchout):
 				if unpack_level < 4:
 					output_file += ".smf"
 				if entry.lower().endswith(extensions):
-					entries.append((input_file, output_file, patch_file))
+					entries.append((input_file, output_file, splitext(patch_file)[0]))
 			elif input_file != pathout and inp != patchout:
 				entries.extend(get_archives(input_file, output_file, patch_file, unpack_level, extensions, pathout, patchout))
 		return entries
@@ -570,7 +570,7 @@ def conversion(inp, out, unpack_level, repack_level, extensions, pathout):
 			with open(inp, "rb") as file:
 				file_encode(file, out, unpack_level, repack_level)
 		except Exception as e:
-			error_message(e, " in " + inp)
+			silent_error(e, " in " + inp)
 		finish_sub_task()
 	merge_task()
 	if conversions > 1:
@@ -593,6 +593,7 @@ def get_encoded(inp, out, unpack_level, repack_level, extensions, pathout):
 					entries.append((input_file, output_file))
 			elif input_file != pathout:
 				entries.extend(get_encoded(input_file, output_file, unpack_level, repack_level, extensions, pathout))
+		return entries
 	elif isfile(inp):
 		return [(inp, out)]
 	else:
@@ -601,20 +602,17 @@ def get_encoded(inp, out, unpack_level, repack_level, extensions, pathout):
 try:
 	logerror = LogError()
 	error_message = logerror.error_message
-	warning_message = logerror.warning_message
 	input_level = logerror.input_level
-	split_task = logerror.split_task
-	merge_task = logerror.merge_task
-	finish_sub_task = logerror.finish_sub_task
+	warning_message = logerror.warning_message
 	
 	logerror.check_version(3, 9, 0)
 	branches = {
-		"beta": "Beta 1.2.2b tweaked some things",
+		"beta": "Beta 1.2.2c fixed patching, json encode & progressbar",
 		"master": "Merge branch 'beta'"
 	}
 	release_tag = "1.2"
 	print("""\033[95m
-\033[1mOBBPatcher v1.2.2b (c) 2022 Nineteendo\033[22m
+\033[1mOBBPatcher v1.2.2c (c) 2022 Nineteendo\033[22m
 \033[1mCode based on:\033[22m Luigi Auriemma, Small Pea & 1Zulu
 \033[1mDocumentation:\033[22m Watto Studios, YingFengTingYu, TwinKleS-C & h3x4n1um
 \033[1mFollow PyVZ2 development:\033[22m \033[4mhttps://discord.gg/CVZdcGKVSw\033[24m
@@ -701,10 +699,17 @@ try:
 
 	# Start file_to_folder
 	if conversions < 2:
-		logerror.set_levels(4)
+		progressbar = ProgressBar(levels = 4, fail = logerror.fail)
 	else:
-		logerror.set_levels(5)
-		split_task(conversions)
+		progressbar = ProgressBar(levels = 5, fail = logerror.fail)
+		progressbar.split_task(conversions)
+	
+	silent_error = progressbar.silent_error
+	silent_warning = progressbar.silent_warning
+	split_task = progressbar.split_task
+	merge_task = progressbar.merge_task
+	finish_sub_task = progressbar.finish_sub_task
+	
 	if 8 >= options["encodedUnpackLevel"] > 7:
 		conversion(encoded_input, encoded_output, options["encodedUnpackLevel"], 7, ".json", dirname(encoded_output))
 	if 7 >= options["encryptedUnpackLevel"] > 6:
@@ -718,9 +723,7 @@ try:
 
 	logerror.finish_program()
 except Exception as e:
-	logerror.set_levels(0)
 	error_message(e)
 except BaseException as e:
-	logerror.set_levels(0)
 	warning_message(type(e).__name__ + " : " + str(e))
 logerror.close() # Close log

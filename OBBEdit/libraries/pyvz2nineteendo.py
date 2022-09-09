@@ -55,64 +55,16 @@ class LogError:
 			self.fail = StringIO()
 			self.fail.name = None
 			self.error_message(e)
-		self.levels = 0
 	
-	def set_levels(self, levels = 1):
-		self.level = -1
-		self.levels = levels
-		if levels:
-			self.width = get_terminal_size().columns - 23
-			self.entry = [0] * levels
-			self.ratio = [1] * levels
-			self.start = [datetime.now()] * levels
-			self.actions = 0
-			self.warnings = 0
-			self.errors = 0
-			print("\n" * levels, end = "\n\0337")
-			self.show()
-	def split_task(self, entries = 1):
-		self.level += 1
-		self.start[self.level] = datetime.now()
-		self.entry[self.level] = 0
-		self.ratio[self.level] = 1 / entries if entries else 1
-	def merge_task(self):
-		self.entry[self.level] = 0
-		self.level -= 1
-	def finish_sub_task(self):
-		self.actions += 1
-		self.entry[self.level] += 1
-		self.show()
 	def warning_message(self, string):
 		self.fail.write("\t" + string + "\n")
 		self.fail.flush()
-		if self.levels:
-			self.warnings += 1
-			self.show()
-		else:
-			print("\33[93m" + string + "\33[0m")
+		print("\33[93m" + string + "\33[0m")
 	def error_message(self, e, sub = "", string = ""):
 		string += type(e).__name__ + sub + ": " + str(e) + "\n" + format_exc()
 		self.fail.write(string + "\n")
 		self.fail.flush()
-		if self.levels:
-			self.errors += 1
-			self.show()
-		else:
-			print("\033[91m" + string + "\033[0m")
-	def show(self):
-		width = get_terminal_size().columns - 23
-		temp = 0
-		lines = []
-		now = datetime.now()
-		for level in range(self.levels - 1, -1, -1):
-			temp = self.ratio[level] * (temp + self.entry[level])
-			current = now - self.start[level] if temp else timedelta(0)
-			progress = int(width * temp)
-			lines.append(progress * "#" + (width - progress) * "." + " %03d" % (100 * temp) + "% " + duration(current) + " " + duration(current / temp - current if temp else current))
-		if width < self.width:
-			print(end = "\033c")
-		print("\0338" + "\033[A" * (self.levels + 1) + "\n".join(lines) + "\n%d actions %d warnings %d errors" % (self.actions, self.warnings, self.errors), end = "\n\0337")
-		self.width = width
+		print("\033[91m" + string + "\033[0m")
 	
 	def update_options(self, options, newoptions):
 		for key in options:
@@ -205,6 +157,57 @@ class LogError:
 	def close(self):
 	# Close fail file
 		self.fail.close()
+class ProgressBar:
+	def __init__(self, levels = 1, fail = StringIO()):
+		self.fail = fail
+		self.level = -1
+		self.levels = levels
+		self.width = get_terminal_size().columns - 23
+		self.entry = [0] * levels
+		self.ratio = [1] * levels
+		self.start = [datetime.now()] * levels
+		self.actions = 0
+		self.warnings = 0
+		self.errors = 0
+		print("\n" * levels)
+		self.show()
+	def split_task(self, entries = 1):
+		self.level += 1
+		self.start[self.level] = datetime.now()
+		self.entry[self.level] = 0
+		self.ratio[self.level] = 1 / entries if entries else 1
+	def merge_task(self):
+		self.entry[self.level] = 0
+		self.level -= 1
+	def finish_sub_task(self):
+		self.actions += 1
+		self.entry[self.level] += 1
+		self.show()
+	def silent_warning(self, string):
+		self.fail.write("\t" + string + "\n")
+		self.fail.flush()
+		self.warnings += 1
+		self.show()
+	def silent_error(self, e, sub = "", string = ""):
+		string += type(e).__name__ + sub + ": " + str(e) + "\n" + format_exc()
+		self.fail.write(string + "\n")
+		self.fail.flush()
+		self.errors += 1
+		self.show()
+	def show(self):
+		width = get_terminal_size().columns - 23
+		temp = 0
+		lines = []
+		now = datetime.now()
+		for level in range(self.levels - 1, -1, -1):
+			temp = self.ratio[level] * (temp + self.entry[level])
+			current = now - self.start[level] if temp else timedelta(0)
+			progress = int(width * temp)
+			lines.append(progress * "#" + (width - progress) * "." + " %03d" % (100 * temp) + "% " + duration(current) + " " + duration(current / temp - current if temp else current))
+		if width < self.width:
+			print(end = "\033c")
+		print("\033[A" * (self.levels + 1) + "\n".join(lines) + "\n%d actions %d warnings %d errors" % (self.actions, self.warnings, self.errors), end = "\n\0337")
+		self.width = width
 def blue_print(text):
 # Print in blue text
 	print("\033[94m"+ text + "\033[0m")

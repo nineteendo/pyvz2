@@ -1,6 +1,8 @@
-from io import BytesIO
 from struct import unpack, pack, error
 from json import dumps, load
+
+infinity = float('inf')
+negative_infinity = -infinity
 
 class RTONDecoder():
 	def __init__(self, comma = b",", currrent_indent = b"\r\n", doublePoint = b": ", ensureAscii = False, indent = b"    ", repairFiles = True, sortKeys = False, sortValues = False, warning_message = lambda x: None):
@@ -16,11 +18,11 @@ class RTONDecoder():
 
 	def parse_number(self, fp):
 		num = fp.read(1)[0]
-		result = num & 0x7f
+		result = num % 128
 		i = 128
 		while num > 127:
 			num = fp.read(1)[0]
-			result += i * (num & 0x7f)
+			result += num % 128 * i
 			i *= 128
 		return result
 	def parse_text(self, fp):
@@ -64,7 +66,15 @@ class RTONDecoder():
 		return repr(unpack("<i", fp.read(4))[0]).encode()
 	def parse_float32(self, fp, currrent_indent, cached_strings, cached_printable_strings):
 	# type 22
-		return repr(unpack("<f", fp.read(4))[0]).replace("inf", "Infinity").replace("nan", "NaN").encode()
+		float_value = unpack("<f", fp.read(4))[0]
+		if float_value != float_value:
+			return b'NaN'
+		elif float_value == infinity:
+			return b'Infinity'
+		elif float_value == negative_infinity:
+			return b'-Infinity'
+		else:
+			return repr(float_value).encode()
 	def parse_zero_point_zero(self, fp, currrent_indent, cached_strings, cached_printable_strings):
 	# type 23, 43
 		return b"0.0"
@@ -74,7 +84,7 @@ class RTONDecoder():
 	def parse_varint(self, fp, currrent_indent, cached_strings, cached_printable_strings):
 	# type 25, 29, 45 and 49
 		num = self.parse_number(fp)
-		if num % 2:
+		if num / 2: # Odd number
 			num = -num - 1
 		return repr(num // 2).encode()
 	def parse_uint32(self, fp, currrent_indent, cached_strings, cached_printable_strings):
@@ -85,7 +95,15 @@ class RTONDecoder():
 		return repr(unpack("<q", fp.read(8))[0]).encode()
 	def parse_float64(self, fp, currrent_indent, cached_strings, cached_printable_strings):
 	# type 42
-		return repr(unpack("<d", fp.read(8))[0]).replace("inf", "Infinity").replace("nan", "NaN").encode()
+		double_value = unpack("<d", fp.read(8))[0]
+		if double_value != double_value:
+			return b'NaN'
+		elif double_value == infinity:
+			return b'Infinity'
+		elif double_value == negative_infinity:
+			return b'-Infinity'
+		else:
+			return repr(double_value).encode()
 	def parse_uint64(self, fp, currrent_indent, cached_strings, cached_printable_strings):
 	# type 46
 		return repr(unpack("<Q", fp.read(8))[0]).encode()
@@ -269,21 +287,20 @@ class list2:
 		self.data = data
 
 class JSONDecoder():
-	def __init__(self):
-		self.Infinity = [float("Infinity"), float("-Infinity")] # Inf and -Inf values
-	
 	def encode_object_pairs(self, pairs):
 	# Object to list of tuples
 		return list2(pairs)
 	def encode_number(self, integ):
 	# Number with variable length
-		integ, i = divmod(integ, 128)
-		if (integ):
+		i = integ % 128
+		integ = integ // 128
+		if integ:
 			i += 128
 		string = pack("B", i)
 		while integ:
-			integ, i = divmod(integ, 128)
-			if (integ):
+			i = integ % 128
+			integ = integ // 128
+			if integ:
 				i += 128
 			string += pack("B", i)
 		return string
@@ -294,10 +311,7 @@ class JSONDecoder():
 
 	def encode_bool(self, boolean):
 	# type 00, 01
-		if boolean:
-			return b"\x01"
-		else:
-			return b"\x00"
+		return b"\x01" if boolean else b"\0"
 	def encode_int(self, integ):
 	# type 08, 0a, 10, 12, 20, 21, 25, 26, 29, 40, 45, 46, 49
 		if integ == 0:
@@ -326,7 +340,7 @@ class JSONDecoder():
 	# type 22, 42
 		if dec == 0:
 			return b"#"
-		elif dec != dec or dec in self.Infinity or -340282346638528859811704183484516925440 <= dec <= 340282346638528859811704183484516925440 and dec == unpack("<f", pack("<f", dec))[0]:
+		elif -340282346638528859811704183484516925440 <= dec <= 340282346638528859811704183484516925440 and dec == unpack("<f", pack("<f", dec))[0] or dec != dec or dec == infinity or dec == negative_infinity:
 			return b'"' + pack("<f", dec)
 		else:
 			return b"B" + pack("<d", dec)

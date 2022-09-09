@@ -4,7 +4,7 @@ from json import dump
 from struct import pack
 
 # 3th party libraries
-from libraries.pyvz2nineteendo import LogError
+from libraries.pyvz2nineteendo import ProgressBar, LogError
 from libraries.pyvz2rton import JSONDecoder
 
 options = {
@@ -276,29 +276,30 @@ def generate_save_file():
 # Start of the code
 try:
 	logerror = LogError()
-	application_path = logerror.application_path
 	error_message = logerror.error_message
-	warning_message = logerror.warning_message
 	input_level = logerror.input_level
-	split_task = logerror.split_task
-	merge_task = logerror.merge_task
-	finish_sub_task = logerror.finish_sub_task
+	warning_message = logerror.warning_message
+	application_path = logerror.application_path
 
 	logerror.check_version(3, 9, 0)
 	branches = {
-		"beta": "Beta 1.2.2b tweaked some things",
+		"beta": "Beta 1.2.2c fixed patching, json encode & progressbar",
 		"master": "Merge branch 'beta'"
 	}
 	release_tag = "1.2"
 	print("""\033[95m
-\033[1mSaveMaxer v1.2.2b (c) 2022 Nineteendo\033[22m
+\033[1mSaveMaxer v1.2.2c (c) 2022 Nineteendo\033[22m
 \033[1mFollow PyVZ2 development:\033[22m \033[4mhttps://discord.gg/CVZdcGKVSw\033[24m
 \033[0m""")
 	getupdate = logerror.get_update("Nineteendo/PVZ2tools", branches, release_tag)
 	options = logerror.load_template(options, 2)
 	encode_root_object = JSONDecoder().encode_root_object
 
-	logerror.set_levels(2)
+	progressbar = ProgressBar(levels = 2, fail = logerror.fail)
+	
+	split_task = progressbar.split_task
+	merge_task = progressbar.merge_task
+	finish_sub_task = progressbar.finish_sub_task
 	split_task(3)
 	json_data = generate_save_file()
 	finish_sub_task()
@@ -310,9 +311,7 @@ try:
 	
 	logerror.finish_program()
 except Exception as e:
-	logerror.set_levels(0)
 	error_message(e)
 except BaseException as e:
-	logerror.set_levels(0)
 	warning_message(type(e).__name__ + " : " + str(e))
 logerror.close() # Close log

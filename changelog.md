@@ -184,7 +184,7 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* Fixed short names
 ## Master 1.0.6 (2 Feb 2022)
 1. OBBEdit:
-	* Options: 
+	* Options:
 		* Enabled DEBUG MODE
 		* Removed dumpRsgp
 	* README:
@@ -204,7 +204,7 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* Fixed NaN & Infinity
 ## Master 1.0.6c (4 Feb 2022)
 1. OBBEdit:
-	* Options: 
+	* Options:
 		* Enabled DEBUG MODE
 2. RTON Converter:
 	* Increased performance
@@ -243,7 +243,7 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* Issues?
 ### Beta 1.1.0g (4 Mar 2022)
 1. OBBEdit:
-	* Disabled PTX decoding 
+	* Disabled PTX decoding
 	* Warning for BaseExceptions
 2. RTON-OFF:
 	* Faster conversion
@@ -314,7 +314,7 @@ Python3 scripts for modifying Plants VS Zombies 2
 ### Beta 1.1.4b (6 Apr 2022)
 1. OBBEdit:
 	* Removed rsgp unpacking
-	* Moved encryption to custom library
+	* Moved encryption to PyVZ2rijndael library
 	* Decoding all PTX files from PVZfree
 	* Unpacking from the data & image data sections after research on PVZFree
 	* Options:
@@ -324,7 +324,7 @@ Python3 scripts for modifying Plants VS Zombies 2
 ### Beta 1.1.5 (16 Apr 2022)
 1. OBBEdit:
 	* Added templates to make multiple custom settings easier.
-	* Moved RTON conversions to custom library
+	* Moved RTON conversions to PyVZ2rton library
 	* Writing rsb.tag.smf
 	* patching the data & image data sections after research on PVZFree
 	* README:
@@ -337,7 +337,6 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* Improved templates after a suggestion of suggesion of Sarah Lydia on Discord http://discord.com/users/643026770823610381
 	* Failed to support changing file size
 	* Fixed patching images after a report of Sarah Lydia on Discord http://discord.com/users/643026770823610381
-	* Fixed Encryption
 	* Options:
 		* Added overrideDataCompression & overrideEncryption & overrideImageDataCompression
 		* Added rsgExtensions & rsgUnpackLevel
@@ -346,8 +345,10 @@ Python3 scripts for modifying Plants VS Zombies 2
 		* Added overrideDataCompression & overrideEncryption & overrideImageDataCompression
 		* Added rsgExtensions & rsgUnpackLevel
 		* Fixed empty rows
-2. CHANGELOG
+2. CHANGELOG:
 	* Added changelog for PyVZ2 Development
+3. PyVZ2rijndael library
+	* Fixed Encryption
 ### Beta 1.1.6b (2 May 2022)
 1. OBBEdit:
 	* Improved templates
@@ -373,108 +374,127 @@ Python3 scripts for modifying Plants VS Zombies 2
 	* Show preset unpack level & overrides
 	* Credited TwinKleS-C
 	* Link to Discord server discord.gg/CVZdcGKVSw
-	* Moved custom command line input & output to custom library
+	* Moved custom command line input & output to PyVZ2nineteendo library
 	* Options:
 		* RTON conversion more closely to PVZ2Tool
 		* Override encryption for patching
 	* README:
 		* More accurate depiction of data format
 		* Credited TwinKleS-C
-2. CHANGELOG
+2. CHANGELOG:
 	* Updated changelog format
 ### Beta 1.1.6e (28 May 2022)
-1. OBBEdit:
+1. PyVZ2rton library:
 	* Sped up JSON conversion after a report of plant16gamer on Discord http://discord.com/users/894919287142232105
 ### Beta 1.1.7 (29 May 2022)
-1. OBBEdit:
+1. PyVZ2rton library:
 	* Sped up RTON conversion
 ### Beta 1.1.7b (9 June 2022)
 1. OBBEdit:
-	* Sped up RTON conversion
-	* Fixed self.Infinity as number
 	* README:
 		* Files & Foldes
 		* Templates
 2. README:
 	* Fixed wording choice
+3. PyVZ2rton library:
+	* Sped up RTON conversion
+	* Fixed self.Infinity as number
 ### ~~Beta 1.1.7c (10 June 2022)~~
-1. ~~OBBEdit~~:
+1. ~~PyVZ2rton library~~:
 	* ~~Sped up JSON conversion slightly~~
 ### Beta 1.1.7d (11 June 2022)
-1. OBBEdit:
+1. PyVZ2rton library:
 	* Reverted faster JSON conversion after a report of Icy Studio http://discord.com/users/969217714390437930
 	* Tweaked JSON conversion
 ### Beta 1.1.7e (18 June 2022)
 1. OBBEdit:
-	* Moved more code to custom library
+	* Moved more code to PyVZ2nineteendo library
+2. PyVZ2rton library:
+	* Support for custom warning messages
 ### Beta 1.1.7f (19 June 2022)
 1. OBBEdit:
+	* Reorganized templates
+	* Added http:// to invite link http://discord.gg/CVZdcGKVSw
+2. PyVZ2nineteendo library:
 	* Fixed version check
 	* Dump fail.txt to custom file when failed to edit
-	* Reorganized templates
 	* No case-sensite keys
-	* Added http:// to invite link http://discord.gg/CVZdcGKVSw
 ### Beta 1.2.0 (23 June 2022)
 1. OBBEdit:
-	* Confirm relatives paths.
 	* Added unused template with default encryption
 	* Fixed UnboundLocalError for RTONDecoding after a report of Earth2888 on Discord. http://discord.com/users/615425385231810560
 	* Fixed TypeError for SMFCompressing
 	* Fixed AttributeError for RSGUnpacking
 	* Fixed 1BSR & RTON HEADER info
 	* Finished "Unpacking"
+2. PyVZ2nineteendo library:
+	* Confirm relatives paths.
 # Release 1.3.0 (The future)
 ## Master 1.2.x (The future)
 ### Beta 1.2.0b (3 July 2022)
-1. OBBEdit
+1. OBBEdit:
 	* ZIP Support for unpacking
 	* Repack json to encrypted rtons
-	* Options
+	* Options:
 		* Added archiveExtensions, encodedExtensions, zipExtensions, zipPacked, zipUnpacked, zipUnpackLevel
-	* README
+	* README:
 		* Added archiveExtensions, encodedExtensions, zipExtensions, zipPacked, zipUnpacked, zipUnpackLevel
+2. PyVZ2nineteendo library:
+	~~*Slightly Faster makedirs()~~
 	* Fixed escaped brackets in path names.
 ### Beta 1.2.1 (17 July 2022)
-1. OBBEdit
+1. OBBEdit:
 	* Fixed patch.py
-2. SaveMaxer
+2. Savemaxer:
 	* Generate pp.dat
 ### Beta 1.2.1b (19 July 2022)
-1. OBBEdit
+1. OBBEdit:
 	* Version check after a suggestion of TheEarthIsGreenNBlue on Discord http://discord.com/users/615425385231810560
 	* Extra template
-2. SaveMaxer
+2. Savemaxer:
 	* Version check
 	* JSON Output
+3. PyVZ2nineteendo library:
+	* Version check after a suggestion of TheEarthIsGreenNBlue on Discord http://discord.com/users/615425385231810560
 ### Beta 1.2.1c (28 July 2022)
-1. OBBEDIT
+1. PyVZ2nineteendo library:
 	* Progress bar after a suggestion of TheEarthIsGreenNBlue on Discord http://discord.com/users/615425385231810560
+2. PyVZ2rton library:
 	* Work-around for more mods (SHUTTLE?) after a report of dekiel123 on GitHub http://github.com/Nineteendo/PVZ2tools/issues/17
-2. Savemaxer
-	* Progress bar after a suggestion of TheEarthIsGreenNBlue on Discord http://discord.com/users/615425385231810560
-3. CHANGELOG
+3. CHANGELOG:
 	* Added hyperlinks
-4. README
+4. README:
 	* Sources instead of people
 ### Beta 1.2.1d (15 August 2022)
-1. OBBEDIT
+1. OBBEdit:
 	* Include "global_save_data" files
 	* Remove extension "again" when unpacking archives
+2. PyVZ2nineteendo library:
 	* Catch errors while getting a new update
 	* Fixed TypeError & ZeroDivisionError when processing empty tasks
 	* Fixed Progressbar not scrolling on Android
 ### Beta 1.2.2 (19 August 2022)
-1. OBBEDIT
+1. OBBEdit:
 	* Halved RAM usage after a report of º on YouTube http://www.youtube.com/channel/UCG84cfOS3RAC_PSPoc0FnNQ
-### Beta 1.2.2 (20 August 2022)
-1. OBBEDIT
+### Beta 1.2.2b (20 August 2022)
+1. OBBEdit:
 	* Less progressbars when not necessary
+2. PyVZ2nineteendo library:
 	* Get update no longer creates extra files
 	* Fixed time rounding
 	* Added actions
-2. Savemaxer
-	* Get update no longer creates extra files
-	* Fixed time rounding
-	* Added actions
-3. CHANGELOG
+3. CHANGELOG:
 	* Creditted a bunch of people
+### Beta 1.2.2c (9 September 2022)
+1. OBBEdit:
+	* Fixed patching after a report of Im 12 on Discord http://discord.com/users/849953555946405928
+	* Fixed json parsing
+	* Extra template for unpacking everything but with decoded jsons
+3. PyVZ2nineteendo library:
+	* Fixed progressbar after a report of No🅱 on Discord http://discord.com/users/615425385231810560
+	* Code cleanup
+4. PyVZ2rton library:
+	* Slightly faster rton conversions
+5. CHANGELOG:
+	* Removed unnecessary spaces
+	* Tracking libraries separately
