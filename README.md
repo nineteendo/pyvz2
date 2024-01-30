@@ -1,25 +1,30 @@
 # Python Vs. Zombies 2 (PyVZ2)
-Python 3 scripts for modifying Plants Vs. Zombies 2.
 
-## Files:
-- LICENCE, this tool is licenced under GPL-3.0, read it for more information.
-- OBBEdit, a tool to unpack and patch PVZ2's resources
-- SaveMaxer: a tool to generate PVZ2 save files
-- README.md, this file
+## About
 
-## Credits to these sources for code:
-1. Luigi Auriemma for unpacking RSB/1BSR: https://aluigi.altervista.org/bms/1bsr_pgsr.bms
-2. Small Pea for the AES encryption: https://smallpeashared.lanzoul.com/iLqI3ze9qrg
-3. 1Zulu for the RTON conversion: https://drive.google.com/file/d/0B-SMAZsDM9ERTGwxVkpoN0U0LVE
+PyVZ2 is a console tool to modify PvZ2.
 
-## Credits to these sources for documentation:
-1. Watto Studios for documenting RSB/1BSR: http://www.watto.org/specs.html?specs=Archive_RSB_1BSR
-2. YingFengTingYu for documenting the RSB.SMF format: https://github.com/YingFengTingYu/PopStudio
-3. TwinKleS-C for documenting RSB/1BSR: https://github.com/TwinKleS-C/PvZTool/blob/main/src/pvztool.c
-4. H3x4n1um for the documentating the RTON format: https://github.com/h3x4n1um/RETON
+## Branch Information
 
-## MODDING SUPPORT
-https://discord.gg/CVZdcGKVSw
+This branch is for a complete rewrite of the project.
+None of the previous features have been implemented yet.
+Use the [main branch](https://github.com/nineteendo/pvz2tools) for now.
 
-## REPORT ISSUES ON GITHUB:
-https://github.com/Nineteendo/PVZ2tools
+## Status
+
+Work in progress. Initial implementation phase.
+
+## Future Plans
+
+- Interactive menus
+- Built-in file manager
+- Translations
+- Reimplement old functionality
+
+## Contact
+
+For questions or feedback, contact nineteendo19d0@gmail.com.
+
+## License
+
+This project is licensed under the GPL-3.0 license &mdash; see the [LICENSE.md](LICENSE.md) file for details.
