@@ -7,8 +7,7 @@ from typing import Generic
 from ._classes import VALUE, Representation
 from .keyboard import Event, RawInput, get_event
 
-__all__: list[str] = ['VALUE']
-__all__ += ['BaseInputEvent', 'InputEvent']
+__all__: list[str] = ['BaseInputEvent', 'InputEvent']
 __all__ += ['input_event']
 
 
@@ -16,21 +15,23 @@ class BaseInputEvent(Generic[VALUE], metaclass=ABCMeta):
     """Base class for input events."""
 
     def __init__(
-        self, title: object, *, representation: type[str] = Representation
+        self, prompt: object, *, representation: type[str] = Representation
     ) -> None:
         self.representation: type[str] = representation
-        self.title:          str = representation(title)
+        self.prompt:         str = representation(prompt)
 
     def display(self) -> None:
-        print(end=self.get_title(), flush=True)
+        """Display information."""
+        print(end=self.get_prompt(), flush=True)
 
-    def get_title(self) -> str:  # pylint: disable=missing-function-docstring
-        return self.title
+    def get_prompt(self) -> str:
+        """Get prompt for user."""
+        return self.prompt
 
     @RawInput()
     @abstractmethod
-    def get_value(self) -> VALUE:  # pylint: disable=missing-function-docstring
-        pass
+    def get_value(self) -> VALUE:
+        """Get value from user."""
 
 
 class InputEvent(BaseInputEvent[Event]):
@@ -48,7 +49,7 @@ class InputEvent(BaseInputEvent[Event]):
 
 
 def input_event(
-    title: object, *, representation: type[str] = Representation
+    prompt: object, *, representation: type[str] = Representation
 ) -> Event:
     """Read event from console input."""
-    return InputEvent(title, representation=representation).get_value()
+    return InputEvent(prompt, representation=representation).get_value()

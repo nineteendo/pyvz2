@@ -20,7 +20,11 @@ __all__: list[str] = [
     'META', 'SHIFT', 'SHIFT_ADD', 'SHIFT_ESC', 'SHIFT_ESC_ADD', 'SHIFT_META',
     'UNPRINTABLE'
 ]
-__all__ += ['CtrlCodes', 'Event', 'KeyReader', 'Mouse', 'RawInput']
+__all__ += [
+    'CSISequences', 'CtrlCodes', 'Event', 'Modifier', 'Mouse', 'RawInput',
+    'SS3Sequences'
+]
+__all__ += ['get_event']
 
 _ADD_MODIFIABLE:   Pattern = re.compile(r'\x1b?[ -\x7f]')
 _CSI_MODIFIABLE:   Pattern = re.compile(r'\x1b(O[P-S]|\[(\d+(;\d+)?)?[A-Z~])')
@@ -36,10 +40,12 @@ _PARAM_CHARS:      str = '0123456789;'
 _SHIFT_MODIFIABLE: Pattern = re.compile(r'\x1b?.')
 _TIMEOUT:          float = 0.01
 
-UNPRINTABLE: Pattern = re.compile(r'[\0-\x1f\x7f-\x9f]')
+UNPRINTABLE: Pattern = re.compile(r'[\x00-\x1f\x7f-\x9f]')
+
+Modifier = Callable[[str], 'Event']
 
 
-class Modifier:  # pylint: disable=too-few-public-methods
+class _Modifier:  # pylint: disable=too-few-public-methods
     """Class for modifiers."""
 
     def __init__(self, value: int) -> None:
@@ -71,28 +77,28 @@ class Modifier:  # pylint: disable=too-few-public-methods
         return Event(value)
 
 
-SHIFT:               Callable[[str], 'Event'] = Modifier(0x01)
-ALT:                 Callable[[str], 'Event'] = Modifier(0x02)
-ALT_SHIFT:           Callable[[str], 'Event'] = Modifier(0x03)
-CTRL:                Callable[[str], 'Event'] = Modifier(0x04)
-CTRL_SHIFT:          Callable[[str], 'Event'] = Modifier(0x05)
-CTRL_ALT:            Callable[[str], 'Event'] = Modifier(0x06)
-CTRL_ALT_SHIFT:      Callable[[str], 'Event'] = Modifier(0x07)
-META:                Callable[[str], 'Event'] = Modifier(0x08)
-SHIFT_META:          Callable[[str], 'Event'] = Modifier(0x09)
-ALT_META:            Callable[[str], 'Event'] = Modifier(0x0a)
-ALT_SHIFT_META:      Callable[[str], 'Event'] = Modifier(0x0b)
-CTRL_META:           Callable[[str], 'Event'] = Modifier(0x0c)
-CTRL_SHIFT_META:     Callable[[str], 'Event'] = Modifier(0x0d)
-CTRL_ALT_META:       Callable[[str], 'Event'] = Modifier(0x0e)
-CTRL_ALT_SHIFT_META: Callable[[str], 'Event'] = Modifier(0x0f)
-ADD:                 Callable[[str], 'Event'] = Modifier(0x10)  # a -> æ
-SHIFT_ADD:           Callable[[str], 'Event'] = Modifier(0x11)  # a -> Æ
-ESC:                 Callable[[str], 'Event'] = Modifier(0x20)  # a -> \x1ba
-SHIFT_ESC:           Callable[[str], 'Event'] = Modifier(0x21)  # a -> \x1bA
-CTRL_ESC:            Callable[[str], 'Event'] = Modifier(0x24)  # a -> \x1b\x01
-ESC_ADD:             Callable[[str], 'Event'] = Modifier(0x30)  # a -> \x1bæ
-SHIFT_ESC_ADD:       Callable[[str], 'Event'] = Modifier(0x31)  # a -> \x1bÆ
+SHIFT:               Modifier = _Modifier(0x01)
+ALT:                 Modifier = _Modifier(0x02)
+ALT_SHIFT:           Modifier = _Modifier(0x03)
+CTRL:                Modifier = _Modifier(0x04)
+CTRL_SHIFT:          Modifier = _Modifier(0x05)
+CTRL_ALT:            Modifier = _Modifier(0x06)
+CTRL_ALT_SHIFT:      Modifier = _Modifier(0x07)
+META:                Modifier = _Modifier(0x08)
+SHIFT_META:          Modifier = _Modifier(0x09)
+ALT_META:            Modifier = _Modifier(0x0a)
+ALT_SHIFT_META:      Modifier = _Modifier(0x0b)
+CTRL_META:           Modifier = _Modifier(0x0c)
+CTRL_SHIFT_META:     Modifier = _Modifier(0x0d)
+CTRL_ALT_META:       Modifier = _Modifier(0x0e)
+CTRL_ALT_SHIFT_META: Modifier = _Modifier(0x0f)
+ADD:                 Modifier = _Modifier(0x10)
+SHIFT_ADD:           Modifier = _Modifier(0x11)
+ESC:                 Modifier = _Modifier(0x20)
+SHIFT_ESC:           Modifier = _Modifier(0x21)
+CTRL_ESC:            Modifier = _Modifier(0x24)
+ESC_ADD:             Modifier = _Modifier(0x30)
+SHIFT_ESC_ADD:       Modifier = _Modifier(0x31)
 
 
 class CtrlCodes:  # pylint: disable=too-few-public-methods
@@ -245,20 +251,20 @@ class Mouse:  # pylint: disable=too-few-public-methods
     BUTTON_11:      int = 0x83
 
 
-class BaseRawInput(ContextDecorator, metaclass=ABCMeta):
+class _BaseRawInput(ContextDecorator, metaclass=ABCMeta):
     """Base class for raw input."""
     count: int = 0
 
     def __enter__(self) -> None:
-        BaseRawInput.count += 1
+        _BaseRawInput.count += 1
         self.enable()
 
     def __exit__(
         self, _1: Optional[type[BaseException]], _2: Optional[BaseException],
         _3: Optional[TracebackType]
     ) -> None:
-        BaseRawInput.count = max(0, BaseRawInput.count - 1)
-        if not BaseRawInput.count:
+        _BaseRawInput.count = max(0, _BaseRawInput.count - 1)
+        if not _BaseRawInput.count:
             self.disable()
 
     @classmethod
@@ -274,9 +280,10 @@ class BaseRawInput(ContextDecorator, metaclass=ABCMeta):
 
 if sys.platform == "win32":
     from ctypes import byref, c_ulong, windll
+    # noinspection PyCompatibility
     from msvcrt import get_osfhandle  # pylint: disable=import-error
 
-    class RawInput(BaseRawInput):
+    class RawInput(_BaseRawInput):
         """Class to enable & re-enable raw input."""
         old: c_ulong = c_ulong()
         windll.kernel32.GetConsoleMode(
@@ -310,7 +317,7 @@ elif sys.platform == 'darwin' or sys.platform == 'linux':
 
     _IFLAG: int = 0
 
-    class RawInput(BaseRawInput):
+    class RawInput(_BaseRawInput):
         """Class to enable & re-enable raw input."""
         old_value: list[Union[int, list[Union[bytes, int]]]] = tcgetattr(stdin)
 
@@ -331,7 +338,7 @@ elif sys.platform == 'darwin' or sys.platform == 'linux':
         def resume(cls, _1: int, _2: Optional[FrameType]):
             """Resume raw input."""
             signal.signal(SIGTSTP, cls.suspend)
-            if BaseRawInput.count:
+            if _BaseRawInput.count:
                 cls.enable()
 
         @classmethod
@@ -344,7 +351,7 @@ else:
     raise RuntimeError(f'Unsupported platform: {sys.platform!r}')
 
 
-class KeyReader:
+class _KeyReader:
     """Class to read keys from standard input."""
 
     byte:   Optional[bytes] = None
@@ -477,13 +484,13 @@ class Event(str):
         return True
 
 
-# pylint: disable=missing-function-docstring, too-many-return-statements
-def get_event() -> 'Event':
-    key: str = KeyReader.read_char()
+def get_event() -> 'Event':  # pylint: disable=too-many-return-statements
+    """Get event from console."""
+    key: str = _KeyReader.read_char()
     if key != CtrlCodes.ESCAPE:
         return Event(key)
 
-    char: Optional[str] = KeyReader.read_char(timeout=_TIMEOUT)
+    char: Optional[str] = _KeyReader.read_char(timeout=_TIMEOUT)
     if char is None:
         return Event(key)
 
@@ -491,7 +498,7 @@ def get_event() -> 'Event':
     if key not in [ESC(CtrlCodes.ESCAPE), ESC('O'), ESC('[')]:
         return Event(key)
 
-    char = KeyReader.read_char(raw=True, timeout=_TIMEOUT)
+    char = _KeyReader.read_char(raw=True, timeout=_TIMEOUT)
     if char is None:
         return Event(key)
 
@@ -500,27 +507,27 @@ def get_event() -> 'Event':
         if key not in [_ESC_SS3, _ESC_CSI]:
             return Event(key)
 
-        char = KeyReader.read_char(raw=True)
+        char = _KeyReader.read_char(raw=True)
 
     if key in [_ESC_SS3, SS3Sequences.SS3]:
         return Event(key + char)
 
     if key + char in (ESC(CSISequences.MOUSE_CLICK), CSISequences.MOUSE_CLICK):
-        return Event(key + char + KeyReader.read(2, raw=True))
+        return Event(key + char + _KeyReader.read(2, raw=True))
 
     if key + char in (ESC(CSISequences.MOUSE), CSISequences.MOUSE):
-        return Event(key + char + KeyReader.read(3, raw=True))
+        return Event(key + char + _KeyReader.read(3, raw=True))
 
     if key + char in (ESC(CSISequences.MOUSE_MOVE), CSISequences.MOUSE_MOVE):
-        return Event(key + char + KeyReader.read(6, raw=True))
+        return Event(key + char + _KeyReader.read(6, raw=True))
 
     if key + char in (ESC(CSISequences.SGR_MOUSE), CSISequences.SGR_MOUSE):
         key += char
-        char = KeyReader.read_char(raw=True)
+        char = _KeyReader.read_char(raw=True)
 
     while char in _PARAM_CHARS:
         key += char
-        char = KeyReader.read_char(raw=True)
+        char = _KeyReader.read_char(raw=True)
 
     key += char
     return Event(key)

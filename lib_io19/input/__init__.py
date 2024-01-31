@@ -4,11 +4,10 @@ import sys
 from atexit import register
 
 # Custom libraries
-from ._input_event import InputEvent, input_event
+from ._input_event import input_event
 from .keyboard import RawInput
 
-__all__: list[str] = ['InputEvent']
-__all__ += ['input_event']
+__all__: list[str] = ['input_event']
 
 register(RawInput.disable)
 # pylint: disable=consider-using-in

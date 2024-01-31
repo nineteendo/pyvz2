@@ -18,6 +18,7 @@ Work in progress. Initial implementation phase.
 
 - Interactive menus
 - Built-in file manager
+- Console arguments
 - Translations
 - Reimplement old functionality
 
