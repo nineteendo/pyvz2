@@ -11,7 +11,9 @@ __all__: list[str] = ['InputEvent']
 __all__ += ['input_event']
 
 register(RawInput.disable)
-if sys.platform in ['darwin', 'linux']:
+# pylint: disable=consider-using-in
+if sys.platform == 'darwin' or sys.platform == 'linux':
+    # pylint: disable=no-name-in-module
     from signal import SIGCONT, SIGTSTP, signal
 
     signal(SIGCONT, RawInput.resume)  # Enable raw input on resume
