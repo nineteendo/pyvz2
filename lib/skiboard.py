@@ -1,10 +1,10 @@
-"""19.io helper functions for keyboard input."""
+"""Skiboard module for keyboard input."""
 # Standard libraries
 import re
 import signal
 import sys
 from abc import ABCMeta, abstractmethod
-from collections.abc import Callable
+from atexit import register
 from contextlib import ContextDecorator
 from re import Pattern
 from signal import SIGINT, raise_signal
@@ -14,17 +14,15 @@ from types import FrameType, TracebackType
 from typing import Optional, Union, overload
 
 __all__: list[str] = [
-    'ADD', 'ALT', 'ALT_META', 'ALT_SHIFT', 'ALT_SHIFT_META', 'CTRL',
-    'CTRL_ALT', 'CTRL_ALT_META', 'CTRL_ALT_SHIFT', 'CTRL_ALT_SHIFT_META',
-    'CTRL_ESC', 'CTRL_META', 'CTRL_SHIFT', 'CTRL_SHIFT_META', 'ESC', 'ESC_ADD',
-    'META', 'SHIFT', 'SHIFT_ADD', 'SHIFT_ESC', 'SHIFT_ESC_ADD', 'SHIFT_META',
-    'UNPRINTABLE'
+    'CSISequences', 'CtrlCodes', 'Event', 'Mouse', 'RawInput', 'SS3Sequences'
 ]
 __all__ += [
-    'CSISequences', 'CtrlCodes', 'Event', 'Modifier', 'Mouse', 'RawInput',
-    'SS3Sequences'
+    'add', 'alt', 'alt_meta', 'alt_shift', 'alt_shift_meta', 'ctrl',
+    'ctrl_alt', 'ctrl_alt_meta', 'ctrl_alt_shift', 'ctrl_alt_shift_meta',
+    'ctrl_esc', 'ctrl_meta', 'ctrl_shift', 'ctrl_shift_meta', 'esc', 'esc_add',
+    'get_event', 'meta', 'shift', 'shift_add', 'shift_esc', 'shift_esc_add',
+    'shift_meta'
 ]
-__all__ += ['get_event']
 
 _ADD_MODIFIABLE:   Pattern = re.compile(r'\x1b?[ -\x7f]')
 _CSI_MODIFIABLE:   Pattern = re.compile(r'\x1b(O[P-S]|\[(\d+(;\d+)?)?[A-Z~])')
@@ -40,65 +38,59 @@ _PARAM_CHARS:      str = '0123456789;'
 _SHIFT_MODIFIABLE: Pattern = re.compile(r'\x1b?.')
 _TIMEOUT:          float = 0.01
 
-UNPRINTABLE: Pattern = re.compile(r'[\x00-\x1f\x7f-\x9f]')
 
-Modifier = Callable[[str], 'Event']
-
-
-class _Modifier:  # pylint: disable=too-few-public-methods
-    """Class for modifiers."""
-
-    def __init__(self, value: int) -> None:
-        self.value: int = value & 0x3f
-
-    def __call__(self, value: str) -> 'Event':
-        """Add modifier to value."""
-        if self.value & 0x01 and _SHIFT_MODIFIABLE.fullmatch(value):
+def _make_modifier(modifier: int):
+    """Make modifier function."""
+    def apply_modifier(value: str) -> 'Event':
+        """Apply modifier to value."""
+        if modifier & 0x01 and _SHIFT_MODIFIABLE.fullmatch(value):
             value = value.upper()
 
-        if self.value & 0x04 and _CTRL_MODIFIABLE.fullmatch(value):
+        if modifier & 0x04 and _CTRL_MODIFIABLE.fullmatch(value):
             value = value[:-1] + chr((ord(value[-1].upper()) - 0x40) % 0x80)
 
-        if self.value & 0x0f and _CSI_MODIFIABLE.fullmatch(value):
+        if modifier & 0x0f and _CSI_MODIFIABLE.fullmatch(value):
             value = value.replace(SS3Sequences.SS3, CSISequences.CSI)
             start, _1, end = value[:-1].partition('[')
             params: list[str] = end.split(';')
             param1: int = int(params[0]) if params[0] else 1
             param2: int = int(params[1]) if len(params) > 1 else 1
-            param2 = ((param2 - 1) | self.value & 0x0f) + 1
+            param2 = ((param2 - 1) | modifier & 0x0f) + 1
             value = f'{start}[{param1};{param2}{value[-1]}'
 
-        if self.value & 0x10 and _ADD_MODIFIABLE.fullmatch(value):
+        if modifier & 0x10 and _ADD_MODIFIABLE.fullmatch(value):
             value = value[:-1] + chr(ord(value[-1]) + 0x80)
 
-        if self.value & 0x20 and _ESC_MODIFIABLE.fullmatch(value):
+        if modifier & 0x20 and _ESC_MODIFIABLE.fullmatch(value):
             value = CtrlCodes.ESCAPE + value
 
         return Event(value)
 
+    return apply_modifier
 
-SHIFT:               Modifier = _Modifier(0x01)
-ALT:                 Modifier = _Modifier(0x02)
-ALT_SHIFT:           Modifier = _Modifier(0x03)
-CTRL:                Modifier = _Modifier(0x04)
-CTRL_SHIFT:          Modifier = _Modifier(0x05)
-CTRL_ALT:            Modifier = _Modifier(0x06)
-CTRL_ALT_SHIFT:      Modifier = _Modifier(0x07)
-META:                Modifier = _Modifier(0x08)
-SHIFT_META:          Modifier = _Modifier(0x09)
-ALT_META:            Modifier = _Modifier(0x0a)
-ALT_SHIFT_META:      Modifier = _Modifier(0x0b)
-CTRL_META:           Modifier = _Modifier(0x0c)
-CTRL_SHIFT_META:     Modifier = _Modifier(0x0d)
-CTRL_ALT_META:       Modifier = _Modifier(0x0e)
-CTRL_ALT_SHIFT_META: Modifier = _Modifier(0x0f)
-ADD:                 Modifier = _Modifier(0x10)
-SHIFT_ADD:           Modifier = _Modifier(0x11)
-ESC:                 Modifier = _Modifier(0x20)
-SHIFT_ESC:           Modifier = _Modifier(0x21)
-CTRL_ESC:            Modifier = _Modifier(0x24)
-ESC_ADD:             Modifier = _Modifier(0x30)
-SHIFT_ESC_ADD:       Modifier = _Modifier(0x31)
+
+shift = _make_modifier(0x01)
+alt = _make_modifier(0x02)
+alt_shift = _make_modifier(0x03)
+ctrl = _make_modifier(0x04)
+ctrl_shift = _make_modifier(0x05)
+ctrl_alt = _make_modifier(0x06)
+ctrl_alt_shift = _make_modifier(0x07)
+meta = _make_modifier(0x08)
+shift_meta = _make_modifier(0x09)
+alt_meta = _make_modifier(0x0a)
+alt_shift_meta = _make_modifier(0x0b)
+ctrl_meta = _make_modifier(0x0c)
+ctrl_shift_meta = _make_modifier(0x0d)
+ctrl_alt_meta = _make_modifier(0x0e)
+ctrl_alt_shift_meta = _make_modifier(0x0f)
+add = _make_modifier(0x10)
+shift_add = _make_modifier(0x11)
+esc = _make_modifier(0x20)
+shift_esc = _make_modifier(0x21)
+ctrl_esc = _make_modifier(0x24)
+esc_add = _make_modifier(0x30)
+shift_esc_add = _make_modifier(0x31)
 
 
 class CtrlCodes:  # pylint: disable=too-few-public-methods
@@ -256,8 +248,10 @@ class _BaseRawInput(ContextDecorator, metaclass=ABCMeta):
     count: int = 0
 
     def __enter__(self) -> None:
+        if not _BaseRawInput.count:
+            self.enable()
+
         _BaseRawInput.count += 1
-        self.enable()
 
     def __exit__(
         self, _1: Optional[type[BaseException]], _2: Optional[BaseException],
@@ -279,9 +273,17 @@ class _BaseRawInput(ContextDecorator, metaclass=ABCMeta):
 
 
 if sys.platform == "win32":
+    # Standard libraries
     from ctypes import byref, c_ulong, windll
     # noinspection PyCompatibility
     from msvcrt import get_osfhandle  # pylint: disable=import-error
+
+    _ENABLE_MOUSE_INPUT:            int = 0x0010
+    _ENABLE_INSERT_MODE:            int = 0x0020
+    _ENABLE_QUICK_EDIT_MODE:        int = 0x0040
+    _ENABLE_EXTENDED_FLAGS:         int = 0x0080
+    _ENABLE_AUTO_POSITION:          int = 0x0100
+    _ENABLE_VIRTUAL_TERMINAL_INPUT: int = 0x0200
 
     class RawInput(_BaseRawInput):
         """Class to enable & re-enable raw input."""
@@ -301,17 +303,16 @@ if sys.platform == "win32":
         def enable() -> None:
             windll.kernel32.SetConsoleMode(
                 get_osfhandle(stdin.fileno()),
-                0x0200 | 0x0100 | 0x0080 | 0x0040 | 0x0020 | 0x0010
-                # 0x0001 -> disabled, because 0x0002 is disabled
-                # 0x0002 -> disabled, to read character by character
-                # 0x0004 -> disabled, because 0x0002 is disabled
-                # 0x0200 -> enabled, to work with unix escape sequences
+                _ENABLE_VIRTUAL_TERMINAL_INPUT | _ENABLE_AUTO_POSITION |
+                _ENABLE_EXTENDED_FLAGS | _ENABLE_QUICK_EDIT_MODE |
+                _ENABLE_INSERT_MODE | _ENABLE_MOUSE_INPUT
             )
             print(end='\x1b[?1000h\x1b[?1006h', flush=True)
 # pylint: disable=consider-using-in
 elif sys.platform == 'darwin' or sys.platform == 'linux':
-    # pylint: disable=ungrouped-imports, import-error
-    from signal import SIG_DFL, SIGTSTP  # pylint: disable=no-name-in-module
+    # pylint: disable=no-name-in-module, import-error, ungrouped-imports
+    # Standard libraries
+    from signal import SIG_DFL, SIGCONT, SIGTSTP
     from termios import ICRNL, IXON, TCSANOW, tcgetattr, tcsetattr
     from tty import setcbreak
 
@@ -347,8 +348,13 @@ elif sys.platform == 'darwin' or sys.platform == 'linux':
             cls.disable()
             signal.signal(SIGTSTP, SIG_DFL)
             raise_signal(SIGTSTP)
+
+    signal.signal(SIGCONT, RawInput.resume)  # Enable raw input on resume
+    signal.signal(SIGTSTP, RawInput.suspend)  # Disable raw input on suspend
 else:
     raise RuntimeError(f'Unsupported platform: {sys.platform!r}')
+
+register(RawInput.disable)
 
 
 class _KeyReader:
@@ -462,11 +468,11 @@ class Event(str):
     def button(self) -> Optional[int]:
         """Mouse button."""
         if self.startswith(
-            (ESC(CSISequences.SGR_MOUSE), CSISequences.SGR_MOUSE)
+            (esc(CSISequences.SGR_MOUSE), CSISequences.SGR_MOUSE)
         ):
             return int(self[:-1].partition('<')[2].split(';')[0])
 
-        if self.startswith((ESC(CSISequences.MOUSE), CSISequences.MOUSE)):
+        if self.startswith((esc(CSISequences.MOUSE), CSISequences.MOUSE)):
             return ord(self[-3:-2]) - 32
 
         return None
@@ -474,11 +480,11 @@ class Event(str):
     def ispressed(self) -> bool:
         """Is key pressed."""
         if self.startswith(
-            (ESC(CSISequences.SGR_MOUSE), CSISequences.SGR_MOUSE)
+            (esc(CSISequences.SGR_MOUSE), CSISequences.SGR_MOUSE)
         ):
             return self.endswith('M')
 
-        if self.startswith((ESC(CSISequences.MOUSE), CSISequences.MOUSE)):
+        if self.startswith((esc(CSISequences.MOUSE), CSISequences.MOUSE)):
             return ord(self[-3:-2]) - 32 & 0x03 != Mouse.RELEASE
 
         return True
@@ -495,14 +501,14 @@ def get_event() -> 'Event':  # pylint: disable=too-many-return-statements
         return Event(key)
 
     key += char
-    if key not in [ESC(CtrlCodes.ESCAPE), ESC('O'), ESC('[')]:
+    if key not in [esc(CtrlCodes.ESCAPE), esc('O'), esc('[')]:
         return Event(key)
 
     char = _KeyReader.read_char(raw=True, timeout=_TIMEOUT)
     if char is None:
         return Event(key)
 
-    if key == ESC(CtrlCodes.ESCAPE):
+    if key == esc(CtrlCodes.ESCAPE):
         key += char
         if key not in [_ESC_SS3, _ESC_CSI]:
             return Event(key)
@@ -512,16 +518,16 @@ def get_event() -> 'Event':  # pylint: disable=too-many-return-statements
     if key in [_ESC_SS3, SS3Sequences.SS3]:
         return Event(key + char)
 
-    if key + char in (ESC(CSISequences.MOUSE_CLICK), CSISequences.MOUSE_CLICK):
+    if key + char in (esc(CSISequences.MOUSE_CLICK), CSISequences.MOUSE_CLICK):
         return Event(key + char + _KeyReader.read(2, raw=True))
 
-    if key + char in (ESC(CSISequences.MOUSE), CSISequences.MOUSE):
+    if key + char in (esc(CSISequences.MOUSE), CSISequences.MOUSE):
         return Event(key + char + _KeyReader.read(3, raw=True))
 
-    if key + char in (ESC(CSISequences.MOUSE_MOVE), CSISequences.MOUSE_MOVE):
+    if key + char in (esc(CSISequences.MOUSE_MOVE), CSISequences.MOUSE_MOVE):
         return Event(key + char + _KeyReader.read(6, raw=True))
 
-    if key + char in (ESC(CSISequences.SGR_MOUSE), CSISequences.SGR_MOUSE):
+    if key + char in (esc(CSISequences.SGR_MOUSE), CSISequences.SGR_MOUSE):
         key += char
         char = _KeyReader.read_char(raw=True)
 

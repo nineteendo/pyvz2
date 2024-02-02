@@ -4,8 +4,9 @@ from abc import ABCMeta, abstractmethod
 from typing import Generic
 
 # Custom libraries
+from ...colorized import ColoredOutput, bold, green
+from ...skiboard import Event, RawInput, get_event
 from ._classes import VALUE, Representation
-from .keyboard import Event, RawInput, get_event
 
 __all__: list[str] = ['BaseInputEvent', 'InputEvent']
 __all__ += ['input_event']
@@ -22,13 +23,14 @@ class BaseInputEvent(Generic[VALUE], metaclass=ABCMeta):
 
     def display(self) -> None:
         """Display information."""
-        print(end=self.get_prompt(), flush=True)
+        print(green('?'), bold(self.get_prompt()), end=' ', flush=True)
 
     def get_prompt(self) -> str:
         """Get prompt for user."""
         return self.prompt
 
     @RawInput()
+    @ColoredOutput()
     @abstractmethod
     def get_value(self) -> VALUE:
         """Get value from user."""
@@ -38,6 +40,7 @@ class InputEvent(BaseInputEvent[Event]):
     """Class for input events."""
 
     @RawInput()
+    @ColoredOutput()
     def get_value(self) -> Event:
         self.display()
         event: Event = get_event()

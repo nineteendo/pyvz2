@@ -1,16 +1,19 @@
 """19.io helper classes for console input."""
 # Standard libraries
+import re
 from datetime import date, datetime, time
 from enum import Enum
+from re import Pattern
 from types import FunctionType
 from typing import TypeVar
 
 # Custom libraries
 from ..real2float import format_real
-from .keyboard import UNPRINTABLE
 
 __all__: list[str] = ['VALUE']
 __all__ += ['Representation']
+
+_UNPRINTABLE: Pattern = re.compile(r'[\x00-\x1f\x7f-\x9f]')
 
 VALUE = TypeVar('VALUE')
 
@@ -36,4 +39,4 @@ class Representation(str):
             if isinstance(obj, data_type):
                 return function(obj)
 
-        return super().__new__(cls, UNPRINTABLE.sub(lambda _1: '?', str(obj)))
+        return super().__new__(cls, _UNPRINTABLE.sub(lambda _1: '?', str(obj)))
