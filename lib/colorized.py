@@ -6,16 +6,17 @@ from contextlib import ContextDecorator
 from types import TracebackType
 from typing import Optional
 
-__all__: list[str] = ['ColoredOutput']
+__all__: list[str] = ['ColoredOutput', 'NoCursor', 'RestoreCursor']
 __all__ += [
     'alt_font', 'black', 'blink', 'blue', 'bold', 'conceal', 'cyan', 'dim',
-    'double_underline', 'encircle', 'frame', 'green', 'grey', 'invert',
-    'italic', 'lt_blue', 'lt_cyan', 'lt_green', 'lt_grey', 'lt_magenta',
-    'lt_red', 'lt_yellow', 'magenta', 'on_black', 'on_blue', 'on_cyan',
-    'on_green', 'on_grey', 'on_lt_blue', 'on_lt_cyan', 'on_lt_green',
-    'on_lt_grey', 'on_lt_magenta', 'on_lt_red', 'on_lt_yellow', 'on_magenta',
-    'on_red', 'on_white', 'on_yellow', 'overline', 'rapid_blink', 'red',
-    'strikethrough', 'underline', 'white', 'yellow'
+    'double_underline', 'encircle', 'erase_in_display', 'erase_in_line',
+    'frame', 'green', 'grey', 'invert', 'italic', 'lt_blue', 'lt_cyan',
+    'lt_green', 'lt_grey', 'lt_magenta', 'lt_red', 'lt_yellow', 'magenta',
+    'on_black', 'on_blue', 'on_cyan', 'on_green', 'on_grey', 'on_lt_blue',
+    'on_lt_cyan', 'on_lt_green', 'on_lt_grey', 'on_lt_magenta', 'on_lt_red',
+    'on_lt_yellow', 'on_magenta', 'on_red', 'on_white', 'on_yellow',
+    'overline', 'rapid_blink', 'red', 'strikethrough', 'underline', 'white',
+    'yellow'
 ]
 
 
@@ -79,6 +80,16 @@ on_white = _make_formatter(107, 49)
 def dim(*values: object, sep: str = ' ') -> str:
     """Apply formatting to values."""
     return grey(_dim(*values, sep))  # Fall back to grey
+
+
+def erase_in_display(mode: int = 0) -> None:
+    """Erase text in display."""
+    print(end=f'\x1b[{mode}J')
+
+
+def erase_in_line(mode: int = 0) -> None:
+    """Erase text in line."""
+    print(end=f'\x1b[{mode}K')
 
 
 class _BaseColoredOutput(ContextDecorator):
@@ -148,3 +159,58 @@ else:
 
 
 register(ColoredOutput.disable)
+
+
+class NoCursor(ContextDecorator):
+    """Class to hide & show cursor."""
+    count: int = 0
+
+    def __enter__(self) -> None:
+        if not NoCursor.count:
+            self.hide()
+
+        NoCursor.count += 1
+
+    def __exit__(
+        self, _1: Optional[type[BaseException]], _2: Optional[BaseException],
+        _3: Optional[TracebackType]
+    ) -> None:
+        NoCursor.count = max(0, NoCursor.count - 1)
+        if not NoCursor.count:
+            self.show()
+
+    @staticmethod
+    def hide() -> None:
+        """Hide cursor."""
+        print(end='\x1b[?25l', flush=True)
+
+    @staticmethod
+    def show() -> None:
+        """Show cursor."""
+        print(end='\x1b[?25h', flush=True)
+
+
+register(NoCursor.show)
+
+
+class RestoreCursor(ContextDecorator):
+    """Class to save & restore cursor position."""
+
+    def __enter__(self) -> None:
+        self.save()
+
+    def __exit__(
+        self, _1: Optional[type[BaseException]], _2: Optional[BaseException],
+        _3: Optional[TracebackType]
+    ) -> None:
+        self.restore()
+
+    @staticmethod
+    def restore() -> None:
+        """Restore cursor position."""
+        print(end='\x1b8', flush=True)
+
+    @staticmethod
+    def save() -> None:
+        """Save cursor position."""
+        print(end='\x1b7', flush=True)

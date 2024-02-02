@@ -10,7 +10,7 @@ from re import Pattern
 from signal import SIGINT, raise_signal
 from sys import stdin
 from threading import Lock, Thread
-from types import FrameType, TracebackType
+from types import TracebackType
 from typing import Optional, Union, overload
 
 __all__: list[str] = [
@@ -287,16 +287,16 @@ if sys.platform == "win32":
 
     class RawInput(_BaseRawInput):
         """Class to enable & re-enable raw input."""
-        old: c_ulong = c_ulong()
+        _old: c_ulong = c_ulong()
         windll.kernel32.GetConsoleMode(
-            get_osfhandle(stdin.fileno()), byref(old)
+            get_osfhandle(stdin.fileno()), byref(_old)
         )
 
         @classmethod
         def disable(cls) -> None:
             print(end='\x1b[?1000l\x1b[?1006l', flush=True)
             windll.kernel32.SetConsoleMode(
-                get_osfhandle(stdin.fileno()), cls.old.value
+                get_osfhandle(stdin.fileno()), cls._old.value
             )
 
         @staticmethod
@@ -310,9 +310,8 @@ if sys.platform == "win32":
             print(end='\x1b[?1000h\x1b[?1006h', flush=True)
 # pylint: disable=consider-using-in
 elif sys.platform == 'darwin' or sys.platform == 'linux':
-    # pylint: disable=no-name-in-module, import-error, ungrouped-imports
+    # pylint: disable=import-error
     # Standard libraries
-    from signal import SIG_DFL, SIGCONT, SIGTSTP
     from termios import ICRNL, IXON, TCSANOW, tcgetattr, tcsetattr
     from tty import setcbreak
 
@@ -320,11 +319,13 @@ elif sys.platform == 'darwin' or sys.platform == 'linux':
 
     class RawInput(_BaseRawInput):
         """Class to enable & re-enable raw input."""
-        old_value: list[Union[int, list[Union[bytes, int]]]] = tcgetattr(stdin)
+        _old_value: list[Union[int, list[Union[bytes, int]]]] = tcgetattr(
+            stdin
+        )
 
         @classmethod
         def disable(cls) -> None:
-            tcsetattr(stdin, TCSANOW, cls.old_value)
+            tcsetattr(stdin, TCSANOW, cls._old_value)
             print(end='\x1b[?1000l\x1b[?1006l', flush=True)
 
         @staticmethod
@@ -334,23 +335,6 @@ elif sys.platform == 'darwin' or sys.platform == 'linux':
             mode[_IFLAG] &= ~(ICRNL | IXON)
             tcsetattr(stdin, TCSANOW, mode)
             setcbreak(stdin, TCSANOW)
-
-        @classmethod
-        def resume(cls, _1: int, _2: Optional[FrameType]):
-            """Resume raw input."""
-            signal.signal(SIGTSTP, cls.suspend)
-            if _BaseRawInput.count:
-                cls.enable()
-
-        @classmethod
-        def suspend(cls, _1: int, _2: Optional[FrameType]):
-            """Suspend raw input."""
-            cls.disable()
-            signal.signal(SIGTSTP, SIG_DFL)
-            raise_signal(SIGTSTP)
-
-    signal.signal(SIGCONT, RawInput.resume)  # Enable raw input on resume
-    signal.signal(SIGTSTP, RawInput.suspend)  # Disable raw input on suspend
 else:
     raise RuntimeError(f'Unsupported platform: {sys.platform!r}')
 
