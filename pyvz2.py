@@ -2,8 +2,8 @@
 """PyVZ2, a console utility to modify PVZ2."""
 # Custom libraries
 from lib.colorized import ColoredOutput
-from lib.io19.input import input_event
-from lib.skiboard import Event, RawInput
+from lib.io19.input import pause
+from lib.skiboard import RawInput
 
 __all__: list[str] = []
 
@@ -13,9 +13,7 @@ __all__: list[str] = []
 def main() -> None:
     """Start PyVZ2."""
     try:
-        while True:
-            event: Event = input_event('Press any key...')
-            print(repr(event), event.ispressed(), event.button)
+        pause()
     except KeyboardInterrupt:
         pass  # Hide KeyboardInterrupt
 
