@@ -15,10 +15,10 @@ if sys.platform == 'darwin' or sys.platform == 'linux':
     from .skiboard import RawInput
 
     def resume(_1: int, _2: Optional[FrameType]) -> None:
-        """Resume raw input and no cursor."""
+        """Resume raw input & no cursor."""
         signal.signal(SIGTSTP, suspend)
         if NoCursor.count:
-            NoCursor.hide()
+            NoCursor.enable()
 
         if RawInput.count:
             RawInput.enable()
@@ -26,8 +26,8 @@ if sys.platform == 'darwin' or sys.platform == 'linux':
     signal.signal(SIGCONT, resume)  # Enable on resume
 
     def suspend(_1: int, _2: Optional[FrameType]) -> None:
-        """Suspend raw input and no cursor."""
-        NoCursor.show()
+        """Suspend raw input & no cursor."""
+        NoCursor.disable()
         RawInput.disable()
         signal.signal(SIGTSTP, SIG_DFL)
         raise_signal(SIGTSTP)

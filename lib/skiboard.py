@@ -1,7 +1,17 @@
 """Skiboard module for keyboard input."""
+__all__: list[str] = [
+    # PascalCase
+    'CSISequences', 'CtrlCodes', 'Event', 'Mouse', 'RawInput', 'SS3Sequences',
+    # snake_case
+    'add', 'alt', 'alt_meta', 'alt_shift', 'alt_shift_meta', 'ctrl',
+    'ctrl_alt', 'ctrl_alt_meta', 'ctrl_alt_shift', 'ctrl_alt_shift_meta',
+    'ctrl_esc', 'ctrl_meta', 'ctrl_shift', 'ctrl_shift_meta', 'esc', 'esc_add',
+    'get_event', 'meta', 'shift', 'shift_add', 'shift_esc', 'shift_esc_add',
+    'shift_meta'
+]
+
 # Standard libraries
 import re
-import signal
 import sys
 from abc import ABCMeta, abstractmethod
 from atexit import register
@@ -11,25 +21,12 @@ from signal import SIGINT, raise_signal
 from sys import stdin
 from threading import Lock, Thread
 from types import TracebackType
-from typing import Optional, Union, overload
-
-__all__: list[str] = [
-    'CSISequences', 'CtrlCodes', 'Event', 'Mouse', 'RawInput', 'SS3Sequences'
-]
-__all__ += [
-    'add', 'alt', 'alt_meta', 'alt_shift', 'alt_shift_meta', 'ctrl',
-    'ctrl_alt', 'ctrl_alt_meta', 'ctrl_alt_shift', 'ctrl_alt_shift_meta',
-    'ctrl_esc', 'ctrl_meta', 'ctrl_shift', 'ctrl_shift_meta', 'esc', 'esc_add',
-    'get_event', 'meta', 'shift', 'shift_add', 'shift_esc', 'shift_esc_add',
-    'shift_meta'
-]
+from typing import Any, Optional, Self, overload
 
 _ADD_MODIFIABLE:   Pattern = re.compile(r'\x1b?[ -\x7f]')
 _CSI_MODIFIABLE:   Pattern = re.compile(r'\x1b(O[P-S]|\[(\d+(;\d+)?)?[A-Z~])')
 _CTRL_C:           bytes = b'\x03'
 _CTRL_MODIFIABLE:  Pattern = re.compile(r'\x1b?[?-_a-z]')
-_CTRL_Y:           bytes = b'\x19'
-_CTRL_Z:           bytes = b'\x1a'
 _EOF:              bytes = b''
 _ESC_CSI:          str = '\x1b\x1b['
 _ESC_MODIFIABLE:   Pattern = re.compile(r'.|\x1b[O\[].+')
@@ -50,6 +47,7 @@ def _make_modifier(modifier: int):
             value = value[:-1] + chr((ord(value[-1].upper()) - 0x40) % 0x80)
 
         if modifier & 0x0f and _CSI_MODIFIABLE.fullmatch(value):
+            # Deal with F1-F4
             value = value.replace(SS3Sequences.SS3, CSISequences.CSI)
             start, _1, end = value[:-1].partition('[')
             params: list[str] = end.split(';')
@@ -247,11 +245,12 @@ class _BaseRawInput(ContextDecorator, metaclass=ABCMeta):
     """Base class for raw input."""
     count: int = 0
 
-    def __enter__(self) -> None:
+    def __enter__(self) -> Self:
         if not _BaseRawInput.count:
             self.enable()
 
         _BaseRawInput.count += 1
+        return self
 
     def __exit__(
         self, _1: Optional[type[BaseException]], _2: Optional[BaseException],
@@ -266,9 +265,9 @@ class _BaseRawInput(ContextDecorator, metaclass=ABCMeta):
     def disable(cls) -> None:
         """Disable raw input."""
 
-    @staticmethod
+    @classmethod
     @abstractmethod
-    def enable() -> None:
+    def enable(cls) -> None:
         """Enable raw input."""
 
 
@@ -278,11 +277,9 @@ if sys.platform == "win32":
     # noinspection PyCompatibility
     from msvcrt import get_osfhandle  # pylint: disable=import-error
 
-    _ENABLE_MOUSE_INPUT:            int = 0x0010
-    _ENABLE_INSERT_MODE:            int = 0x0020
-    _ENABLE_QUICK_EDIT_MODE:        int = 0x0040
-    _ENABLE_EXTENDED_FLAGS:         int = 0x0080
-    _ENABLE_AUTO_POSITION:          int = 0x0100
+    _ENABLE_PROCESSED_INPUT:        int = 0x0001
+    _ENABLE_LINE_INPUT:             int = 0x0002
+    _ENABLE_ECHO_INPUT:             int = 0x0004
     _ENABLE_VIRTUAL_TERMINAL_INPUT: int = 0x0200
 
     class RawInput(_BaseRawInput):
@@ -299,41 +296,58 @@ if sys.platform == "win32":
                 get_osfhandle(stdin.fileno()), cls._old.value
             )
 
-        @staticmethod
-        def enable() -> None:
+        @classmethod
+        def enable(cls) -> None:
+            value: int = cls._old.value
+            # HACK: Disable processed input, Windows has one key delay
+            # Disable line input and echo input
+            value &= ~(
+                _ENABLE_PROCESSED_INPUT | _ENABLE_LINE_INPUT |
+                _ENABLE_ECHO_INPUT
+            )
+            value |= _ENABLE_VIRTUAL_TERMINAL_INPUT
             windll.kernel32.SetConsoleMode(
-                get_osfhandle(stdin.fileno()),
-                _ENABLE_VIRTUAL_TERMINAL_INPUT | _ENABLE_AUTO_POSITION |
-                _ENABLE_EXTENDED_FLAGS | _ENABLE_QUICK_EDIT_MODE |
-                _ENABLE_INSERT_MODE | _ENABLE_MOUSE_INPUT
+                get_osfhandle(stdin.fileno()), value
             )
             print(end='\x1b[?1000h\x1b[?1006h', flush=True)
 # pylint: disable=consider-using-in
 elif sys.platform == 'darwin' or sys.platform == 'linux':
     # pylint: disable=import-error
     # Standard libraries
-    from termios import ICRNL, IXON, TCSANOW, tcgetattr, tcsetattr
+    from termios import (
+        ICRNL, INLCR, ISTRIP, IXON, ONLCR, OPOST, TCSANOW, tcgetattr, tcsetattr
+    )
     from tty import setcbreak
 
     _IFLAG: int = 0
+    _OFLAG: int = 1
 
     class RawInput(_BaseRawInput):
-        """Class to enable & re-enable raw input."""
-        _old_value: list[Union[int, list[Union[bytes, int]]]] = tcgetattr(
-            stdin
-        )
+        """Class to enable & disable raw input."""
+        if not stdin.isatty():
+            raise RuntimeError("stdin doesn't refer to a terminal")
+
+        _old_value: list[Any] = tcgetattr(stdin)
 
         @classmethod
         def disable(cls) -> None:
             tcsetattr(stdin, TCSANOW, cls._old_value)
             print(end='\x1b[?1000l\x1b[?1006l', flush=True)
 
-        @staticmethod
-        def enable() -> None:
+        @classmethod
+        def enable(cls) -> None:
             print(end='\x1b[?1000h\x1b[?1006h', flush=True)
-            mode: list = tcgetattr(stdin)
-            mode[_IFLAG] &= ~(ICRNL | IXON)
+            mode: list[Any] = tcgetattr(stdin)
+            # Disable stripping of input to seven bits
+            # Disable converting of '\r' & '\n' on input
+            # Disable start/stop control on output
+            mode[_IFLAG] &= ~(ISTRIP | INLCR | ICRNL | IXON)
+
+            # Convert '\n' on output to '\r\n'
+            mode[_OFLAG] |= OPOST | ONLCR
             tcsetattr(stdin, TCSANOW, mode)
+
+            # Disable line buffering & erase/kill character-processing
             setcbreak(stdin, TCSANOW)
 else:
     raise RuntimeError(f'Unsupported platform: {sys.platform!r}')
@@ -374,18 +388,16 @@ class _KeyReader:
         cls, *, raw: bool = False, timeout: Optional[float] = None
     ) -> Optional[str]:
         """Read character from standard input."""
-        # NOTE - We need to read bytes because of bug on Windows
         byte: Optional[bytes] = cls.read_byte(timeout=timeout)
         if byte is None:
             return byte
 
-        if byte == _CTRL_C:
-            # NOTE - Parity, KeyboardInterrupt terminates Python on macOS
-            raise_signal(SIGINT)
+        if byte == _EOF:
+            raise EOFError()
 
-        if byte in [_CTRL_Y, _CTRL_Z, _EOF]:
-            # NOTE - Parity, Ctrl-Y & Ctrl-Z suspends Python on macOS
-            raise_signal(getattr(signal, 'SIGTSTP', SIGINT))
+        if byte == _CTRL_C:
+            # HACK: Automatic handling of Ctrl+C has been disabled on Windows
+            raise_signal(SIGINT)
 
         if raw:
             return byte.decode('latin_1')
@@ -402,7 +414,7 @@ class _KeyReader:
             byte += cls.read_byte()
 
         if byte_ord & 0xF8 == 0xF8:  # 11111xxx
-            raise RuntimeError(f'Read invalid character: {byte!r}')
+            raise RuntimeError(f'Read non-utf8 character: {byte!r}')
 
         return byte.decode()
 
@@ -422,7 +434,7 @@ class _KeyReader:
     ]:
         """Read byte from standard input."""
         while True:
-            if cls.thread is not None and cls.thread.is_alive():
+            if cls.thread and cls.thread.is_alive():
                 cls.thread.join(timeout)
             elif timeout is None:
                 while cls.byte is None:
@@ -461,7 +473,8 @@ class Event(str):
 
         return None
 
-    def ispressed(self) -> bool:
+    @property
+    def pressed(self) -> bool:
         """Is key pressed."""
         if self.startswith(
             (esc(CSISequences.SGR_MOUSE), CSISequences.SGR_MOUSE)
@@ -474,14 +487,14 @@ class Event(str):
         return True
 
 
-def get_event() -> 'Event':  # pylint: disable=too-many-return-statements
+def get_event() -> 'Event':
     """Get event from console."""
     key: str = _KeyReader.read_char()
     if key != CtrlCodes.ESCAPE:
         return Event(key)
 
     char: Optional[str] = _KeyReader.read_char(timeout=_TIMEOUT)
-    if char is None:
+    if not char:
         return Event(key)
 
     key += char
@@ -489,7 +502,7 @@ def get_event() -> 'Event':  # pylint: disable=too-many-return-statements
         return Event(key)
 
     char = _KeyReader.read_char(raw=True, timeout=_TIMEOUT)
-    if char is None:
+    if not char:
         return Event(key)
 
     if key == esc(CtrlCodes.ESCAPE):
@@ -499,25 +512,23 @@ def get_event() -> 'Event':  # pylint: disable=too-many-return-statements
 
         char = _KeyReader.read_char(raw=True)
 
-    if key in [_ESC_SS3, SS3Sequences.SS3]:
-        return Event(key + char)
-
-    if key + char in (esc(CSISequences.MOUSE_CLICK), CSISequences.MOUSE_CLICK):
-        return Event(key + char + _KeyReader.read(2, raw=True))
-
-    if key + char in (esc(CSISequences.MOUSE), CSISequences.MOUSE):
-        return Event(key + char + _KeyReader.read(3, raw=True))
-
-    if key + char in (esc(CSISequences.MOUSE_MOVE), CSISequences.MOUSE_MOVE):
-        return Event(key + char + _KeyReader.read(6, raw=True))
-
     if key + char in (esc(CSISequences.SGR_MOUSE), CSISequences.SGR_MOUSE):
         key += char
         char = _KeyReader.read_char(raw=True)
 
-    while char in _PARAM_CHARS:
-        key += char
-        char = _KeyReader.read_char(raw=True)
+    if key not in [_ESC_SS3, SS3Sequences.SS3]:
+        while char in _PARAM_CHARS:
+            key += char
+            char = _KeyReader.read_char(raw=True)
 
     key += char
+    if key in (esc(CSISequences.MOUSE_CLICK), CSISequences.MOUSE_CLICK):
+        key += _KeyReader.read(2, raw=True)
+
+    if key in (esc(CSISequences.MOUSE), CSISequences.MOUSE):
+        key += _KeyReader.read(3, raw=True)
+
+    if key in (esc(CSISequences.MOUSE_MOVE), CSISequences.MOUSE_MOVE):
+        key += _KeyReader.read(6, raw=True)
+
     return Event(key)
