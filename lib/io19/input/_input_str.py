@@ -20,7 +20,7 @@ from lib.io19.real2float import format_real
 
 # Custom libraries
 from ...colorized import (
-    ColoredOutput, NoCursor, beep, cyan, grey, invert, italic, raw_print,
+    ColoredOutput, NoCursor, beep, cyan, grey, invert, raw_print,
     set_cursor_position
 )
 from ...skiboard import (
@@ -290,7 +290,7 @@ class BaseInputStr(BaseInputHandler[str]):
                 msg = '...' + msg[offset+3:]
 
             msg += ' '
-            raw_print('', grey(italic(invert(msg[:1]) + msg[1:])), end='\n')
+            raw_print('', grey(invert(msg[:1]) + msg[1:]), end='\n')
         else:
             self.handle_scroll()
             msg = msg[self.text_scroll:self.text_scroll+len(msg) - offset]
