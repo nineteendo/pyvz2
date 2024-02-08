@@ -10,14 +10,16 @@ __all__: list[str] = [
     'lt_red', 'lt_yellow', 'magenta', 'on_black', 'on_blue', 'on_cyan',
     'on_green', 'on_grey', 'on_lt_blue', 'on_lt_cyan', 'on_lt_green',
     'on_lt_grey', 'on_lt_magenta', 'on_lt_red', 'on_lt_yellow', 'on_magenta',
-    'on_red', 'on_white', 'on_yellow', 'overline', 'rapid_blink', 'red',
-    'set_cursor_position', 'strikethrough', 'underline', 'white', 'yellow'
+    'on_red', 'on_white', 'on_yellow', 'overline', 'rapid_blink', 'raw_print',
+    'red', 'set_cursor_position', 'strikethrough', 'underline', 'white',
+    'yellow'
 ]
 
 # Standard libraries
 import sys
 from atexit import register
 from contextlib import ContextDecorator
+from sys import stdout
 from types import TracebackType
 from typing import Optional, Self
 
@@ -87,22 +89,31 @@ def beep() -> None:
 def cursor_up(cells: int = 1) -> None:
     """Move cursor up."""
     if cells:
-        print(end=f'\x1b[{cells}A')
+        raw_print(f'\x1b[{cells}A')
 
 
 def erase_in_display(mode: int = 0) -> None:
     """Erase text in display."""
-    print(end=f'\x1b[{mode}J')
+    raw_print(f'\x1b[{mode}J')
 
 
 def erase_in_line(mode: int = 0) -> None:
     """Erase text in line."""
-    print(end=f'\x1b[{mode}K')
+    raw_print(f'\x1b[{mode}K')
+
+
+def raw_print(
+    *values: object, sep: str = ' ', end: str = '', flush: bool = False
+) -> None:
+    """Prints to stdout without automatic flusing."""
+    stdout.buffer.write((sep.join(map(str, values)) + end).encode())
+    if flush:
+        stdout.buffer.flush()
 
 
 def set_cursor_position(row: int = 1, col: int = 1) -> None:
     """Set cursor position."""
-    print(end=f'\x1b[{row};{col}H')
+    raw_print(f'\x1b[{row};{col}H')
 
 
 class _BaseColoredOutput(ContextDecorator):
@@ -139,7 +150,6 @@ if sys.platform == "win32":
     from ctypes import byref, c_ulong, windll
     # noinspection PyCompatibility
     from msvcrt import get_osfhandle  # pylint: disable=import-error
-    from sys import stdout
 
     _ENABLE_PROCESSED_OUTPUT:            int = 0x0001
     _ENABLE_WRAP_AT_EOL_OUTPUT:          int = 0x0002

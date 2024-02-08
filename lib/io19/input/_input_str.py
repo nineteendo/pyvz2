@@ -20,7 +20,7 @@ from lib.io19.real2float import format_real
 
 # Custom libraries
 from ...colorized import (
-    ColoredOutput, NoCursor, beep, cyan, grey, invert, italic,
+    ColoredOutput, NoCursor, beep, cyan, grey, invert, italic, raw_print,
     set_cursor_position
 )
 from ...skiboard import (
@@ -122,7 +122,7 @@ class BaseInputStr(BaseInputHandler[str]):
                 if self.get_max_chars():
                     self.print_msg(msg)
 
-                stdout.flush()
+                stdout.buffer.flush()
 
             if self.ready_event.wait(0.1):
                 break
@@ -163,7 +163,7 @@ class BaseInputStr(BaseInputHandler[str]):
             msg: str = self.representation(self.value)
             self.print_prompt(f' {msg} ', short=True)
             self.print_msg(msg, short=True)
-            print()
+            raw_print('\n', flush=True)
 
         return self.value
 
@@ -281,7 +281,7 @@ class BaseInputStr(BaseInputHandler[str]):
             if offset:
                 msg = '...' + msg[offset+3:]
 
-            print('', cyan(msg), end=' ')
+            raw_print('', cyan(msg), end=' ')
             self.cursor.wrote(f' {msg} ')
             return
 
@@ -290,7 +290,7 @@ class BaseInputStr(BaseInputHandler[str]):
                 msg = '...' + msg[offset+3:]
 
             msg += ' '
-            print('', grey(italic(invert(msg[:1]) + msg[1:])))
+            raw_print('', grey(italic(invert(msg[:1]) + msg[1:])), end='\n')
         else:
             self.handle_scroll()
             msg = msg[self.text_scroll:self.text_scroll+len(msg) - offset]
@@ -302,7 +302,7 @@ class BaseInputStr(BaseInputHandler[str]):
 
             before: str = msg[:self.text_position]
             after:  str = msg[self.text_position:] + ' '
-            print('', before + invert(after[:1]) + after[1:])
+            raw_print('', before + invert(after[:1]) + after[1:], end='\n')
 
         self.cursor.wrote(f' {msg} ')
         self.cursor.moved_next_line()

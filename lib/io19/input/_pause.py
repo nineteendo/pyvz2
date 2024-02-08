@@ -18,8 +18,8 @@ from typing import Generic, Optional
 
 # Custom libraries
 from ...colorized import (
-    ColoredOutput, NoCursor, bold, cursor_up, erase_in_display, green, red,
-    set_cursor_position
+    ColoredOutput, NoCursor, bold, cursor_up, erase_in_display, green,
+    raw_print, red, set_cursor_position
 )
 from ...skiboard import Event, RawInput, get_event
 from ._classes import VALUE, Cursor, Representation
@@ -46,7 +46,7 @@ class BaseInputHandler(Generic[VALUE], metaclass=ABCMeta):
         if offset:
             err = '...' + err[offset+3:]
 
-        print(red('>>'), bold(err), end='')
+        raw_print(red('>>'), bold(err))
         self.cursor.wrote(f'? {err}')
 
     def print_prompt(self, msg: str = '', *, short: bool = False) -> None:
@@ -65,7 +65,7 @@ class BaseInputHandler(Generic[VALUE], metaclass=ABCMeta):
         if offset:
             prompt = '...' + prompt[offset+3:]
 
-        print(green('?'), bold(prompt), end='')
+        raw_print(green('?'), bold(prompt))
         self.cursor.wrote(f'? {prompt}')
 
     def get_prompt(self) -> str:
@@ -90,7 +90,7 @@ class BaseInputHandler(Generic[VALUE], metaclass=ABCMeta):
             set_cursor_position()
         else:
             cursor_up(self.cursor.row)
-            print(end='\r')
+            raw_print('\r')
 
         self.cursor = Cursor(new_terminal_size.columns)
         erase_in_display()
@@ -105,7 +105,7 @@ class Pause(BaseInputHandler[None]):
     @NoCursor()
     def get_value(self) -> None:
         self.print_prompt(short=True)
-        stdout.flush()
+        stdout.buffer.flush()
         event: Event = get_event()
         while not event.pressed:
             event = get_event()
