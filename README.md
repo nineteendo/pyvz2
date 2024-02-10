@@ -2,7 +2,7 @@
 
 ## About
 
-PyVZ2 is a console tool to modify PvZ2.
+PyVZ2 is a command line utility to modify PvZ2.
 
 ## Branch Information
 
@@ -18,7 +18,7 @@ Work in progress. Initial implementation phase.
 
 - Interactive menus
 - Built-in file manager
-- Console arguments
+- Command line arguments
 - Translations
 - Reimplement old functionality
 

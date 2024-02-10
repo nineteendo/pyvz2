@@ -1,34 +1,81 @@
-"""Colorized module for formatting text."""
-__all__: list[str] = [
-    # PascalCase
-    'ColoredOutput', 'NoCursor',
-    # snake_case
-    'alt_font', 'beep', 'black', 'blink', 'blue', 'bold', 'conceal',
-    'cursor_up', 'cyan', 'dim', 'double_underline', 'encircle',
-    'erase_in_display', 'erase_in_line', 'frame', 'green', 'grey', 'invert',
-    'italic', 'lt_blue', 'lt_cyan', 'lt_green', 'lt_grey', 'lt_magenta',
-    'lt_red', 'lt_yellow', 'magenta', 'on_black', 'on_blue', 'on_cyan',
-    'on_green', 'on_grey', 'on_lt_blue', 'on_lt_cyan', 'on_lt_green',
-    'on_lt_grey', 'on_lt_magenta', 'on_lt_red', 'on_lt_yellow', 'on_magenta',
-    'on_red', 'on_white', 'on_yellow', 'overline', 'rapid_blink', 'raw_print',
-    'red', 'set_cursor_position', 'strikethrough', 'underline', 'white',
-    'yellow'
-]
+"""RGBeep module for formatting text."""
+# Copyright (C) 2020-2024 Nice Zombies
+from __future__ import annotations
 
-# Standard libraries
+__all__: list[str] = [
+    "ColoredOutput",
+    "NoCursor",
+    "alt_font",
+    "beep",
+    "black",
+    "blink",
+    "blue",
+    "bold",
+    "conceal",
+    "cursor_up",
+    "cyan",
+    "dim",
+    "double_underline",
+    "encircle",
+    "erase_in_display",
+    "erase_in_line",
+    "frame",
+    "green",
+    "grey",
+    "invert",
+    "italic",
+    "lt_blue",
+    "lt_cyan",
+    "lt_green",
+    "lt_grey",
+    "lt_magenta",
+    "lt_red",
+    "lt_yellow",
+    "magenta",
+    "on_black",
+    "on_blue",
+    "on_cyan",
+    "on_green",
+    "on_grey",
+    "on_lt_blue",
+    "on_lt_cyan",
+    "on_lt_green",
+    "on_lt_grey",
+    "on_lt_magenta",
+    "on_lt_red",
+    "on_lt_yellow",
+    "on_magenta",
+    "on_red",
+    "on_white",
+    "on_yellow",
+    "overline",
+    "rapid_blink",
+    "raw_print",
+    "red",
+    "set_cursor_position",
+    "strikethrough",
+    "underline",
+    "white",
+    "yellow",
+]
+__author__: str = "Nice Zombies"
+
 import sys
 from atexit import register
 from contextlib import ContextDecorator
 from sys import stdout
-from types import TracebackType
-from typing import Optional, Self
+from typing import TYPE_CHECKING, Self
+
+if TYPE_CHECKING:
+    from types import TracebackType
 
 
-def _make_formatter(start: int, end: int):
+# mypy: disable-error-code=no-untyped-def
+def _make_formatter(start: int, end: int):  # noqa: ANN202
     """Make formatter function."""
-    def apply_formatting(*values: object, sep: str = ' ') -> str:
+    def apply_formatting(*values: object, sep: str = " ") -> str:
         """Apply formatting to values."""
-        return f'\x1b[{start}m{sep.join(map(str, values))}\x1b[{end}m'
+        return f"\x1b[{start}m{sep.join(map(str, values))}\x1b[{end}m"
 
     return apply_formatting
 
@@ -83,29 +130,29 @@ on_white = _make_formatter(107, 49)
 
 def beep() -> None:
     """Emit a short attention sound."""
-    print(end='\a', flush=True)
+    print(end="\a", flush=True)
 
 
 def cursor_up(cells: int = 1) -> None:
     """Move cursor up."""
     if cells:
-        raw_print(f'\x1b[{cells}A')
+        raw_print(f"\x1b[{cells}A")
 
 
 def erase_in_display(mode: int = 0) -> None:
     """Erase text in display."""
-    raw_print(f'\x1b[{mode}J')
+    raw_print(f"\x1b[{mode}J")
 
 
 def erase_in_line(mode: int = 0) -> None:
     """Erase text in line."""
-    raw_print(f'\x1b[{mode}K')
+    raw_print(f"\x1b[{mode}K")
 
 
 def raw_print(
-    *values: object, sep: str = ' ', end: str = '', flush: bool = False
+    *values: object, sep: str = " ", end: str = "", flush: bool = False,
 ) -> None:
-    """Prints to stdout without automatic flusing."""
+    """Print to stdout without automatic flusing."""
     stdout.buffer.write((sep.join(map(str, values)) + end).encode())
     if flush:
         stdout.buffer.flush()
@@ -113,14 +160,15 @@ def raw_print(
 
 def set_cursor_position(row: int = 1, col: int = 1) -> None:
     """Set cursor position."""
-    raw_print(f'\x1b[{row};{col}H')
+    raw_print(f"\x1b[{row};{col}H")
 
 
 class _BaseColoredOutput(ContextDecorator):
     """Base class for colored output."""
+
     count: int = 0
 
-    def __enter__(self) -> Self:
+    def __enter__(self: Self) -> Self:
         if not _BaseColoredOutput.count:
             self.enable()
 
@@ -128,8 +176,8 @@ class _BaseColoredOutput(ContextDecorator):
         return self
 
     def __exit__(
-        self, _1: Optional[type[BaseException]], _2: Optional[BaseException],
-        _3: Optional[TracebackType]
+        self: Self, _1: type[BaseException] | None, _2: BaseException | None,
+        _3: TracebackType | None,
     ) -> None:
         _BaseColoredOutput.count = max(0, _BaseColoredOutput.count - 1)
         if not _BaseColoredOutput.count:
@@ -146,46 +194,49 @@ class _BaseColoredOutput(ContextDecorator):
 
 # NOTE: Necessary for compatibility with Windows 10
 if sys.platform == "win32":
-    # Standard libraries
     from ctypes import byref, c_ulong, windll
     # noinspection PyCompatibility
     from msvcrt import get_osfhandle  # pylint: disable=import-error
 
-    _ENABLE_PROCESSED_OUTPUT:            int = 0x0001
-    _ENABLE_WRAP_AT_EOL_OUTPUT:          int = 0x0002
+    _ENABLE_PROCESSED_OUTPUT: int = 0x0001
+    _ENABLE_WRAP_AT_EOL_OUTPUT: int = 0x0002
     _ENABLE_VIRTUAL_TERMINAL_PROCESSING: int = 0x0004
-    _DISABLE_NEWLINE_AUTO_RETURN:        int = 0x0008
+    _DISABLE_NEWLINE_AUTO_RETURN: int = 0x0008
 
     class ColoredOutput(_BaseColoredOutput):
         """Class to enable & disable colored output."""
+
         _old: c_ulong = c_ulong()
         windll.kernel32.GetConsoleMode(
-            get_osfhandle(stdout.fileno()), byref(_old)
+            get_osfhandle(stdout.fileno()), byref(_old),
         )
 
         @classmethod
         def disable(cls) -> None:
+            """Disable colored output."""
             windll.kernel32.SetConsoleMode(
-                get_osfhandle(stdout.fileno()), cls._old.value
+                get_osfhandle(stdout.fileno()), cls._old.value,
             )
 
         @classmethod
         def enable(cls) -> None:
+            """Enable colored output."""
             value: int = cls._old.value
             value |= (
-                _ENABLE_PROCESSED_OUTPUT | _ENABLE_WRAP_AT_EOL_OUTPUT |
-                _ENABLE_VIRTUAL_TERMINAL_PROCESSING |
-                _DISABLE_NEWLINE_AUTO_RETURN
+                _ENABLE_PROCESSED_OUTPUT | _ENABLE_WRAP_AT_EOL_OUTPUT
+                | _ENABLE_VIRTUAL_TERMINAL_PROCESSING
+                | _DISABLE_NEWLINE_AUTO_RETURN
             )
             windll.kernel32.SetConsoleMode(
-                get_osfhandle(stdout.fileno()), value
+                get_osfhandle(stdout.fileno()), value,
             )
 # pylint: disable=consider-using-in
-elif sys.platform == 'darwin' or sys.platform == 'linux':
+elif sys.platform == "darwin" or sys.platform == "linux":  # noqa: PLR1714
     class ColoredOutput(_BaseColoredOutput):
         """Class to enable & disable colored output."""
 else:
-    raise RuntimeError(f'Unsupported platform: {sys.platform!r}')
+    err: str = f"Unsupported platform: {sys.platform!r}"
+    raise RuntimeError(err)
 
 
 register(ColoredOutput.disable)
@@ -193,9 +244,11 @@ register(ColoredOutput.disable)
 
 class NoCursor(ContextDecorator):
     """Class to enable & disable no cursor."""
+
     count: int = 0
 
-    def __enter__(self) -> Self:
+    def __enter__(self: Self) -> Self:
+        """Enable no cursor."""
         if not NoCursor.count:
             self.enable()
 
@@ -203,9 +256,10 @@ class NoCursor(ContextDecorator):
         return self
 
     def __exit__(
-        self, _1: Optional[type[BaseException]], _2: Optional[BaseException],
-        _3: Optional[TracebackType]
+        self: Self, _1: type[BaseException] | None, _2: BaseException | None,
+        _3: TracebackType | None,
     ) -> None:
+        """Disable no cursor."""
         NoCursor.count = max(0, NoCursor.count - 1)
         if not NoCursor.count:
             self.disable()
@@ -213,12 +267,12 @@ class NoCursor(ContextDecorator):
     @staticmethod
     def disable() -> None:
         """Disable no cursor."""
-        print(end='\x1b[?25h', flush=True)
+        print(end="\x1b[?25h", flush=True)
 
     @staticmethod
     def enable() -> None:
         """Enable no cursor."""
-        print(end='\x1b[?25l', flush=True)
+        print(end="\x1b[?25l", flush=True)
 
 
 register(NoCursor.disable)
