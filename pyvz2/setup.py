@@ -6,6 +6,7 @@ setup(
     name="pyvz2-dependencies",
     version="0.1.0",
     packages=find_packages(),
+    py_modules=["rgbeep", "skiboard"],
     author="Nice Zombies",
     author_email="nineteendo19d0@gmail.com",
     description="Dependencies of PyVZ2",
