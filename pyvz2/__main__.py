@@ -32,6 +32,7 @@ def main() -> None:
 
 # pylint: disable=consider-using-in
 if sys.platform == "darwin" or sys.platform == "linux":  # noqa: PLR1714
+    # pylint: disable=no-name-in-module
     from signal import SIG_DFL, SIGCONT, SIGTSTP, raise_signal, signal
     from typing import TYPE_CHECKING
 

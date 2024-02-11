@@ -34,7 +34,7 @@ class BaseInputHandler(Generic[VALUE], ABC):
         self.representation: type[str] = representation
         self.terminal_size: terminal_size = new_terminal_size
 
-    def printerror(self: Self, err: str) -> None:
+    def print_error(self: Self, err: str) -> None:
         """Print error message."""
         columns: int = self.terminal_size.columns
         err_len: int = len(f">> {err}")
@@ -43,7 +43,7 @@ class BaseInputHandler(Generic[VALUE], ABC):
             err = "..." + err[offset + 3:]
 
         raw_print(red(">>"), bold(err))
-        self.cursor.wrote(f"? {err}")
+        self.cursor.wrote(f">> {err}")
 
     def print_prompt(
         self: Self, msg: str = "", *, short: bool = False,

@@ -122,15 +122,15 @@ class BaseTextInput(BaseInputHandler[str]):
                 msg: str = self.value if self.value else self.placeholder
                 self.clear_screen()
                 if self.enlarge_window():
-                    self.printerror(_("Enlarge window"))
+                    self.print_error(_("Enlarge window"))
                 else:
                     self.print_prompt(f" {msg} ")
                     self.print_msg(msg)
-                    raw_print("\n")
+                    raw_print("\r\n")
                     self.cursor.moved_next_line()
                     err: str = self.invalid_value(self.value)
                     if err:
-                        self.printerror(err)
+                        self.print_error(err)
 
                 stdout.buffer.flush()
 
@@ -169,16 +169,17 @@ class BaseTextInput(BaseInputHandler[str]):
                         self.handle_scroll()
                         continue
 
+                    if (event.button == Mouse.BUTTON_2 or event in {
+                        SS3Sequences.KEYPAD_ENTER, CtrlCodes.LINE_FEED,
+                        CtrlCodes.CARRIAGE_RETURN,
+                    }) and not self.invalid_value(self.value):
+                        # Submit input
+                        break
+
                     if event == CtrlCodes.ESCAPE and not self.value:
                         # Cancel
                         self.clear_screen()
                         return None
-
-                    if event.button == Mouse.BUTTON_2 or (event in {
-                        CtrlCodes.LINE_FEED, CtrlCodes.CARRIAGE_RETURN,
-                    } and not self.invalid_value(self.value)):
-                        # Submit input
-                        break
 
                     beep()
 
@@ -189,7 +190,7 @@ class BaseTextInput(BaseInputHandler[str]):
             self.clear_screen()
             self.print_prompt(f" {msg} ", short=True)
             self.print_msg(msg, short=True)
-            raw_print("\n", flush=True)
+            raw_print("\r\n", flush=True)
 
         return self.value
 
@@ -198,7 +199,9 @@ class BaseTextInput(BaseInputHandler[str]):
         """Handle keyboard event."""
         start: str = self.value[:self.text_scroll + self.text_position]
         end: str = self.value[self.text_scroll + self.text_position:]
-        if event == ctrl("a") and start:
+        if event in {
+            ctrl("a"), SS3Sequences.HOME, CSISequences.HOME,
+        } and start:
             # Move cursor to start of line
             self.text_position = self.text_scroll = 0
         elif event in {
@@ -209,7 +212,7 @@ class BaseTextInput(BaseInputHandler[str]):
         elif event in {ctrl("d"), CSISequences.DELETE} and end:
             # Delete character after cursor
             self.value = start + end[1:]
-        elif event == ctrl("e") and end:
+        elif event in {ctrl("e"), SS3Sequences.END, CSISequences.END} and end:
             # Move cursor to end of line
             self.text_position += len(end)
         elif event in {
@@ -231,7 +234,7 @@ class BaseTextInput(BaseInputHandler[str]):
         elif event in {ctrl("u"), ctrl(CSISequences.HOME)} and start:
             # Delete everything before cursor
             self.text_position, self.text_scroll, self.value = 0, 0, end
-        elif event in {esc("q"), CtrlCodes.ESCAPE} and self.value:
+        elif event in {CtrlCodes.ESCAPE, esc("q")} and self.value:
             # Delete whole line
             self.text_position, self.text_scroll, self.value = 0, 0, ""
         elif (
@@ -297,6 +300,7 @@ class BaseTextInput(BaseInputHandler[str]):
     def print_msg(self: Self, msg: str, *, short: bool = False) -> None:
         """Print message."""
         offset: int = self.get_value_offset(short=short)
+        end: str
         if short:
             if offset:
                 msg = "..." + msg[offset + 3:]
@@ -306,8 +310,8 @@ class BaseTextInput(BaseInputHandler[str]):
             if offset:
                 msg = "..." + msg[offset + 3:]
 
-            msg += " "
-            raw_print("", grey(invert(msg[:1]) + msg[1:]))
+            end = msg + " "
+            raw_print("", grey(invert(end[:1]) + end[1:]))
         else:
             self.handle_scroll()
             msg = msg[self.text_scroll:self.text_scroll + len(msg) - offset]
@@ -318,7 +322,7 @@ class BaseTextInput(BaseInputHandler[str]):
                 msg = msg[:-3] + "..."
 
             start: str = msg[:self.text_position]
-            end: str = msg[self.text_position:] + " "
+            end = msg[self.text_position:] + " "
             raw_print("", start + invert(end[:1]) + end[1:])
 
         self.cursor.wrote(f" {msg} ")
