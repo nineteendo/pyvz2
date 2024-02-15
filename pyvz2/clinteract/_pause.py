@@ -25,7 +25,7 @@ class BaseInputHandler(Generic[VALUE], ABC):
     """Base class for handling command line input."""
 
     def __init__(
-        self: Self, prompt: object = _("Press any key..."), *,
+        self: Self, prompt: object, *,
         representation: type[str] = Representation,
     ) -> None:
         new_terminal_size: terminal_size = get_terminal_size()
@@ -40,7 +40,7 @@ class BaseInputHandler(Generic[VALUE], ABC):
         err_len: int = len(f">> {err}")
         offset: int = max(0, err_len - columns)
         if offset:
-            err = "..." + err[offset + 3:]
+            err = err[:-offset - 1] + "\u2026"  # Add right ellipsis
 
         raw_print(red(">>"), bold(err))
         self.cursor.wrote(f">> {err}")
@@ -52,7 +52,7 @@ class BaseInputHandler(Generic[VALUE], ABC):
         prompt: str = self.get_prompt()
         offset: int = self.get_prompt_offset(msg, short=short)
         if offset:
-            prompt = "..." + prompt[offset + 3:]
+            prompt = prompt[:-offset - 1] + "\u2026"  # Add right ellipsis
 
         raw_print(green("?"), bold(prompt))
         self.cursor.wrote(f"? {prompt}")
@@ -94,22 +94,36 @@ class BaseInputHandler(Generic[VALUE], ABC):
 class Pause(BaseInputHandler[None]):
     """Class for pausing."""
 
+    def __init__(
+        self: Self, prompt: object = None, *,
+        representation: type[str] = Representation,
+        timeout: float | None = None,
+    ) -> None:
+        if prompt is None:
+            if timeout is None:
+                prompt = _("Press any key...")
+            else:
+                prompt = _("Wait / Press any key...")
+
+        self.timeout: float | None = timeout
+        super().__init__(prompt, representation=representation)
+
     @RawInput()
     @ColoredOutput()
     @NoCursor()
     def get_value(self: Self) -> None:
         self.print_prompt(short=True)
         stdout.buffer.flush()
-        event: Event = get_event()
-        while not event.pressed:
-            event = get_event()
+        event: Event | None = get_event(timeout=self.timeout)
+        while event and not event.pressed:
+            event = get_event(timeout=self.timeout)
 
         return self.clear_screen()
 
 
 def pause(
-    prompt: object = _("Press any key..."), *,
-    representation: type[str] = Representation,
+    prompt: object = None, *, representation: type[str] = Representation,
+    timeout: float | None = None,
 ) -> None:
     """Pause with message."""
-    Pause(prompt, representation=representation).get_value()
+    Pause(prompt, representation=representation, timeout=timeout).get_value()

@@ -13,9 +13,8 @@ __version__: str = "2.0"
 
 import sys
 from contextlib import suppress
-from gettext import gettext as _
 
-from clinteract import input_str
+from clinteract import pause
 from rgbeep import ColoredOutput, NoCursor
 from skiboard import RawInput
 
@@ -27,7 +26,7 @@ from skiboard import RawInput
 def main() -> None:
     """Start PyVZ2."""
     with suppress(EOFError, KeyboardInterrupt):
-        input_str(_("Enter name:"), min_length=3)
+        pause(timeout=5)
 
 
 # pylint: disable=consider-using-in

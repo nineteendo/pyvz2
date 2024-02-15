@@ -32,15 +32,15 @@ from .real2float import format_real
 class BaseTextInput(BaseInputHandler[str]):
     """Base class for text input."""
 
-    # pylint: disable=too-many-arguments, too-many-locals
-    def __init__(  # noqa: PLR0913
+    # pylint: disable=too-many-arguments, too-many-locals, too-many-statements
+    def __init__(  # noqa: PLR0913, C901
         self: Self, prompt: object, *, allow_letters: bool = False,
         allow_marks: bool = False, allow_numbers: bool = False,
         allow_punctuations: bool = False, allow_separators: bool = False,
         allow_symbols: bool = False, ascii_only: bool = False,
         clear: bool = False, make_lowercase: bool = False,
         make_uppercase: bool = False, max_length: int = 0, min_length: int = 0,
-        placeholder: object = _("Enter text..."),
+        placeholder: str | None = None,
         representation: type[str] = Representation,
         value: str | None = None, whitelist: str = "",
     ) -> None:
@@ -99,6 +99,9 @@ class BaseTextInput(BaseInputHandler[str]):
         elif make_uppercase:
             value = value.upper()
 
+        if placeholder is None:
+            placeholder = _("Enter text...")
+
         self.clear: bool = clear
         self.make_lowercase: bool = make_lowercase
         self.make_uppercase: bool = make_uppercase
@@ -139,7 +142,7 @@ class BaseTextInput(BaseInputHandler[str]):
 
     def enlarge_window(self: Self) -> bool:
         """Check if window is too small."""
-        return self.terminal_size.columns < 2
+        return self.terminal_size.lines < 2
 
     def get_value_offset(self: Self, *, short: bool = False) -> int:
         """Get scroll offset for value."""
@@ -148,7 +151,7 @@ class BaseTextInput(BaseInputHandler[str]):
             max_chars -= self.terminal_size.columns
 
         prompt_len: int = len(f"? {self.get_prompt()}")
-        msg: str = self.value
+        msg: str = self.value if self.value else self.placeholder
         msg_len: int = len(f" {msg} ")
         return max(0, msg_len + min(prompt_len, max_chars // 2) - max_chars)
 
@@ -253,20 +256,20 @@ class BaseTextInput(BaseInputHandler[str]):
         return True
 
     def handle_scroll(self: Self) -> None:
-        """Handle scroll and position."""
+        """Handle scroll & position."""
         msg: str = self.value
         offset: int = self.get_value_offset()
-        if self.text_scroll <= max(0, 3 - self.text_position):
+        if self.text_scroll <= max(0, 1 - self.text_position):
             # Scroll to start
             self.text_position += self.text_scroll
             self.text_scroll = 0
-        elif self.text_position < 3:
+        elif self.text_position < 1:
             # Move cursor after left ellipsis
-            self.text_scroll -= 3 - self.text_position
-            self.text_position = 3
+            self.text_scroll -= 1 - self.text_position
+            self.text_position = 1
 
-        max_text_position: int = len(msg) - offset - 3
-        if self.text_scroll >= min(len(msg) - self.text_position - 3, offset):
+        max_text_position: int = len(msg) - offset - 1
+        if self.text_scroll >= min(len(msg) - self.text_position - 1, offset):
             # Scroll to end
             self.text_position -= offset - self.text_scroll
             self.text_scroll = offset
@@ -303,12 +306,12 @@ class BaseTextInput(BaseInputHandler[str]):
         end: str
         if short:
             if offset:
-                msg = "..." + msg[offset + 3:]
+                msg = msg[:-offset - 1] + "\u2026"  # Add right ellipsis
 
             raw_print("", cyan(msg), end=" ")
         elif not self.value:
             if offset:
-                msg = "..." + msg[offset + 3:]
+                msg = msg[:-offset - 1] + "\u2026"  # Add right ellipsis
 
             end = msg + " "
             raw_print("", grey(invert(end[:1]) + end[1:]))
@@ -316,10 +319,10 @@ class BaseTextInput(BaseInputHandler[str]):
             self.handle_scroll()
             msg = msg[self.text_scroll:self.text_scroll + len(msg) - offset]
             if self.text_scroll:
-                msg = "..." + msg[3:]
+                msg = "\u2026" + msg[1:]  # Add left ellipsis
 
             if self.text_scroll < offset:
-                msg = msg[:-3] + "..."
+                msg = msg[:-1] + "\u2026"  # Add right ellipsis
 
             start: str = msg[:self.text_position]
             end = msg[self.text_position:] + " "
@@ -337,8 +340,7 @@ class InputStr(BaseTextInput):
 def input_str(  # pylint: disable=too-many-arguments
     prompt: object, *, ascii_only: bool = False, clear: bool = False,
     make_lowercase: bool = False, make_uppercase: bool = False,
-    max_length: int = 0, min_length: int = 0,
-    placeholder: object = _("Enter text..."),
+    max_length: int = 0, min_length: int = 0, placeholder: str | None = None,
     representation: type[str] = Representation, value: str | None = None,
 ) -> str | None:
     ...
@@ -352,8 +354,7 @@ def input_str(  # pylint: disable=too-many-arguments, too-many-locals
     allow_separators: bool = False, allow_symbols: bool = False,
     ascii_only: bool = False, clear: bool = False,
     make_lowercase: bool = False, make_uppercase: bool = False,
-    max_length: int = 0, min_length: int = 0,
-    placeholder: object = _("Enter text..."),
+    max_length: int = 0, min_length: int = 0, placeholder: str | None = None,
     representation: type[str] = Representation, value: str | None = None,
     whitelist: str = "",
 ) -> str | None:
@@ -368,8 +369,7 @@ def input_str(  # noqa: PLR0913
     allow_separators: bool = False, allow_symbols: bool = False,
     ascii_only: bool = False, clear: bool = False,
     make_lowercase: bool = False, make_uppercase: bool = False,
-    max_length: int = 0, min_length: int = 0,
-    placeholder: object = _("Enter text..."),
+    max_length: int = 0, min_length: int = 0, placeholder: str | None = None,
     representation: type[str] = Representation, value: str | None = None,
     whitelist: str = "",
 ) -> str | None:

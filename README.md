@@ -24,7 +24,7 @@ Work in progress. Initial implementation phase.
 
 ## Contact
 
-For questions or feedback, contact nineteendo19d0@gmail.com.
+For questions / feedback, contact nineteendo19d0@gmail.com.
 
 ## License
 

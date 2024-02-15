@@ -56,9 +56,7 @@ _CSI_MODIFIABLE: Pattern[str] = re.compile(
 _CTRL_C: bytes = b"\x03"
 _CTRL_MODIFIABLE: Pattern[str] = re.compile(r"\x1b?[?-_a-z]")
 _EOF: bytes = b""
-_ESC_CSI: str = "\x1b\x1b["
 _ESC_MODIFIABLE: Pattern[str] = re.compile(r".|\x1b[O\[].+")
-_ESC_SS3: str = "\x1b\x1bO"
 _PARAM_CHARS: str = "0123456789;"
 _SHIFT_MODIFIABLE: Pattern[str] = re.compile(r"\x1b?.")
 _TIMEOUT: float = 0.01
@@ -443,6 +441,12 @@ class _KeyReader:
 
         # Handle multi-byte characters
         byte_ord: int = ord(byte)
+        if byte_ord & 0xF8 == 0xF8:  # 11111xxx
+            # pylint: disable=redefined-outer-name
+            # noinspection PyShadowingNames
+            err: str = f"Read non-utf8 character: {byte!r}"
+            raise RuntimeError(err)
+
         if byte_ord & 0xC0 == 0xC0:  # 11xxxxxx10xxxxxx...
             byte += cls.read_byte()
 
@@ -451,12 +455,6 @@ class _KeyReader:
 
         if byte_ord & 0xF0 == 0xF0:  # 1111xxxx10xxxxxx10xxxxxx10xxxxxx...
             byte += cls.read_byte()
-
-        if byte_ord & 0xF8 == 0xF8:  # 11111xxx
-            # pylint: disable=redefined-outer-name
-            # noinspection PyShadowingNames
-            err: str = f"Read non-utf8 character: {byte!r}"
-            raise RuntimeError(err)
 
         return byte.decode()
 
@@ -507,9 +505,9 @@ class Event(str):
     @property
     def button(self: Self) -> int | None:
         """Mouse button."""
-        if self.startswith(
-            (esc(CSISequences.SGR_MOUSE), CSISequences.SGR_MOUSE),
-        ):
+        if self.startswith((
+            esc(CSISequences.SGR_MOUSE), CSISequences.SGR_MOUSE,
+        )):
             return int(self[:-1].partition("<")[2].split(";")[0])
 
         if self.startswith((esc(CSISequences.MOUSE), CSISequences.MOUSE)):
@@ -520,9 +518,9 @@ class Event(str):
     @property
     def pressed(self: Self) -> bool:
         """Is key pressed."""
-        if self.startswith(
-            (esc(CSISequences.SGR_MOUSE), CSISequences.SGR_MOUSE),
-        ):
+        if self.startswith((
+            esc(CSISequences.SGR_MOUSE), CSISequences.SGR_MOUSE,
+        )):
             return self.endswith("M")
 
         if self.startswith((esc(CSISequences.MOUSE), CSISequences.MOUSE)):
@@ -531,9 +529,58 @@ class Event(str):
         return True
 
 
-def get_event() -> Event:  # noqa: C901
+def _get_ss3_sequence(*, timeout: float | None = None) -> str:
+    """Get SS3 sequence from command line."""
+    char: str | None = _KeyReader.read_char(raw=True, timeout=timeout)
+    return char if char else ""
+
+
+def _get_csi_sequence(*, timeout: float | None = None) -> str:
+    """Get CSI sequence from command line."""
+    csi_sequence: str = ""
+    char: str | None = _KeyReader.read_char(raw=True, timeout=timeout)
+    if char is None:
+        return csi_sequence
+
+    if CSISequences.CSI + csi_sequence + char == CSISequences.SGR_MOUSE:
+        csi_sequence += char
+        char = _KeyReader.read_char(raw=True)
+
+    while char in _PARAM_CHARS:
+        csi_sequence += char
+        char = _KeyReader.read_char(raw=True)
+
+    csi_sequence += char
+    if CSISequences.CSI + csi_sequence == CSISequences.MOUSE_CLICK:
+        csi_sequence += _KeyReader.read(2, raw=True)
+
+    if CSISequences.CSI + csi_sequence == CSISequences.MOUSE:
+        csi_sequence += _KeyReader.read(3, raw=True)
+
+    if CSISequences.CSI + csi_sequence == CSISequences.MOUSE_MOVE:
+        csi_sequence += _KeyReader.read(6, raw=True)
+
+    return csi_sequence
+
+
+# noinspection PyMissingOrEmptyDocstring
+@overload
+def get_event(*, timeout: None = None) -> Event:
+    ...
+
+
+# noinspection PyMissingOrEmptyDocstring
+@overload
+def get_event(*, timeout: float = ...) -> Event | None:
+    ...
+
+
+def get_event(*, timeout: float | None = None) -> Event | None:
     """Get event from command line."""
-    key: str = _KeyReader.read_char()
+    key: str | None = _KeyReader.read_char(timeout=timeout)
+    if key is None:
+        return key
+
     if key != CtrlCodes.ESCAPE:
         return Event(key)
 
@@ -542,37 +589,19 @@ def get_event() -> Event:  # noqa: C901
         return Event(key)
 
     key += char
-    if key not in {esc(CtrlCodes.ESCAPE), esc("O"), esc("[")}:
-        return Event(key)
-
-    char = _KeyReader.read_char(raw=True, timeout=_TIMEOUT)
-    if not char:
-        return Event(key)
-
-    if key == esc(CtrlCodes.ESCAPE):
-        key += char
-        if key not in {_ESC_SS3, _ESC_CSI}:
+    if key == SS3Sequences.SS3:
+        key += _get_ss3_sequence(timeout=_TIMEOUT)
+    elif key == CSISequences.CSI:
+        key += _get_csi_sequence(timeout=_TIMEOUT)
+    elif key == esc(CtrlCodes.ESCAPE):
+        char = _KeyReader.read_char(raw=True, timeout=_TIMEOUT)
+        if not char:
             return Event(key)
 
-        char = _KeyReader.read_char(raw=True)
-
-    if key + char in {esc(CSISequences.SGR_MOUSE), CSISequences.SGR_MOUSE}:
         key += char
-        char = _KeyReader.read_char(raw=True)
-
-    if key not in {_ESC_SS3, SS3Sequences.SS3}:
-        while char in _PARAM_CHARS:
-            key += char
-            char = _KeyReader.read_char(raw=True)
-
-    key += char
-    if key in {esc(CSISequences.MOUSE_CLICK), CSISequences.MOUSE_CLICK}:
-        key += _KeyReader.read(2, raw=True)
-
-    if key in {esc(CSISequences.MOUSE), CSISequences.MOUSE}:
-        key += _KeyReader.read(3, raw=True)
-
-    if key in {esc(CSISequences.MOUSE_MOVE), CSISequences.MOUSE_MOVE}:
-        key += _KeyReader.read(6, raw=True)
+        if key == CtrlCodes.ESCAPE + SS3Sequences.SS3:
+            key += _get_ss3_sequence()
+        elif key == CtrlCodes.ESCAPE + CSISequences.CSI:
+            key += _get_csi_sequence()
 
     return Event(key)
