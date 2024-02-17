@@ -2,36 +2,21 @@
 # Copyright (C) 2020-2024 Nice Zombies
 from __future__ import annotations
 
-__all__: list[str] = ["VALUE", "ContextEvent", "Cursor", "Representation"]
+__all__: list[str] = ["VALUE", "Cursor", "Representation"]
 __author__: str = "Nice Zombies"
 
 import re
-import threading
 from datetime import date, datetime, time
 from enum import Enum
 from re import Pattern
-from types import FunctionType, TracebackType
-from typing import Self, TypeVar
+from types import FunctionType
+from typing import ClassVar, Self, TypeVar
 
 from .real2float import format_real
 
 _UNPRINTABLE: Pattern[str] = re.compile(r"[\x00-\x1f\x7f-\x9f]")
 
 VALUE = TypeVar("VALUE")
-
-
-class ContextEvent(threading.Event):
-    """Class implementing context event objects."""
-
-    def __enter__(self: Self) -> Self:
-        self.clear()
-        return self
-
-    def __exit__(
-        self: Self, _1: type[BaseException] | None, _2: BaseException | None,
-        _3: TracebackType | None,
-    ) -> None:
-        self.set()
 
 
 class Cursor:
@@ -51,11 +36,6 @@ class Cursor:
         self.row += (self.col + len(text) - 1) // self.columns
         self.col = (self.col + len(text) - 1) % self.columns + 1
 
-    @property
-    def position(self: Self) -> int:
-        """Get cursor position."""
-        return self.row * self.columns + self.col
-
     def moved_next_line(self: Self) -> None:
         """Notify cursor has moved to next line."""
         self.row, self.col = self.row + 1, 0
@@ -64,7 +44,7 @@ class Cursor:
 class Representation(str):
     """Get a user-friendly representation from the given object."""
 
-    __slots__: tuple[()] = ()
+    __slots__: ClassVar[tuple[()]] = ()
 
     # noinspection PyTypeHints
     def __new__(cls: type[Self], obj: object = "") -> Self:  # noqa: C901

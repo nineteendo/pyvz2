@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 __all__: list[str] = [
-    "ColoredOutput",
-    "NoCursor",
     "alt_font",
     "beep",
     "black",
@@ -60,14 +58,7 @@ __all__: list[str] = [
 ]
 __author__: str = "Nice Zombies"
 
-import sys
-from atexit import register
-from contextlib import ContextDecorator
 from sys import stdout
-from typing import TYPE_CHECKING, Self
-
-if TYPE_CHECKING:
-    from types import TracebackType
 
 
 # mypy: disable-error-code=no-untyped-def
@@ -161,118 +152,3 @@ def raw_print(
 def set_cursor_position(row: int = 1, col: int = 1) -> None:
     """Set cursor position."""
     raw_print(f"\x1b[{row};{col}H")
-
-
-class _BaseColoredOutput(ContextDecorator):
-    """Base class for colored output."""
-
-    count: int = 0
-
-    def __enter__(self: Self) -> Self:
-        if not _BaseColoredOutput.count:
-            self.enable()
-
-        _BaseColoredOutput.count += 1
-        return self
-
-    def __exit__(
-        self: Self, _1: type[BaseException] | None, _2: BaseException | None,
-        _3: TracebackType | None,
-    ) -> None:
-        _BaseColoredOutput.count = max(0, _BaseColoredOutput.count - 1)
-        if not _BaseColoredOutput.count:
-            self.disable()
-
-    @classmethod
-    def disable(cls) -> None:
-        """Disable colored output."""
-
-    @classmethod
-    def enable(cls) -> None:
-        """Enable colored output."""
-
-
-# NOTE: Necessary for compatibility with Windows 10
-if sys.platform == "win32":
-    from ctypes import byref, c_ulong, windll
-    # noinspection PyCompatibility
-    from msvcrt import get_osfhandle  # pylint: disable=import-error
-
-    _ENABLE_PROCESSED_OUTPUT: int = 0x0001
-    _ENABLE_WRAP_AT_EOL_OUTPUT: int = 0x0002
-    _ENABLE_VIRTUAL_TERMINAL_PROCESSING: int = 0x0004
-    _DISABLE_NEWLINE_AUTO_RETURN: int = 0x0008
-
-    class ColoredOutput(_BaseColoredOutput):
-        """Class to enable & disable colored output."""
-
-        _old: c_ulong = c_ulong()
-        windll.kernel32.GetConsoleMode(
-            get_osfhandle(stdout.fileno()), byref(_old),
-        )
-
-        @classmethod
-        def disable(cls) -> None:
-            """Disable colored output."""
-            windll.kernel32.SetConsoleMode(
-                get_osfhandle(stdout.fileno()), cls._old.value,
-            )
-
-        @classmethod
-        def enable(cls) -> None:
-            """Enable colored output."""
-            value: int = cls._old.value
-            value |= (
-                _ENABLE_PROCESSED_OUTPUT | _ENABLE_WRAP_AT_EOL_OUTPUT
-                | _ENABLE_VIRTUAL_TERMINAL_PROCESSING
-                | _DISABLE_NEWLINE_AUTO_RETURN
-            )
-            windll.kernel32.SetConsoleMode(
-                get_osfhandle(stdout.fileno()), value,
-            )
-# pylint: disable=consider-using-in
-elif sys.platform == "darwin" or sys.platform == "linux":  # noqa: PLR1714
-    class ColoredOutput(_BaseColoredOutput):
-        """Class to enable & disable colored output."""
-else:
-    err: str = f"Unsupported platform: {sys.platform!r}"
-    raise RuntimeError(err)
-
-
-register(ColoredOutput.disable)
-
-
-class NoCursor(ContextDecorator):
-    """Class to enable & disable no cursor."""
-
-    count: int = 0
-
-    def __enter__(self: Self) -> Self:
-        """Enable no cursor."""
-        if not NoCursor.count:
-            self.enable()
-
-        NoCursor.count += 1
-        return self
-
-    def __exit__(
-        self: Self, _1: type[BaseException] | None, _2: BaseException | None,
-        _3: TracebackType | None,
-    ) -> None:
-        """Disable no cursor."""
-        NoCursor.count = max(0, NoCursor.count - 1)
-        if not NoCursor.count:
-            self.disable()
-
-    @staticmethod
-    def disable() -> None:
-        """Disable no cursor."""
-        print(end="\x1b[?25h", flush=True)
-
-    @staticmethod
-    def enable() -> None:
-        """Enable no cursor."""
-        print(end="\x1b[?25l", flush=True)
-
-
-register(NoCursor.disable)

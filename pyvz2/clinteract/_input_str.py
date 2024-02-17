@@ -11,21 +11,23 @@ from gettext import gettext as _
 from math import prod
 from sys import stdout
 from threading import Lock, Thread
-from typing import Self, overload
+from typing import Literal, Self, overload
 from unicodedata import category
 
-from rgbeep import (
-    ColoredOutput, NoCursor, beep, cyan, grey, invert, raw_print,
-    set_cursor_position,
+from contextile import (
+    ContextEvent, colored_output, mouse_input, no_cursor, raw_input,
 )
+from rgbeep import beep, cyan, grey, invert, raw_print, set_cursor_position
 from skiboard import (
-    CSISequences, CtrlCodes, Event, Mouse, RawInput, SS3Sequences, ctrl, esc,
-    get_event,
+    CSISequences, CtrlCodes, Event, KeypadActions, Mouse, SS3Sequences, ctrl,
+    esc, get_event,
 )
 
-from ._classes import ContextEvent, Cursor, Representation
+from ._classes import Cursor, Representation
 from ._pause import BaseInputHandler
 from .real2float import format_real
+
+_ELLIPSIS: Literal["\u2026"] = "\u2026"
 
 
 # pylint: disable=too-many-instance-attributes
@@ -155,9 +157,10 @@ class BaseTextInput(BaseInputHandler[str]):
         msg_len: int = len(f" {msg} ")
         return max(0, msg_len + min(prompt_len, max_chars // 2) - max_chars)
 
-    @RawInput()
-    @ColoredOutput()
-    @NoCursor()
+    @raw_input
+    @mouse_input
+    @colored_output
+    @no_cursor
     def get_value(self: Self) -> str | None:
         with self.ready_event:
             Thread(target=self.display_thread, daemon=True).start()
@@ -173,13 +176,13 @@ class BaseTextInput(BaseInputHandler[str]):
                         continue
 
                     if (event.button == Mouse.BUTTON_2 or event in {
-                        SS3Sequences.KEYPAD_ENTER, CtrlCodes.LINE_FEED,
-                        CtrlCodes.CARRIAGE_RETURN,
+                        CtrlCodes.LINE_FEED, CtrlCodes.CARRIAGE_RETURN,
+                        KeypadActions.ENTER,
                     }) and not self.invalid_value(self.value):
                         # Submit input
                         break
 
-                    if event == CtrlCodes.ESCAPE and not self.value:
+                    if event == CtrlCodes.ESCAPE:
                         # Cancel
                         self.clear_screen()
                         return None
@@ -203,23 +206,30 @@ class BaseTextInput(BaseInputHandler[str]):
         start: str = self.value[:self.text_scroll + self.text_position]
         end: str = self.value[self.text_scroll + self.text_position:]
         if event in {
-            ctrl("a"), SS3Sequences.HOME, CSISequences.HOME,
+            ctrl("a"), SS3Sequences.HOME, KeypadActions.HOME,
+            CSISequences.HOME,
         } and start:
             # Move cursor to start of line
             self.text_position = self.text_scroll = 0
         elif event in {
-            ctrl("b"), SS3Sequences.LEFT, CSISequences.LEFT,
+            ctrl("b"), SS3Sequences.LEFT, KeypadActions.LEFT,
+            CSISequences.LEFT,
         } and start:
             # Move cursor back one character
             self.text_position -= 1
-        elif event in {ctrl("d"), CSISequences.DELETE} and end:
+        elif event in {
+            ctrl("d"), KeypadActions.DELETE, CSISequences.DELETE,
+        } and end:
             # Delete character after cursor
             self.value = start + end[1:]
-        elif event in {ctrl("e"), SS3Sequences.END, CSISequences.END} and end:
+        elif event in {
+            ctrl("e"), SS3Sequences.END, KeypadActions.END, CSISequences.END,
+        } and end:
             # Move cursor to end of line
             self.text_position += len(end)
         elif event in {
-            ctrl("f"), SS3Sequences.RIGHT, CSISequences.RIGHT,
+            ctrl("f"), SS3Sequences.RIGHT, KeypadActions.RIGHT,
+            CSISequences.RIGHT,
         } and end:
             # Move cursor forward one character
             self.text_position += 1
@@ -306,12 +316,12 @@ class BaseTextInput(BaseInputHandler[str]):
         end: str
         if short:
             if offset:
-                msg = msg[:-offset - 1] + "\u2026"  # Add right ellipsis
+                msg = msg[:-offset - 1] + _ELLIPSIS
 
             raw_print("", cyan(msg), end=" ")
         elif not self.value:
             if offset:
-                msg = msg[:-offset - 1] + "\u2026"  # Add right ellipsis
+                msg = msg[:-offset - 1] + _ELLIPSIS
 
             end = msg + " "
             raw_print("", grey(invert(end[:1]) + end[1:]))
@@ -319,10 +329,10 @@ class BaseTextInput(BaseInputHandler[str]):
             self.handle_scroll()
             msg = msg[self.text_scroll:self.text_scroll + len(msg) - offset]
             if self.text_scroll:
-                msg = "\u2026" + msg[1:]  # Add left ellipsis
+                msg = _ELLIPSIS + msg[1:]
 
             if self.text_scroll < offset:
-                msg = msg[:-1] + "\u2026"  # Add right ellipsis
+                msg = msg[:-1] + _ELLIPSIS
 
             start: str = msg[:self.text_position]
             end = msg[self.text_position:] + " "

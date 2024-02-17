@@ -6,7 +6,6 @@ __all__: list[str] = [
     "VALUE",
     "BaseInputHandler",
     "BaseTextInput",
-    "ContextEvent",
     "Cursor",
     "InputStr",
     "Pause",
@@ -14,6 +13,6 @@ __all__: list[str] = [
 ]
 __author__: str = "Nice Zombies"
 
-from ._classes import VALUE, ContextEvent, Cursor, Representation
+from ._classes import VALUE, Cursor, Representation
 from ._input_str import BaseTextInput, InputStr
 from ._pause import BaseInputHandler, Pause

@@ -6,8 +6,8 @@ __all__: list[str] = [
     "CSISequences",
     "CtrlCodes",
     "Event",
+    "KeypadActions",
     "Mouse",
-    "RawInput",
     "SS3Sequences",
     "add",
     "alt",
@@ -36,28 +36,21 @@ __all__: list[str] = [
 __author__: str = "Nice Zombies"
 
 import re
-import sys
-from abc import ABC, abstractmethod
-from atexit import register
-from contextlib import ContextDecorator
 from re import Pattern
 from signal import SIGINT, raise_signal
 from sys import stdin
 from threading import Lock, Thread
-from typing import TYPE_CHECKING, Any, Self, overload
-
-if TYPE_CHECKING:
-    from types import TracebackType
+from typing import ClassVar, Literal, Self, overload
 
 _ADD_MODIFIABLE: Pattern[str] = re.compile(r"\x1b?[ -\x7f]")
 _CSI_MODIFIABLE: Pattern[str] = re.compile(
     r"\x1bO[P-S]|\x1b\[(?:\d+(?:;\d+)?)?[A-Z~]",
 )
-_CTRL_C: bytes = b"\x03"
+_CTRL_C: Literal[b"\x03"] = b"\x03"
 _CTRL_MODIFIABLE: Pattern[str] = re.compile(r"\x1b?[?-_a-z]")
-_EOF: bytes = b""
+_EOF: Literal[b""] = b""
 _ESC_MODIFIABLE: Pattern[str] = re.compile(r".|\x1b[O\[].+")
-_PARAM_CHARS: str = "0123456789;"
+_PARAM_CHARS: Literal["0123456789;"] = "0123456789;"
 _SHIFT_MODIFIABLE: Pattern[str] = re.compile(r"\x1b?.")
 _TIMEOUT: float = 0.01
 
@@ -121,281 +114,176 @@ shift_esc_add = _make_modifier(0x31)
 class CtrlCodes:  # pylint: disable=too-few-public-methods
     """Class for C0 control codes."""
 
-    NULL: str = "\0"
+    NULL: Literal["\0"] = "\0"
 
-    START_OF_HEADING: str = "\x01"
-    START_OF_TEXT: str = "\x02"
-    END_OF_TEXT: str = "\x03"
-    END_OF_TRANSMISSION: str = "\x04"
-    ENQUIRY: str = "\x05"
-    ACKNOWLEDGE: str = "\x06"
+    START_OF_HEADING: Literal["\x01"] = "\x01"
+    START_OF_TEXT: Literal["\x02"] = "\x02"
+    END_OF_TEXT: Literal["\x03"] = "\x03"
+    END_OF_TRANSMISSION: Literal["\x04"] = "\x04"
+    ENQUIRY: Literal["\x05"] = "\x05"
+    ACKNOWLEDGE: Literal["\x06"] = "\x06"
 
-    BELL: str = "\a"
-    BACKSPACE: str = "\b"
-    HORIZONTAL_TABULATION: str = "\t"
-    LINE_FEED: str = "\n"
-    VERTICAL_TABULATION: str = "\v"
-    FORM_FEED: str = "\f"
-    CARRIAGE_RETURN: str = "\r"
+    BELL: Literal["\a"] = "\a"
+    BACKSPACE: Literal["\b"] = "\b"
+    HORIZONTAL_TABULATION: Literal["\t"] = "\t"
+    LINE_FEED: Literal["\n"] = "\n"
+    VERTICAL_TABULATION: Literal["\v"] = "\v"
+    FORM_FEED: Literal["\f"] = "\f"
+    CARRIAGE_RETURN: Literal["\r"] = "\r"
 
-    SHIFT_OUT: str = "\x0e"
-    SHIFT_IN: str = "\x0f"
-    DATA_LINK_ESCAPE: str = "\x10"
-    XON: str = "\x11"
-    DEVICE_CONTROL_TWO: str = "\x12"
-    XOFF: str = "\x13"
-    DEVICE_CONTROL_FOUR: str = "\x14"
-    NEGATIVE_ACKNOWLEDGE: str = "\x15"
-    SYNCHRONOUS_IDLE: str = "\x16"
-    END_OF_TRANSMISSION_BLOCK: str = "\x17"
-    CANCEL: str = "\x18"
-    END_OF_MEDIUM: str = "\x19"
-    SUBSTITUTE: str = "\x1a"
+    SHIFT_OUT: Literal["\x0e"] = "\x0e"
+    SHIFT_IN: Literal["\x0f"] = "\x0f"
+    DATA_LINK_ESCAPE: Literal["\x10"] = "\x10"
+    XON: Literal["\x11"] = "\x11"
+    DEVICE_CONTROL_TWO: Literal["\x12"] = "\x12"
+    XOFF: Literal["\x13"] = "\x13"
+    DEVICE_CONTROL_FOUR: Literal["\x14"] = "\x14"
+    NEGATIVE_ACKNOWLEDGE: Literal["\x15"] = "\x15"
+    SYNCHRONOUS_IDLE: Literal["\x16"] = "\x16"
+    END_OF_TRANSMISSION_BLOCK: Literal["\x17"] = "\x17"
+    CANCEL: Literal["\x18"] = "\x18"
+    END_OF_MEDIUM: Literal["\x19"] = "\x19"
+    SUBSTITUTE: Literal["\x1a"] = "\x1a"
 
-    ESCAPE: str = "\x1b"
+    ESCAPE: Literal["\x1b"] = "\x1b"
 
-    FILE_SEPARATOR: str = "\x1c"
-    GROUP_SEPARATOR: str = "\x1d"
-    RECORD_SEPARATOR: str = "\x1e"
-    UNIT_SEPARATOR: str = "\x1f"
-    DELETE: str = "\x7f"
+    FILE_SEPARATOR: Literal["\x1c"] = "\x1c"
+    GROUP_SEPARATOR: Literal["\x1d"] = "\x1d"
+    RECORD_SEPARATOR: Literal["\x1e"] = "\x1e"
+    UNIT_SEPARATOR: Literal["\x1f"] = "\x1f"
+    DELETE: Literal["\x7f"] = "\x7f"
+
+
+class KeypadActions:  # pylint: disable=too-few-public-methods
+    """Class for keypad actions."""
+
+    ENTER: Literal["\x1bOM"] = "\x1bOM"
+
+    DELETE: Literal["\x1bOn"] = "\x1bOn"
+    INSERT: Literal["\x1bOp"] = "\x1bOp"
+    END: Literal["\x1bOq"] = "\x1bOq"
+    DOWN: Literal["\x1bOr"] = "\x1bOr"
+    PAGE_DOWN: Literal["\x1bOs"] = "\x1bOs"
+    LEFT: Literal["\x1bOt"] = "\x1bOt"
+    RIGHT: Literal["\x1bOv"] = "\x1bOv"
+    HOME: Literal["\x1bOw"] = "\x1bOw"
+    UP: Literal["\x1bOx"] = "\x1bOx"
+    PAGE_UP: Literal["\x1bOy"] = "\x1bOy"
 
 
 class SS3Sequences:  # pylint: disable=too-few-public-methods
     """Class for SS3 sequences."""
 
-    SS3: str = "\x1bO"
+    SS3: Literal["\x1bO"] = "\x1bO"
 
-    UP: str = "\x1bOA"
-    DOWN: str = "\x1bOB"
-    RIGHT: str = "\x1bOC"
-    LEFT: str = "\x1bOD"
-    END: str = "\x1bOF"
-    HOME: str = "\x1bOH"
+    UP: Literal["\x1bOA"] = "\x1bOA"
+    DOWN: Literal["\x1bOB"] = "\x1bOB"
+    RIGHT: Literal["\x1bOC"] = "\x1bOC"
+    LEFT: Literal["\x1bOD"] = "\x1bOD"
+    END: Literal["\x1bOF"] = "\x1bOF"
+    HOME: Literal["\x1bOH"] = "\x1bOH"
 
-    KEYPAD_ENTER: str = "\x1bOM"
+    KEYPAD_ENTER: Literal["\x1bOM"] = "\x1bOM"
 
-    F1: str = "\x1bOP"
-    F2: str = "\x1bOQ"
-    F3: str = "\x1bOR"
-    F4: str = "\x1bOS"
+    F1: Literal["\x1bOP"] = "\x1bOP"
+    F2: Literal["\x1bOQ"] = "\x1bOQ"
+    F3: Literal["\x1bOR"] = "\x1bOR"
+    F4: Literal["\x1bOS"] = "\x1bOS"
 
-    KEYPAD_EQUALS: str = "\x1bOX"
-    KEYPAD_MULTIPLY: str = "\x1bOj"
-    KEYPAD_ADD: str = "\x1bOk"
-    KEYPAD_COMMA: str = "\x1bOl"
-    KEYPAD_MINUS: str = "\x1bOm"
-    KEYPAD_PERIOD: str = "\x1bOn"
-    KEYPAD_DIVIDE: str = "\x1bOo"
+    KEYPAD_EQUALS: Literal["\x1bOX"] = "\x1bOX"
+    KEYPAD_MULTIPLY: Literal["\x1bOj"] = "\x1bOj"
+    KEYPAD_ADD: Literal["\x1bOk"] = "\x1bOk"
+    KEYPAD_COMMA: Literal["\x1bOl"] = "\x1bOl"
+    KEYPAD_MINUS: Literal["\x1bOm"] = "\x1bOm"
+    KEYPAD_PERIOD: Literal["\x1bOn"] = "\x1bOn"
+    KEYPAD_DIVIDE: Literal["\x1bOo"] = "\x1bOo"
 
-    KEYPAD_0: str = "\x1bOp"
-    KEYPAD_1: str = "\x1bOq"
-    KEYPAD_2: str = "\x1bOr"
-    KEYPAD_3: str = "\x1bOs"
-    KEYPAD_4: str = "\x1bOt"
-    KEYPAD_5: str = "\x1bOu"
-    KEYPAD_6: str = "\x1bOv"
-    KEYPAD_7: str = "\x1bOw"
-    KEYPAD_8: str = "\x1bOx"
-    KEYPAD_9: str = "\x1bOy"
+    KEYPAD_0: Literal["\x1bOp"] = "\x1bOp"
+    KEYPAD_1: Literal["\x1bOq"] = "\x1bOq"
+    KEYPAD_2: Literal["\x1bOr"] = "\x1bOr"
+    KEYPAD_3: Literal["\x1bOs"] = "\x1bOs"
+    KEYPAD_4: Literal["\x1bOt"] = "\x1bOt"
+    KEYPAD_5: Literal["\x1bOu"] = "\x1bOu"
+    KEYPAD_6: Literal["\x1bOv"] = "\x1bOv"
+    KEYPAD_7: Literal["\x1bOw"] = "\x1bOw"
+    KEYPAD_8: Literal["\x1bOx"] = "\x1bOx"
+    KEYPAD_9: Literal["\x1bOy"] = "\x1bOy"
 
 
 class CSISequences:  # pylint: disable=too-few-public-methods
     """Class for CSI sequences."""
 
-    CSI: str = "\x1b["
+    CSI: Literal["\x1b["] = "\x1b["
 
-    SGR_MOUSE: str = "\x1b[<"
-    UP: str = "\x1b[A"
-    DOWN: str = "\x1b[B"
-    RIGHT: str = "\x1b[C"
-    LEFT: str = "\x1b[D"
-    BEGIN: str = "\x1b[E"
-    END: str = "\x1b[F"
-    NEXT: str = "\x1b[G"
-    HOME: str = "\x1b[H"
-    MOUSE: str = "\x1b[M"
-    MOUSE_MOVE: str = "\x1b[T"
-    SHIFT_TAB: str = "\x1b[Z"
-    MOUSE_CLICK: str = "\x1b[t"
-    INSERT: str = "\x1b[2~"
-    DELETE: str = "\x1b[3~"
-    PAGE_UP: str = "\x1b[5~"
-    PAGE_DOWN: str = "\x1b[6~"
+    SGR_MOUSE: Literal["\x1b[<"] = "\x1b[<"
+    UP: Literal["\x1b[A"] = "\x1b[A"
+    DOWN: Literal["\x1b[B"] = "\x1b[B"
+    RIGHT: Literal["\x1b[C"] = "\x1b[C"
+    LEFT: Literal["\x1b[D"] = "\x1b[D"
+    BEGIN: Literal["\x1b[E"] = "\x1b[E"
+    END: Literal["\x1b[F"] = "\x1b[F"
+    NEXT: Literal["\x1b[G"] = "\x1b[G"
+    HOME: Literal["\x1b[H"] = "\x1b[H"
+    MOUSE: Literal["\x1b[M"] = "\x1b[M"
+    MOUSE_MOVE: Literal["\x1b[T"] = "\x1b[T"
+    SHIFT_TAB: Literal["\x1b[Z"] = "\x1b[Z"
+    MOUSE_CLICK: Literal["\x1b[t"] = "\x1b[t"
+    INSERT: Literal["\x1b[2~"] = "\x1b[2~"
+    DELETE: Literal["\x1b[3~"] = "\x1b[3~"
+    PAGE_UP: Literal["\x1b[5~"] = "\x1b[5~"
+    PAGE_DOWN: Literal["\x1b[6~"] = "\x1b[6~"
 
-    F5: str = "\x1b[15~"
-    F6: str = "\x1b[17~"
-    F7: str = "\x1b[18~"
-    F8: str = "\x1b[19~"
-    F9: str = "\x1b[20~"
-    F10: str = "\x1b[21~"
-    F11: str = "\x1b[23~"
-    F12: str = "\x1b[24~"
-    F13: str = "\x1b[25~"
-    F14: str = "\x1b[26~"
-    F15: str = "\x1b[28~"
-    F16: str = "\x1b[29~"
-    F17: str = "\x1b[31~"
-    F18: str = "\x1b[32~"
-    F19: str = "\x1b[33~"
-    F20: str = "\x1b[34~"
+    F5: Literal["\x1b[15~"] = "\x1b[15~"
+    F6: Literal["\x1b[17~"] = "\x1b[17~"
+    F7: Literal["\x1b[18~"] = "\x1b[18~"
+    F8: Literal["\x1b[19~"] = "\x1b[19~"
+    F9: Literal["\x1b[20~"] = "\x1b[20~"
+    F10: Literal["\x1b[21~"] = "\x1b[21~"
+    F11: Literal["\x1b[23~"] = "\x1b[23~"
+    F12: Literal["\x1b[24~"] = "\x1b[24~"
+    F13: Literal["\x1b[25~"] = "\x1b[25~"
+    F14: Literal["\x1b[26~"] = "\x1b[26~"
+    F15: Literal["\x1b[28~"] = "\x1b[28~"
+    F16: Literal["\x1b[29~"] = "\x1b[29~"
+    F17: Literal["\x1b[31~"] = "\x1b[31~"
+    F18: Literal["\x1b[32~"] = "\x1b[32~"
+    F19: Literal["\x1b[33~"] = "\x1b[33~"
+    F20: Literal["\x1b[34~"] = "\x1b[34~"
 
 
 class Mouse:  # pylint: disable=too-few-public-methods
     """Class for mouse buttons."""
 
-    BUTTON_1: int = 0x00
-    BUTTON_2: int = 0x01
-    BUTTON_3: int = 0x02
-    RELEASE: int = 0x03
+    BUTTON_1: Literal[0x00] = 0x00
+    BUTTON_2: Literal[0x01] = 0x01
+    BUTTON_3: Literal[0x02] = 0x02
+    RELEASE: Literal[0x03] = 0x03
 
-    SHIFT: int = 0x04
-    ALT: int = 0x08
-    ALT_SHIFT: int = 0x0c
-    CTRL: int = 0x10
-    CTRL_SHIFT: int = 0x14
-    CTRL_ALT: int = 0x18
-    CTRL_ALT_SHIFT: int = 0x1c
+    SHIFT: Literal[0x04] = 0x04
+    ALT: Literal[0x08] = 0x08
+    ALT_SHIFT: Literal[0x0c] = 0x0c
+    CTRL: Literal[0x10] = 0x10
+    CTRL_SHIFT: Literal[0x14] = 0x14
+    CTRL_ALT: Literal[0x18] = 0x18
+    CTRL_ALT_SHIFT: Literal[0x1c] = 0x1c
 
-    BUTTON_4: int = 0x40
-    BUTTON_5: int = 0x41
-    BUTTON_6: int = 0x42
-    BUTTON_7: int = 0x43
+    BUTTON_4: Literal[0x40] = 0x40
+    BUTTON_5: Literal[0x41] = 0x41
+    BUTTON_6: Literal[0x42] = 0x42
+    BUTTON_7: Literal[0x43] = 0x43
 
-    BUTTON_8: int = 0x80
-    BUTTON_9: int = 0x81
-    BUTTON_10: int = 0x82
-    BUTTON_11: int = 0x83
-
-
-class _BaseRawInput(ContextDecorator, ABC):
-    """Base class for raw input."""
-
-    count: int = 0
-
-    def __enter__(self: Self) -> Self:
-        if not _BaseRawInput.count:
-            self.enable()
-
-        _BaseRawInput.count += 1
-        return self
-
-    def __exit__(
-        self: Self, _1: type[BaseException] | None, _2: BaseException | None,
-        _3: TracebackType | None,
-    ) -> None:
-        _BaseRawInput.count = max(0, _BaseRawInput.count - 1)
-        if not _BaseRawInput.count:
-            self.disable()
-
-    @classmethod
-    @abstractmethod
-    def disable(cls) -> None:
-        """Disable raw input."""
-
-    @classmethod
-    @abstractmethod
-    def enable(cls) -> None:
-        """Enable raw input."""
-
-
-if sys.platform == "win32":
-    from ctypes import byref, c_ulong, windll
-    # noinspection PyCompatibility
-    from msvcrt import get_osfhandle  # pylint: disable=import-error
-
-    _ENABLE_PROCESSED_INPUT: int = 0x0001
-    _ENABLE_LINE_INPUT: int = 0x0002
-    _ENABLE_ECHO_INPUT: int = 0x0004
-    _ENABLE_VIRTUAL_TERMINAL_INPUT: int = 0x0200
-
-    class RawInput(_BaseRawInput):
-        """Class to enable & re-enable raw input."""
-
-        _old: c_ulong = c_ulong()
-        windll.kernel32.GetConsoleMode(
-            get_osfhandle(stdin.fileno()), byref(_old),
-        )
-
-        @classmethod
-        def disable(cls) -> None:
-            """Disable raw input."""
-            print(end="\x1b[?1000l\x1b[?1006l", flush=True)
-            windll.kernel32.SetConsoleMode(
-                get_osfhandle(stdin.fileno()), cls._old.value,
-            )
-
-        @classmethod
-        def enable(cls) -> None:
-            """Enable raw input."""
-            value: int = cls._old.value
-            # HACK: Disable processed input, Windows has one key delay
-            # Disable line input and echo input
-            value &= ~(
-                _ENABLE_PROCESSED_INPUT | _ENABLE_LINE_INPUT
-                | _ENABLE_ECHO_INPUT
-            )
-            value |= _ENABLE_VIRTUAL_TERMINAL_INPUT
-            windll.kernel32.SetConsoleMode(
-                get_osfhandle(stdin.fileno()), value,
-            )
-            print(end="\x1b[?1000h\x1b[?1006h", flush=True)
-# pylint: disable=consider-using-in
-elif sys.platform == "darwin" or sys.platform == "linux":  # noqa: PLR1714
-    # pylint: disable=import-error
-    from termios import (
-        ICRNL, INLCR, ISTRIP, IXON, ONLCR, OPOST, TCSANOW, tcgetattr,
-        tcsetattr,
-    )
-    from tty import setcbreak
-
-    _IFLAG: int = 0
-    _OFLAG: int = 1
-
-    class RawInput(_BaseRawInput):
-        """Class to enable & disable raw input."""
-
-        if not stdin.isatty():
-            err: str = "stdin doesn't refer to a terminal"
-            raise RuntimeError(err)
-
-        _old_value: list[Any] = tcgetattr(stdin)
-
-        @classmethod
-        def disable(cls) -> None:
-            """Disable raw input."""
-            tcsetattr(stdin, TCSANOW, cls._old_value)
-            print(end="\x1b[?1000l\x1b[?1006l", flush=True)
-
-        @classmethod
-        def enable(cls) -> None:
-            """Enable raw input."""
-            print(end="\x1b[?1000h\x1b[?1006h", flush=True)
-            mode: list[Any] = tcgetattr(stdin)
-            # Disable stripping of input to seven bits
-            # Disable converting of '\r' & '\n' on input
-            # Disable start/stop control on output
-            mode[_IFLAG] &= ~(ISTRIP | INLCR | ICRNL | IXON)
-
-            # Convert '\n' on output to '\r\n'
-            mode[_OFLAG] |= OPOST | ONLCR
-            tcsetattr(stdin, TCSANOW, mode)
-
-            # Disable line buffering & erase/kill character-processing
-            setcbreak(stdin, TCSANOW)
-else:
-    err: str = f"Unsupported platform: {sys.platform!r}"
-    raise RuntimeError(err)
-
-register(RawInput.disable)
+    BUTTON_8: Literal[0x80] = 0x80
+    BUTTON_9: Literal[0x81] = 0x81
+    BUTTON_10: Literal[0x82] = 0x82
+    BUTTON_11: Literal[0x83] = 0x83
 
 
 class _KeyReader:
     """Class to read keys from standard input."""
 
-    byte: bytes | None = None
-    lock: Lock = Lock()
-    thread: Thread | None = None
+    byte: ClassVar[bytes | None] = None
+    lock: ClassVar[Lock] = Lock()
+    thread: ClassVar[Thread | None] = None
 
     @classmethod
     def read(cls, number: int, *, raw: bool = False) -> str:
@@ -500,7 +388,7 @@ class _KeyReader:
 class Event(str):
     """Class to represent events."""
 
-    __slots__: tuple[()] = ()
+    __slots__: ClassVar[tuple[()]] = ()
 
     @property
     def button(self: Self) -> int | None:

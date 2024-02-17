@@ -11,52 +11,26 @@ __all__: list[str] = []
 __author__: str = "Nice Zombies"
 __version__: str = "2.0"
 
-import sys
 from contextlib import suppress
 
-from clinteract import pause
-from rgbeep import ColoredOutput, NoCursor
-from skiboard import RawInput
+from contextile import (
+    application_keypad, colored_output, mouse_input, no_cursor, raw_input,
+)
+from skiboard import get_event
 
 
-# Enable raw input, colored output & no cursor for entire program
-@RawInput()
-@ColoredOutput()
-@NoCursor()
+# Enable raw & mouse input, colored output and no cursor for entire program
+@raw_input
+@application_keypad
+@mouse_input
+@colored_output
+@no_cursor
 def main() -> None:
     """Start PyVZ2."""
     with suppress(EOFError, KeyboardInterrupt):
-        pause(timeout=5)
+        while True:
+            print(repr(get_event()))
 
-
-# pylint: disable=consider-using-in
-if sys.platform == "darwin" or sys.platform == "linux":  # noqa: PLR1714
-    # pylint: disable=no-name-in-module
-    from signal import SIG_DFL, SIGCONT, SIGTSTP, raise_signal, signal
-    from typing import TYPE_CHECKING
-
-    if TYPE_CHECKING:
-        from types import FrameType
-
-    def resume(_1: int, _2: FrameType | None) -> None:
-        """Enable raw input & no cursor on resume."""
-        signal(SIGTSTP, suspend)
-        if NoCursor.count:
-            NoCursor.enable()
-
-        if RawInput.count:
-            RawInput.enable()
-
-    signal(SIGCONT, resume)
-
-    def suspend(_1: int, _2: FrameType | None) -> None:
-        """Disable raw input & no cursor on suspend."""
-        NoCursor.disable()
-        RawInput.disable()
-        signal(SIGTSTP, SIG_DFL)
-        raise_signal(SIGTSTP)
-
-    signal(SIGTSTP, suspend)
 
 if __name__ == "__main__":
     main()

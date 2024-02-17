@@ -10,15 +10,18 @@ from gettext import gettext as _
 from math import prod
 from os import get_terminal_size, terminal_size
 from sys import stdout
-from typing import Generic, Self
+from typing import Generic, Literal, Self
 
+from contextile import colored_output, mouse_input, no_cursor, raw_input
 from rgbeep import (
-    ColoredOutput, NoCursor, bold, cursor_up, erase_in_display, green,
-    raw_print, red, set_cursor_position,
+    bold, cursor_up, erase_in_display, green, raw_print, red,
+    set_cursor_position,
 )
-from skiboard import Event, RawInput, get_event
+from skiboard import Event, get_event
 
 from ._classes import VALUE, Cursor, Representation
+
+_ELLIPSIS: Literal["\u2026"] = "\u2026"
 
 
 class BaseInputHandler(Generic[VALUE], ABC):
@@ -40,7 +43,7 @@ class BaseInputHandler(Generic[VALUE], ABC):
         err_len: int = len(f">> {err}")
         offset: int = max(0, err_len - columns)
         if offset:
-            err = err[:-offset - 1] + "\u2026"  # Add right ellipsis
+            err = err[:-offset - 1] + _ELLIPSIS
 
         raw_print(red(">>"), bold(err))
         self.cursor.wrote(f">> {err}")
@@ -52,7 +55,7 @@ class BaseInputHandler(Generic[VALUE], ABC):
         prompt: str = self.get_prompt()
         offset: int = self.get_prompt_offset(msg, short=short)
         if offset:
-            prompt = prompt[:-offset - 1] + "\u2026"  # Add right ellipsis
+            prompt = prompt[:-offset - 1] + _ELLIPSIS
 
         raw_print(green("?"), bold(prompt))
         self.cursor.wrote(f"? {prompt}")
@@ -101,16 +104,17 @@ class Pause(BaseInputHandler[None]):
     ) -> None:
         if prompt is None:
             if timeout is None:
-                prompt = _("Press any key...")
+                prompt = _("Press enter to continue...")
             else:
-                prompt = _("Wait / Press any key...")
+                prompt = _("Wait / Press enter to continue...")
 
         self.timeout: float | None = timeout
         super().__init__(prompt, representation=representation)
 
-    @RawInput()
-    @ColoredOutput()
-    @NoCursor()
+    @raw_input
+    @mouse_input
+    @colored_output
+    @no_cursor
     def get_value(self: Self) -> None:
         self.print_prompt(short=True)
         stdout.buffer.flush()
