@@ -19,7 +19,7 @@ __author__: str = "Nice Zombies"
 import sys
 from contextlib import ContextDecorator
 from sys import stdin, stdout
-from typing import TYPE_CHECKING, Any, Literal, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self
 
 if TYPE_CHECKING:
     from types import FrameType, TracebackType
@@ -44,10 +44,12 @@ class ContextEvent(Event):
 class RecursiveContextDecorator(ContextDecorator):
     """Class for recursive context decorators."""
 
+    decorators: ClassVar[list[RecursiveContextDecorator]] = []
+
     def __init__(self: Self) -> None:
         """Create new recursive context decorator instance."""
         self.count: int = 0
-        register(self.disable)
+        register(self._disable)
 
     def __enter__(self: Self) -> Self:
         """Enter context."""
@@ -62,38 +64,51 @@ class RecursiveContextDecorator(ContextDecorator):
         _3: TracebackType | None,
     ) -> None:
         """Exit context."""
-        self.count = max(0, self.count - 1)
-        if not self.count:
+        if self.count == 1:
             self.disable()
 
-    def disable(self: Self) -> None:
-        """Disable context."""
+        self.count = max(0, self.count - 1)
 
-    def enable(self: Self) -> None:
+    def _disable(self: Self) -> None:
+        ...
+
+    def _enable(self: Self) -> None:
+        ...
+
+    def disable(self: Self, *, tracked: bool = True) -> None:
+        """Disable context."""
+        self._disable()
+        if self in self.decorators and tracked:
+            self.decorators.remove(self)
+
+    def enable(self: Self, *, tracked: bool = True) -> None:
         """Enable context."""
+        self._enable()
+        if self not in self.decorators and tracked:
+            self.decorators.append(self)
 
 
 class _ApplicationKeypad(RecursiveContextDecorator):
-    def disable(self) -> None:  # noqa: PLR6301
+    def _disable(self) -> None:  # noqa: PLR6301
         print(end="\x1b>", flush=True)
 
-    def enable(self) -> None:  # noqa: PLR6301
+    def _enable(self) -> None:  # noqa: PLR6301
         print(end="\x1b=", flush=True)
 
 
 class _MouseInput(RecursiveContextDecorator):
-    def disable(self) -> None:  # noqa: PLR6301
+    def _disable(self) -> None:  # noqa: PLR6301
         print(end="\x1b[?1000l\x1b[?1006l", flush=True)
 
-    def enable(self) -> None:  # noqa: PLR6301
+    def _enable(self) -> None:  # noqa: PLR6301
         print(end="\x1b[?1000h\x1b[?1006h", flush=True)
 
 
 class _NoCursor(RecursiveContextDecorator):
-    def disable(self: Self) -> None:  # noqa: PLR6301
+    def _disable(self: Self) -> None:  # noqa: PLR6301
         print(end="\x1b[?25h", flush=True)
 
-    def enable(self: Self) -> None:  # noqa: PLR6301
+    def _enable(self: Self) -> None:  # noqa: PLR6301
         print(end="\x1b[?25l", flush=True)
 
 
@@ -120,12 +135,12 @@ if sys.platform == "win32":
             )
             super().__init__()
 
-        def disable(self) -> None:
+        def _disable(self) -> None:
             windll.kernel32.SetConsoleMode(
                 get_osfhandle(stdin.fileno()), self._old.value,
             )
 
-        def enable(self) -> None:
+        def _enable(self) -> None:
             value: int = self._old.value
             # HACK: Disable processed input, Windows has one key delay
             # Disable line input and echo input
@@ -146,12 +161,12 @@ if sys.platform == "win32":
             )
             super().__init__()
 
-        def disable(self: Self) -> None:
+        def _disable(self: Self) -> None:
             windll.kernel32.SetConsoleMode(
                 get_osfhandle(stdout.fileno()), self._old.value,
             )
 
-        def enable(self: Self) -> None:
+        def _enable(self: Self) -> None:
             value: int = self._old.value
             value |= (
                 _ENABLE_PROCESSED_OUTPUT | _ENABLE_WRAP_AT_EOL_OUTPUT
@@ -163,7 +178,8 @@ if sys.platform == "win32":
             )
 # pylint: disable=consider-using-in
 elif sys.platform == "darwin" or sys.platform == "linux":  # noqa: PLR1714
-    # pylint: disable=import-error
+    # pylint: disable=import-error, no-name-in-module
+    from signal import SIG_DFL, SIGCONT, SIGTSTP, raise_signal, signal
     from termios import (
         ICRNL, INLCR, ISTRIP, IXON, ONLCR, OPOST, TCSANOW, tcgetattr,
         tcsetattr,
@@ -185,10 +201,10 @@ elif sys.platform == "darwin" or sys.platform == "linux":  # noqa: PLR1714
             self._old_value: list[Any] = tcgetattr(stdin)
             super().__init__()
 
-        def disable(self) -> None:
+        def _disable(self) -> None:
             tcsetattr(stdin, TCSANOW, self._old_value)
 
-        def enable(self) -> None:  # noqa: PLR6301
+        def _enable(self) -> None:  # noqa: PLR6301
             mode: list[Any] = tcgetattr(stdin)
             # Disable stripping of input to seven bits
             # Disable converting of '\r' & '\n' on input
@@ -203,6 +219,23 @@ elif sys.platform == "darwin" or sys.platform == "linux":  # noqa: PLR1714
             setcbreak(stdin, TCSANOW)
 
     _ColoredOutput = RecursiveContextDecorator
+
+    def _resume(_1: int, _2: FrameType | None) -> None:
+        """Enable all contexts on resume."""
+        signal(SIGTSTP, _suspend)
+        for decorator in RecursiveContextDecorator.decorators:
+            decorator.enable(tracked=False)
+
+    def _suspend(signum: int, _2: FrameType | None) -> None:
+        """Disable all contexts on suspend."""
+        for decorator in reversed(RecursiveContextDecorator.decorators):
+            decorator.disable(tracked=False)
+
+        signal(signum, SIG_DFL)
+        raise_signal(signum)
+
+    signal(SIGCONT, _resume)
+    signal(SIGTSTP, _suspend)
 else:
     err: str = f"Unsupported platform: {sys.platform!r}"
     raise RuntimeError(err)
@@ -212,36 +245,3 @@ application_keypad: RecursiveContextDecorator = _ApplicationKeypad()
 mouse_input: RecursiveContextDecorator = _MouseInput()
 colored_output: RecursiveContextDecorator = _ColoredOutput()
 no_cursor: RecursiveContextDecorator = _NoCursor()
-
-
-# pylint: disable=consider-using-in
-if sys.platform == "darwin" or sys.platform == "linux":  # noqa: PLR1714
-    # pylint: disable=no-name-in-module
-    from signal import SIG_DFL, SIGCONT, SIGTSTP, raise_signal, signal
-
-    def resume(_1: int, _2: FrameType | None) -> None:
-        """Enable all contexts on resume."""
-        signal(SIGTSTP, suspend)
-        if raw_input.count:
-            raw_input.enable()
-
-        if application_keypad.count:
-            application_keypad.enable()
-
-        if mouse_input.count:
-            mouse_input.enable()
-
-        if no_cursor.count:
-            no_cursor.enable()
-
-    def suspend(_1: int, _2: FrameType | None) -> None:
-        """Disable all contexts on suspend."""
-        no_cursor.disable()
-        mouse_input.disable()
-        application_keypad.disable()
-        raw_input.disable()
-        signal(SIGTSTP, SIG_DFL)
-        raise_signal(SIGTSTP)
-
-    signal(SIGCONT, resume)
-    signal(SIGTSTP, suspend)
