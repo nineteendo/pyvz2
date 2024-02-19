@@ -7,7 +7,7 @@ from threading import Event
 
 __all__: list[str] = [
     "ContextEvent",
-    "RecursiveContextDecorator",
+    "RecursiveContext",
     "application_keypad",
     "colored_output",
     "mouse_input",
@@ -41,13 +41,13 @@ class ContextEvent(Event):
         self.set()
 
 
-class RecursiveContextDecorator(ContextDecorator):
+class RecursiveContext(ContextDecorator):
     """Class for recursive context decorators."""
 
-    decorators: ClassVar[list[RecursiveContextDecorator]] = []
+    decorators: ClassVar[list[RecursiveContext]] = []
 
     def __init__(self: Self) -> None:
-        """Create new recursive context decorator instance."""
+        """Create new recursive context instance."""
         self.count: int = 0
         register(self._disable)
 
@@ -88,30 +88,6 @@ class RecursiveContextDecorator(ContextDecorator):
             self.decorators.append(self)
 
 
-class _ApplicationKeypad(RecursiveContextDecorator):
-    def _disable(self) -> None:  # noqa: PLR6301
-        print(end="\x1b>", flush=True)
-
-    def _enable(self) -> None:  # noqa: PLR6301
-        print(end="\x1b=", flush=True)
-
-
-class _MouseInput(RecursiveContextDecorator):
-    def _disable(self) -> None:  # noqa: PLR6301
-        print(end="\x1b[?1000l\x1b[?1006l", flush=True)
-
-    def _enable(self) -> None:  # noqa: PLR6301
-        print(end="\x1b[?1000h\x1b[?1006h", flush=True)
-
-
-class _NoCursor(RecursiveContextDecorator):
-    def _disable(self: Self) -> None:  # noqa: PLR6301
-        print(end="\x1b[?25h", flush=True)
-
-    def _enable(self: Self) -> None:  # noqa: PLR6301
-        print(end="\x1b[?25l", flush=True)
-
-
 if sys.platform == "win32":
     from ctypes import byref, c_ulong, windll
     # noinspection PyCompatibility
@@ -127,7 +103,7 @@ if sys.platform == "win32":
     _ENABLE_VIRTUAL_TERMINAL_PROCESSING: Literal[0x0004] = 0x0004
     _DISABLE_NEWLINE_AUTO_RETURN: Literal[0x0008] = 0x0008
 
-    class _RawInput(RecursiveContextDecorator):
+    class _RawInput(RecursiveContext):
         def __init__(self: Self) -> None:
             self._old: c_ulong = c_ulong()
             windll.kernel32.GetConsoleMode(
@@ -153,7 +129,7 @@ if sys.platform == "win32":
                 get_osfhandle(stdin.fileno()), value,
             )
 
-    class _ColoredOutput(RecursiveContextDecorator):
+    class _ColoredOutput(RecursiveContext):
         def __init__(self: Self) -> None:
             self._old: c_ulong = c_ulong()
             windll.kernel32.GetConsoleMode(
@@ -189,7 +165,7 @@ elif sys.platform == "darwin" or sys.platform == "linux":  # noqa: PLR1714
     _IFLAG: Literal[0] = 0
     _OFLAG: Literal[1] = 1
 
-    class _RawInput(RecursiveContextDecorator):
+    class _RawInput(RecursiveContext):
 
         def __init__(self: Self) -> None:
             if not stdin.isatty():
@@ -218,17 +194,17 @@ elif sys.platform == "darwin" or sys.platform == "linux":  # noqa: PLR1714
             # Disable line buffering & erase/kill character-processing
             setcbreak(stdin, TCSANOW)
 
-    _ColoredOutput = RecursiveContextDecorator
+    _ColoredOutput = RecursiveContext
 
     def _resume(_1: int, _2: FrameType | None) -> None:
         """Enable all contexts on resume."""
         signal(SIGTSTP, _suspend)
-        for decorator in RecursiveContextDecorator.decorators:
+        for decorator in RecursiveContext.decorators:
             decorator.enable(tracked=False)
 
     def _suspend(signum: int, _2: FrameType | None) -> None:
         """Disable all contexts on suspend."""
-        for decorator in reversed(RecursiveContextDecorator.decorators):
+        for decorator in reversed(RecursiveContext.decorators):
             decorator.disable(tracked=False)
 
         signal(signum, SIG_DFL)
@@ -240,8 +216,24 @@ else:
     err: str = f"Unsupported platform: {sys.platform!r}"
     raise RuntimeError(err)
 
-raw_input: RecursiveContextDecorator = _RawInput()
-application_keypad: RecursiveContextDecorator = _ApplicationKeypad()
-mouse_input: RecursiveContextDecorator = _MouseInput()
-colored_output: RecursiveContextDecorator = _ColoredOutput()
-no_cursor: RecursiveContextDecorator = _NoCursor()
+
+def _make_terminal_context(start: str, end: str) -> RecursiveContext:
+    class TerminalContext(RecursiveContext):
+        """Class for terminal contexts."""
+
+        def _disable(self) -> None:  # noqa: PLR6301
+            print(end=end, flush=True)
+
+        def _enable(self) -> None:  # noqa: PLR6301
+            print(end=start, flush=True)
+
+    return TerminalContext()
+
+
+raw_input: RecursiveContext = _RawInput()
+application_keypad: RecursiveContext = _make_terminal_context("\x1b=", "\x1b>")
+mouse_input: RecursiveContext = _make_terminal_context(
+    "\x1b[?1000h\x1b[?1006h", "\x1b[?1000l\x1b[?1006l",
+)
+colored_output: RecursiveContext = _ColoredOutput()
+no_cursor: RecursiveContext = _make_terminal_context("\x1b[?25l", "\x1b[?25h")
