@@ -36,19 +36,33 @@ class BaseTextInput(BaseInputHandler[str]):
 
     # pylint: disable=too-many-arguments, too-many-locals, too-many-statements
     def __init__(  # noqa: PLR0913, C901
-        self: Self, prompt: object, *, allow_letters: bool = False,
-        allow_marks: bool = False, allow_numbers: bool = False,
-        allow_punctuations: bool = False, allow_separators: bool = False,
-        allow_symbols: bool = False, ascii_only: bool = False,
-        clear: bool = False, make_lowercase: bool = False,
-        make_uppercase: bool = False, max_length: int = 0, min_length: int = 0,
+        self: Self,
+        prompt: object,
+        *,
+        allow_letters: bool = False,
+        allow_marks: bool = False,
+        allow_numbers: bool = False,
+        allow_punctuations: bool = False,
+        allow_separators: bool = False,
+        allow_symbols: bool = False,
+        ascii_only: bool = False,
+        clear: bool = False,
+        make_lowercase: bool = False,
+        make_uppercase: bool = False,
+        max_length: int = 0,
+        min_length: int = 0,
         placeholder: str | None = None,
         representation: type[str] = Representation,
-        value: str | None = None, whitelist: str = "",
+        value: str | None = None,
+        whitelist: str = "",
     ) -> None:
         if not (
-            allow_letters or (allow_marks and not ascii_only) or allow_numbers
-            or allow_punctuations or allow_separators or allow_symbols
+            allow_letters
+            or (allow_marks and not ascii_only)
+            or allow_numbers
+            or allow_punctuations
+            or allow_separators
+            or allow_symbols
         ) and not whitelist:
             # Allow everything when nothing is explicitly allowed
             allow_letters = allow_marks = allow_numbers = True
@@ -348,10 +362,17 @@ class InputStr(BaseTextInput):
 # noinspection PyMissingOrEmptyDocstring
 @overload
 def input_str(  # pylint: disable=too-many-arguments
-    prompt: object, *, ascii_only: bool = False, clear: bool = False,
-    make_lowercase: bool = False, make_uppercase: bool = False,
-    max_length: int = 0, min_length: int = 0, placeholder: str | None = None,
-    representation: type[str] = Representation, value: str | None = None,
+    prompt: object,
+    *,
+    ascii_only: bool = False,
+    clear: bool = False,
+    make_lowercase: bool = False,
+    make_uppercase: bool = False,
+    max_length: int = 0,
+    min_length: int = 0,
+    placeholder: str | None = None,
+    representation: type[str] = Representation,
+    value: str | None = None,
 ) -> str | None:
     ...
 
@@ -359,37 +380,66 @@ def input_str(  # pylint: disable=too-many-arguments
 # noinspection PyMissingOrEmptyDocstring
 @overload
 def input_str(  # pylint: disable=too-many-arguments, too-many-locals
-    prompt: object, *, allow_letters: bool = False, allow_marks: bool = False,
-    allow_numbers: bool = False, allow_punctuations: bool = False,
-    allow_separators: bool = False, allow_symbols: bool = False,
-    ascii_only: bool = False, clear: bool = False,
-    make_lowercase: bool = False, make_uppercase: bool = False,
-    max_length: int = 0, min_length: int = 0, placeholder: str | None = None,
-    representation: type[str] = Representation, value: str | None = None,
+    prompt: object,
+    *,
+    allow_letters: bool = False,
+    allow_marks: bool = False,
+    allow_numbers: bool = False,
+    allow_punctuations: bool = False,
+    allow_separators: bool = False,
+    allow_symbols: bool = False,
+    ascii_only: bool = False,
+    clear: bool = False,
+    make_lowercase: bool = False,
+    make_uppercase: bool = False,
+    max_length: int = 0,
+    min_length: int = 0,
+    placeholder: str | None = None,
+    representation: type[str] = Representation,
+    value: str | None = None,
     whitelist: str = "",
 ) -> str | None:
     ...
 
+
 # pylint: disable=too-many-arguments, too-many-locals
-
-
 def input_str(  # noqa: PLR0913
-    prompt: object, *, allow_letters: bool = False, allow_marks: bool = False,
-    allow_numbers: bool = False, allow_punctuations: bool = False,
-    allow_separators: bool = False, allow_symbols: bool = False,
-    ascii_only: bool = False, clear: bool = False,
-    make_lowercase: bool = False, make_uppercase: bool = False,
-    max_length: int = 0, min_length: int = 0, placeholder: str | None = None,
-    representation: type[str] = Representation, value: str | None = None,
+    prompt: object,
+    *,
+    allow_letters: bool = False,
+    allow_marks: bool = False,
+    allow_numbers: bool = False,
+    allow_punctuations: bool = False,
+    allow_separators: bool = False,
+    allow_symbols: bool = False,
+    ascii_only: bool = False,
+    clear: bool = False,
+    make_lowercase: bool = False,
+    make_uppercase: bool = False,
+    max_length: int = 0,
+    min_length: int = 0,
+    placeholder: str | None = None,
+    representation: type[str] = Representation,
+    value: str | None = None,
     whitelist: str = "",
 ) -> str | None:
     """Read str from command line input."""
     return InputStr(
-        prompt, allow_letters=allow_letters, allow_marks=allow_marks,
-        allow_numbers=allow_numbers, allow_punctuations=allow_punctuations,
-        allow_separators=allow_separators, allow_symbols=allow_symbols,
-        ascii_only=ascii_only, clear=clear, make_lowercase=make_lowercase,
-        make_uppercase=make_uppercase, max_length=max_length,
-        min_length=min_length, placeholder=placeholder,
-        representation=representation, value=value, whitelist=whitelist,
+        prompt,
+        allow_letters=allow_letters,
+        allow_marks=allow_marks,
+        allow_numbers=allow_numbers,
+        allow_punctuations=allow_punctuations,
+        allow_separators=allow_separators,
+        allow_symbols=allow_symbols,
+        ascii_only=ascii_only,
+        clear=clear,
+        make_lowercase=make_lowercase,
+        make_uppercase=make_uppercase,
+        max_length=max_length,
+        min_length=min_length,
+        placeholder=placeholder,
+        representation=representation,
+        value=value,
+        whitelist=whitelist,
     ).get_value()

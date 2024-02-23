@@ -28,7 +28,9 @@ class BaseInputHandler(Generic[VALUE], ABC):
     """Base class for handling command line input."""
 
     def __init__(
-        self: Self, prompt: object, *,
+        self: Self,
+        prompt: object,
+        *,
         representation: type[str] = Representation,
     ) -> None:
         new_terminal_size: terminal_size = get_terminal_size()
@@ -98,7 +100,9 @@ class Pause(BaseInputHandler[None]):
     """Class for pausing."""
 
     def __init__(
-        self: Self, prompt: object = None, *,
+        self: Self,
+        prompt: object = None,
+        *,
         representation: type[str] = Representation,
         timeout: float | None = None,
     ) -> None:
@@ -126,7 +130,9 @@ class Pause(BaseInputHandler[None]):
 
 
 def pause(
-    prompt: object = None, *, representation: type[str] = Representation,
+    prompt: object = None,
+    *,
+    representation: type[str] = Representation,
     timeout: float | None = None,
 ) -> None:
     """Pause with message."""

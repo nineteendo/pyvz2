@@ -34,7 +34,9 @@ class ContextEvent(Event):
         return self
 
     def __exit__(
-        self: Self, _1: type[BaseException] | None, _2: BaseException | None,
+        self: Self,
+        _1: type[BaseException] | None,
+        _2: BaseException | None,
         _3: TracebackType | None,
     ) -> None:
         """Exit context."""
@@ -60,7 +62,9 @@ class RecursiveContext(ContextDecorator):
         return self
 
     def __exit__(
-        self: Self, _1: type[BaseException] | None, _2: BaseException | None,
+        self: Self,
+        _1: type[BaseException] | None,
+        _2: BaseException | None,
         _3: TracebackType | None,
     ) -> None:
         """Exit context."""
