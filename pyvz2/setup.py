@@ -1,5 +1,6 @@
 """Dependencies of PyVZ2."""
-# Copyright (C) 2020-2024 Nice Zombies
+# Copyright (C) 2024-2024 Nice Zombies
+# mypy: disable-error-code=import-untyped
 from setuptools import find_packages, setup
 
 setup(

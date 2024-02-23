@@ -1,5 +1,5 @@
 """CLInteract type var & helper classes for command line input."""
-# Copyright (C) 2020-2024 Nice Zombies
+# Copyright (C) 2023-2024 Nice Zombies
 from __future__ import annotations
 
 __all__: list[str] = ["VALUE", "Cursor", "Representation"]

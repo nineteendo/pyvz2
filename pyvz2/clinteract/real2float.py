@@ -1,5 +1,5 @@
 """CLInteract helper functions for real numbers."""
-# Copyright (C) 2020-2024 Nice Zombies
+# Copyright (C) 2023-2024 Nice Zombies
 from __future__ import annotations
 
 __all__: list[str] = ["format_real", "real2float"]

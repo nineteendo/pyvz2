@@ -1,5 +1,5 @@
 """Contextile module for additional contexts."""
-# Copyright (C) 2020-2024 Nice Zombies
+# Copyright (C) 2023-2024 Nice Zombies
 from __future__ import annotations
 
 from atexit import register

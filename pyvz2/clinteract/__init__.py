@@ -1,5 +1,5 @@
 """CLInteract module for command line interaction."""
-# Copyright (C) 2020-2024 Nice Zombies
+# Copyright (C) 2023-2024 Nice Zombies
 # TODO(Nice Zombies): BasePicker
 # TODO(Nice Zombies):  |-- BaseDictPicker
 # TODO(Nice Zombies):  |    +-- DictPicker

@@ -1,5 +1,5 @@
 """RGBeep module for formatting text."""
-# Copyright (C) 2020-2024 Nice Zombies
+# Copyright (C) 2022-2024 Nice Zombies
 from __future__ import annotations
 
 __all__: list[str] = [

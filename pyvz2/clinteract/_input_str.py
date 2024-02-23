@@ -1,5 +1,5 @@
 """CLInteract class & function for str input."""
-# Copyright (C) 2020-2024 Nice Zombies
+# Copyright (C) 2023-2024 Nice Zombies
 # TODO(Nice Zombies): Alt + right click is disabled
 # TODO(Nice Zombies): Selecting text is disabled
 from __future__ import annotations
