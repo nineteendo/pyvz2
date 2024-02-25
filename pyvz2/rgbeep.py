@@ -141,7 +141,10 @@ def erase_in_line(mode: int = 0) -> None:
 
 
 def raw_print(
-    *values: object, sep: str = " ", end: str = "", flush: bool = False,
+    *values: object,
+    sep: str = " ",
+    end: str = "",
+    flush: bool = False,
 ) -> None:
     """Print to stdout without automatic flusing."""
     stdout.buffer.write((sep.join(map(str, values)) + end).encode())

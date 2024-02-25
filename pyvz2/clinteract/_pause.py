@@ -51,7 +51,10 @@ class BaseInputHandler(Generic[VALUE], ABC):
         self.cursor.wrote(f">> {err}")
 
     def print_prompt(
-        self: Self, msg: str = "", *, short: bool = False,
+        self: Self,
+        msg: str = "",
+        *,
+        short: bool = False,
     ) -> None:
         """Print prompt."""
         prompt: str = self.get_prompt()

@@ -304,13 +304,19 @@ class _KeyReader:
     @classmethod
     @overload
     def read_char(
-        cls, *, raw: bool = False, timeout: float = ...,
+        cls,
+        *,
+        raw: bool = False,
+        timeout: float = ...,
     ) -> str | None:
         ...
 
     @classmethod
     def read_char(
-        cls, *, raw: bool = False, timeout: float | None = None,
+        cls,
+        *,
+        raw: bool = False,
+        timeout: float | None = None,
     ) -> str | None:
         """Read character from standard input."""
         byte: bytes | None = cls.read_byte(timeout=timeout)

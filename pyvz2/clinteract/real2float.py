@@ -11,7 +11,10 @@ from sys import float_info
 
 
 def format_real(
-    real: float, *, decimal_point: str = ".", thousands_sep: str = "",
+    real: float,
+    *,
+    decimal_point: str = ".",
+    thousands_sep: str = "",
 ) -> str:
     """Format real using specified format."""
     string: str
