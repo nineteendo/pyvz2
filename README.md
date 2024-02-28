@@ -16,11 +16,15 @@ Work in progress. Initial implementation phase.
 
 ## Future Plans
 
+- Error logging
 - Interactive menus
 - Built-in file manager
-- Command line arguments
+- CLInteract demo
 - Translations
+- Custom keyboard shortcuts
+- Update checking
 - Reimplement old functionality
+- Command line arguments
 
 ## Contact
 
