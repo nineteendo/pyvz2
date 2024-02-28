@@ -74,6 +74,8 @@ INPUT_EVENTS: dict[str, str] = {
     "\x1b[D": "left",
     "\x1b[F": "end",
     "\x1b[H": "home",
+    "\x1b[I": "focus",
+    "\x1b[O": "unfocus",
     "\x1b[P": "f1",  # For modifier+f1
     "\x1b[Q": "f2",  # For modifier+f2
     "\x1b[R": "f3",  # For modifier+f3
