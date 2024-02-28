@@ -4,7 +4,12 @@
 # TODO(Nice Zombies): Selecting text is disabled
 from __future__ import annotations
 
-__all__: list[str] = ["BaseTextInput", "InputStr", "input_str"]
+__all__: list[str] = [
+    "BaseTextInput",
+    "InputStr",
+    "get_shortcuts",
+    "input_str",
+]
 __author__: str = "Nice Zombies"
 
 from gettext import gettext as _
@@ -18,10 +23,7 @@ from contextile import (
     ContextEvent, colored_output, mouse_input, no_cursor, raw_input,
 )
 from rgbeep import beep, cyan, grey, invert, raw_print, set_cursor_position
-from skiboard import (
-    CSISequences, CtrlCodes, Event, KeypadActions, Mouse, SS3Sequences, ctrl,
-    esc, get_event,
-)
+from skiboard import InputEvent, get_input_event
 
 from ._classes import Cursor, Representation
 from ._pause import BaseInputHandler
@@ -30,12 +32,32 @@ from .real2float import format_real
 _ELLIPSIS: Literal["\u2026"] = "\u2026"
 
 
+def get_shortcuts() -> dict[str, list[str]]:
+    """Get (a copy of) the default shortcuts."""
+    return {
+        "Cancel": ["escape"],
+        "Clear screen": ["ctrl+l"],
+        "Delete char after cursor": ["ctrl+d", "delete"],
+        "Delete char before cursor": ["backspace", "ctrl+h"],
+        "Delete everything after cursor": ["ctrl+end", "ctrl+k"],
+        "Delete everything before cursor": ["ctrl+home", "ctrl+u"],
+        "Delete whole line": ["alt+q", "escape"],
+        "Move cursor back": ["ctrl+b", "left"],
+        "Move cursor forward": ["ctrl+f", "right"],
+        "Move cursor to end": ["ctrl+e", "end"],
+        "Move cursor to start": ["ctrl+a", "home"],
+        "Scroll cursor back": [],
+        "Scroll cursor forward": [],
+        "Submit input": ["enter", "middle_click"],
+    }
+
+
 # pylint: disable=too-many-instance-attributes
 class BaseTextInput(BaseInputHandler[str]):
     """Base class for text input."""
 
     # pylint: disable=too-many-arguments, too-many-locals, too-many-statements
-    def __init__(  # noqa: PLR0913, C901
+    def __init__(  # noqa: PLR0913, C901, PLR0915
         self: Self,
         prompt: object,
         *,
@@ -53,6 +75,7 @@ class BaseTextInput(BaseInputHandler[str]):
         min_length: int = 0,
         placeholder: str | None = None,
         representation: type[str] = Representation,
+        shortcuts: dict[str, list[str]] | None = None,
         value: str | None = None,
         whitelist: str = "",
     ) -> None:
@@ -76,6 +99,9 @@ class BaseTextInput(BaseInputHandler[str]):
         if min_length < 0 or (max_length and min_length > max_length):
             err = "min_length doesn't lay between 0 & max_length"
             raise ValueError(err)
+
+        if not shortcuts:
+            shortcuts = get_shortcuts()
 
         invalid_char: str | None = next(
             (char for char in whitelist if not char.isprintable()), None,
@@ -128,6 +154,7 @@ class BaseTextInput(BaseInputHandler[str]):
         self.placeholder: str = representation(placeholder)
         self.lock: Lock = Lock()
         self.ready_event: ContextEvent = ContextEvent()
+        self.shortcuts: dict[str, list[str]] = shortcuts
         self.value: str = value
         super().__init__(prompt, representation=representation)
 
@@ -179,27 +206,28 @@ class BaseTextInput(BaseInputHandler[str]):
         with self.ready_event:
             Thread(target=self.display_thread, daemon=True).start()
             while True:
-                event: Event = get_event()
+                event: InputEvent = get_input_event()
+                if event.moving or not event.pressed:
+                    continue
+
                 with self.lock:
-                    if event.pressed and self.enlarge_window():
+                    if self.enlarge_window():
                         beep()
                         continue
 
-                    if not event.pressed or self.handle_event(event):
+                    if self.handle_input_event(event):
                         self.handle_scroll()
                         continue
 
-                    if (event.button == Mouse.BUTTON_2 or event in {
-                        CtrlCodes.LINE_FEED, CtrlCodes.CARRIAGE_RETURN,
-                        KeypadActions.ENTER,
-                    }) and not self.invalid_value(self.value):
-                        # Submit input
-                        break
-
-                    if event == CtrlCodes.ESCAPE:
-                        # Cancel
+                    if self.is_shortcut(event, "Cancel"):
                         self.clear_screen()
                         return None
+
+                    if (
+                        self.is_shortcut(event, "Submit input")
+                        and not self.invalid_value(self.value)
+                    ):
+                        break
 
                     beep()
 
@@ -215,64 +243,54 @@ class BaseTextInput(BaseInputHandler[str]):
         return self.value
 
     # pylint: disable=too-many-branches
-    def handle_event(self: Self, event: Event) -> bool:  # noqa: C901, PLR0912
-        """Handle keyboard event."""
+    def handle_input_event(  # noqa: C901, PLR0912
+        self: Self,
+        event: InputEvent,
+    ) -> bool:
+        """Handle input event."""
         start: str = self.value[:self.text_scroll + self.text_position]
         end: str = self.value[self.text_scroll + self.text_position:]
-        if event in {
-            ctrl("a"), SS3Sequences.HOME, KeypadActions.HOME,
-            CSISequences.HOME,
-        } and start:
-            # Move cursor to start of line
-            self.text_position = self.text_scroll = 0
-        elif event in {
-            ctrl("b"), SS3Sequences.LEFT, KeypadActions.LEFT,
-            CSISequences.LEFT,
-        } and start:
-            # Move cursor back one character
-            self.text_position -= 1
-        elif event in {
-            ctrl("d"), KeypadActions.DELETE, CSISequences.DELETE,
-        } and end:
-            # Delete character after cursor
-            self.value = start + end[1:]
-        elif event in {
-            ctrl("e"), SS3Sequences.END, KeypadActions.END, CSISequences.END,
-        } and end:
-            # Move cursor to end of line
-            self.text_position += len(end)
-        elif event in {
-            ctrl("f"), SS3Sequences.RIGHT, KeypadActions.RIGHT,
-            CSISequences.RIGHT,
-        } and end:
-            # Move cursor forward one character
-            self.text_position += 1
-        elif event in {ctrl("h"), CtrlCodes.DELETE} and start:
-            # Delete character before cursor
-            self.value = start[:-1] + end
-            self.text_position -= 1
-        elif event in {ctrl("k"), ctrl(CSISequences.END)} and end:
-            # Delete everything after cursor
-            self.value = start
-        elif event == ctrl("l"):
-            # Clear screen
+        if self.is_shortcut(event, "Clear screen"):
             set_cursor_position()
             self.cursor = Cursor(self.terminal_size.columns)
-        elif event in {ctrl("u"), ctrl(CSISequences.HOME)} and start:
-            # Delete everything before cursor
+        elif self.is_shortcut(event, "Delete char after cursor") and end:
+            self.value = start + end[1:]
+        elif self.is_shortcut(event, "Delete char before cursor") and start:
+            self.value = start[:-1] + end
+            self.text_position -= 1
+        elif self.is_shortcut(event, "Delete everything after cursor") and end:
+            self.value = start
+        elif (
+            self.is_shortcut(event, "Delete everything before cursor")
+            and start
+        ):
             self.text_position, self.text_scroll, self.value = 0, 0, end
-        elif event in {CtrlCodes.ESCAPE, esc("q")} and self.value:
-            # Delete whole line
+        elif self.is_shortcut(event, "Delete whole line") and self.value:
             self.text_position, self.text_scroll, self.value = 0, 0, ""
+        elif self.is_shortcut(event, "Move cursor back") and start:
+            self.text_position -= 1
+        elif self.is_shortcut(event, "Move cursor forward") and end:
+            self.text_position += 1
+        elif self.is_shortcut(event, "Move cursor to end") and end:
+            self.text_position += len(end)
+        elif self.is_shortcut(event, "Move cursor to start") and start:
+            self.text_position = self.text_scroll = 0
+        elif self.is_shortcut(event, "Scroll cursor back") and start:
+            self.text_scroll -= 1
+        elif self.is_shortcut(event, "Scroll cursor forward") and end:
+            self.text_scroll += 1
         elif (
             not self.max_length or len(self.value) < self.max_length
         ) and not self.is_invalid_char(event):
+            char: str
             if self.make_lowercase:
-                event = Event(event.lower())
+                char = event.lower()
             elif self.make_uppercase:
-                event = Event(event.upper())
+                char = event.upper()
+            else:
+                char = event
 
-            self.value = start + event + end
+            self.value = start + char + end
             self.text_position += 1
         else:
             return False
@@ -324,6 +342,10 @@ class BaseTextInput(BaseInputHandler[str]):
             or (not char.isascii() and self.ascii_only)
         ) or char.lower() in self.whitelist
 
+    def is_shortcut(self: Self, event: InputEvent, key: str) -> bool:
+        """Check if event is a shortcut."""
+        return event.shortcut in self.shortcuts.get(key, [])
+
     def print_msg(self: Self, msg: str, *, short: bool = False) -> None:
         """Print message."""
         offset: int = self.get_value_offset(short=short)
@@ -372,6 +394,7 @@ def input_str(  # pylint: disable=too-many-arguments
     min_length: int = 0,
     placeholder: str | None = None,
     representation: type[str] = Representation,
+    shortcuts: dict[str, list[str]] | None = None,
     value: str | None = None,
 ) -> str | None:
     ...
@@ -396,6 +419,7 @@ def input_str(  # pylint: disable=too-many-arguments, too-many-locals
     min_length: int = 0,
     placeholder: str | None = None,
     representation: type[str] = Representation,
+    shortcuts: dict[str, list[str]] | None = None,
     value: str | None = None,
     whitelist: str = "",
 ) -> str | None:
@@ -420,6 +444,7 @@ def input_str(  # noqa: PLR0913
     min_length: int = 0,
     placeholder: str | None = None,
     representation: type[str] = Representation,
+    shortcuts: dict[str, list[str]] | None = None,
     value: str | None = None,
     whitelist: str = "",
 ) -> str | None:
@@ -440,6 +465,7 @@ def input_str(  # noqa: PLR0913
         min_length=min_length,
         placeholder=placeholder,
         representation=representation,
+        shortcuts=shortcuts,
         value=value,
         whitelist=whitelist,
     ).get_value()

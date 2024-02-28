@@ -32,12 +32,12 @@ class Cursor:
         self.columns: int = columns
 
     def wrote(self: Self, text: str) -> None:
-        """Wrote text to stdout."""
+        """Notify wrote text to stdout."""
         self.row += (self.col + len(text) - 1) // self.columns
         self.col = (self.col + len(text) - 1) % self.columns + 1
 
     def moved_next_line(self: Self) -> None:
-        """Notify cursor has moved to next line."""
+        """Notify moved to next line."""
         self.row, self.col = self.row + 1, 0
 
 
@@ -47,7 +47,7 @@ class Representation(str):
     __slots__: ClassVar[tuple[()]] = ()
 
     # noinspection PyTypeHints
-    def __new__(cls: type[Self], obj: object = "") -> Self:  # noqa: C901
+    def __new__(cls: type[Self], obj: object = "", /) -> Self:  # noqa: C901
         if isinstance(obj, BaseException):
             obj = f"{type(obj).__name__}: {obj}"
         elif isinstance(obj, Enum):

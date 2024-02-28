@@ -17,7 +17,7 @@ from rgbeep import (
     bold, cursor_up, erase_in_display, green, raw_print, red,
     set_cursor_position,
 )
-from skiboard import Event, get_event
+from skiboard import InputEvent, get_input_event
 
 from ._classes import VALUE, Cursor, Representation
 
@@ -125,9 +125,9 @@ class Pause(BaseInputHandler[None]):
     def get_value(self: Self) -> None:
         self.print_prompt(short=True)
         stdout.buffer.flush()
-        event: Event | None = get_event(timeout=self.timeout)
-        while event and not event.pressed:
-            event = get_event(timeout=self.timeout)
+        event: InputEvent | None = get_input_event(timeout=self.timeout)
+        while event and (event.moving or not event.pressed):
+            event = get_input_event(timeout=self.timeout)
 
         return self.clear_screen()
 

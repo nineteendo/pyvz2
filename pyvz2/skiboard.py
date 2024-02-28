@@ -3,35 +3,10 @@
 from __future__ import annotations
 
 __all__: list[str] = [
-    "CSISequences",
-    "CtrlCodes",
-    "Event",
-    "KeypadActions",
-    "Mouse",
-    "SS3Sequences",
-    "add",
-    "alt",
-    "alt_meta",
-    "alt_shift",
-    "alt_shift_meta",
-    "ctrl",
-    "ctrl_alt",
-    "ctrl_alt_meta",
-    "ctrl_alt_shift",
-    "ctrl_alt_shift_meta",
-    "ctrl_esc",
-    "ctrl_meta",
-    "ctrl_shift",
-    "ctrl_shift_meta",
-    "esc",
-    "esc_add",
-    "get_event",
-    "meta",
-    "shift",
-    "shift_add",
-    "shift_esc",
-    "shift_esc_add",
-    "shift_meta",
+    "INPUT_EVENTS",
+    "MOUSE_BUTTONS",
+    "InputEvent",
+    "get_input_event",
 ]
 __author__: str = "Nice Zombies"
 
@@ -42,240 +17,104 @@ from sys import stdin
 from threading import Lock, Thread
 from typing import ClassVar, Literal, Self, overload
 
-_ADD_MODIFIABLE: Pattern[str] = re.compile(r"\x1b?[ -\x7f]")
-_CSI_MODIFIABLE: Pattern[str] = re.compile(
-    r"\x1bO[P-S]|\x1b\[(?:\d+(?:;\d+)?)?[A-Z~]",
+_ALT_SEQUENCE: Pattern[str] = re.compile(r"\x1b.|\x1b\x1b[O\[].+")
+_CTRL_SEQUENCE: Pattern[str] = re.compile(
+    r"[\x00-\x08\x0b\x0c\x0e-\x1a\x1c-\x1f]",
 )
-_CTRL_C: Literal[b"\x03"] = b"\x03"
-_CTRL_MODIFIABLE: Pattern[str] = re.compile(r"\x1b?[?-_a-z]")
-_EOF: Literal[b""] = b""
-_ESC_MODIFIABLE: Pattern[str] = re.compile(r".|\x1b[O\[].+")
+_MODIFIER_SEQUENCE: Pattern[str] = re.compile(r"\x1b\[\d+;\d+[A-Z~]")
+_MOUSE_SEQUENCE: Pattern[str] = re.compile(r"\x1b?\x1b\[M...")
 _PARAM_CHARS: Literal["0123456789;"] = "0123456789;"
-_SHIFT_MODIFIABLE: Pattern[str] = re.compile(r"\x1b?.")
+_SGR_MOUSE_SEQUENCE: Pattern[str] = re.compile(r"\x1b?\x1b\[<\d+;\d+;\d+[Mm]")
+_SHIFT_SEQUENCE: Pattern[str] = re.compile(r"\x1b.")
 _TIMEOUT: float = 0.01
 
+INPUT_EVENTS: dict[str, str] = {
+    # C0 controls
+    "\t": "tab",
+    "\n": "enter",
+    "\r": "enter",
+    "\x1b": "escape",
+    "\x20": "space",
+    "\x7f": "backspace",
 
-# mypy: disable-error-code=no-untyped-def
-def _make_modifier(modifier: int):  # noqa: ANN202
-    """Make modifier function."""
-    def apply_modifier(value: str) -> Event:
-        """Apply modifier to value."""
-        if modifier & 0x01 and _SHIFT_MODIFIABLE.fullmatch(value):
-            value = value.upper()
+    # SS3 Sequences
+    "\x1bOA": "up",
+    "\x1bOB": "down",
+    "\x1bOC": "right",
+    "\x1bOD": "left",
+    "\x1bOF": "end",
+    "\x1bOH": "home",
+    "\x1bOM": "enter",
+    "\x1bOP": "f1",
+    "\x1bOQ": "f2",
+    "\x1bOR": "f3",
+    "\x1bOS": "f4",
+    "\x1bOX": "numpad_equals",
+    "\x1bOj": "numpad_multiply",
+    "\x1bOk": "numpad_add",
+    "\x1bOl": "numpad_decimal",
+    "\x1bOm": "numpad_subtract",
+    "\x1bOn": "delete",
+    "\x1bOo": "numpad_divide",
+    "\x1bOp": "insert",
+    "\x1bOq": "end",
+    "\x1bOr": "down",
+    "\x1bOs": "pagedown",
+    "\x1bOt": "left",
+    "\x1bOu": "numpad5",
+    "\x1bOv": "right",
+    "\x1bOw": "home",
+    "\x1bOx": "up",
+    "\x1bOy": "pageup",
 
-        if modifier & 0x04 and _CTRL_MODIFIABLE.fullmatch(value):
-            value = value[:-1] + chr((ord(value[-1].upper()) - 0x40) % 0x80)
-
-        if modifier & 0x0f and _CSI_MODIFIABLE.fullmatch(value):
-            # Deal with F1-F4
-            value = value.replace(SS3Sequences.SS3, CSISequences.CSI)
-            start, _1, end = value[:-1].partition("[")
-            params: list[str] = end.split(";")
-            param1: int = int(params[0]) if params[0] else 1
-            param2: int = int(params[1]) if len(params) > 1 else 1
-            param2 = ((param2 - 1) | modifier & 0x0f) + 1
-            value = f"{start}[{param1};{param2}{value[-1]}"
-
-        if modifier & 0x10 and _ADD_MODIFIABLE.fullmatch(value):
-            value = value[:-1] + chr(ord(value[-1]) + 0x80)
-
-        if modifier & 0x20 and _ESC_MODIFIABLE.fullmatch(value):
-            value = CtrlCodes.ESCAPE + value
-
-        return Event(value)
-
-    return apply_modifier
-
-
-shift = _make_modifier(0x01)
-alt = _make_modifier(0x02)
-alt_shift = _make_modifier(0x03)
-ctrl = _make_modifier(0x04)
-ctrl_shift = _make_modifier(0x05)
-ctrl_alt = _make_modifier(0x06)
-ctrl_alt_shift = _make_modifier(0x07)
-meta = _make_modifier(0x08)
-shift_meta = _make_modifier(0x09)
-alt_meta = _make_modifier(0x0a)
-alt_shift_meta = _make_modifier(0x0b)
-ctrl_meta = _make_modifier(0x0c)
-ctrl_shift_meta = _make_modifier(0x0d)
-ctrl_alt_meta = _make_modifier(0x0e)
-ctrl_alt_shift_meta = _make_modifier(0x0f)
-add = _make_modifier(0x10)
-shift_add = _make_modifier(0x11)
-esc = _make_modifier(0x20)
-shift_esc = _make_modifier(0x21)
-ctrl_esc = _make_modifier(0x24)
-esc_add = _make_modifier(0x30)
-shift_esc_add = _make_modifier(0x31)
-
-
-class CtrlCodes:  # pylint: disable=too-few-public-methods
-    """Class for C0 control codes."""
-
-    NULL: Literal["\0"] = "\0"
-
-    START_OF_HEADING: Literal["\x01"] = "\x01"
-    START_OF_TEXT: Literal["\x02"] = "\x02"
-    END_OF_TEXT: Literal["\x03"] = "\x03"
-    END_OF_TRANSMISSION: Literal["\x04"] = "\x04"
-    ENQUIRY: Literal["\x05"] = "\x05"
-    ACKNOWLEDGE: Literal["\x06"] = "\x06"
-
-    BELL: Literal["\a"] = "\a"
-    BACKSPACE: Literal["\b"] = "\b"
-    HORIZONTAL_TABULATION: Literal["\t"] = "\t"
-    LINE_FEED: Literal["\n"] = "\n"
-    VERTICAL_TABULATION: Literal["\v"] = "\v"
-    FORM_FEED: Literal["\f"] = "\f"
-    CARRIAGE_RETURN: Literal["\r"] = "\r"
-
-    SHIFT_OUT: Literal["\x0e"] = "\x0e"
-    SHIFT_IN: Literal["\x0f"] = "\x0f"
-    DATA_LINK_ESCAPE: Literal["\x10"] = "\x10"
-    XON: Literal["\x11"] = "\x11"
-    DEVICE_CONTROL_TWO: Literal["\x12"] = "\x12"
-    XOFF: Literal["\x13"] = "\x13"
-    DEVICE_CONTROL_FOUR: Literal["\x14"] = "\x14"
-    NEGATIVE_ACKNOWLEDGE: Literal["\x15"] = "\x15"
-    SYNCHRONOUS_IDLE: Literal["\x16"] = "\x16"
-    END_OF_TRANSMISSION_BLOCK: Literal["\x17"] = "\x17"
-    CANCEL: Literal["\x18"] = "\x18"
-    END_OF_MEDIUM: Literal["\x19"] = "\x19"
-    SUBSTITUTE: Literal["\x1a"] = "\x1a"
-
-    ESCAPE: Literal["\x1b"] = "\x1b"
-
-    FILE_SEPARATOR: Literal["\x1c"] = "\x1c"
-    GROUP_SEPARATOR: Literal["\x1d"] = "\x1d"
-    RECORD_SEPARATOR: Literal["\x1e"] = "\x1e"
-    UNIT_SEPARATOR: Literal["\x1f"] = "\x1f"
-    DELETE: Literal["\x7f"] = "\x7f"
-
-
-class KeypadActions:  # pylint: disable=too-few-public-methods
-    """Class for keypad actions."""
-
-    ENTER: Literal["\x1bOM"] = "\x1bOM"
-
-    DELETE: Literal["\x1bOn"] = "\x1bOn"
-    INSERT: Literal["\x1bOp"] = "\x1bOp"
-    END: Literal["\x1bOq"] = "\x1bOq"
-    DOWN: Literal["\x1bOr"] = "\x1bOr"
-    PAGE_DOWN: Literal["\x1bOs"] = "\x1bOs"
-    LEFT: Literal["\x1bOt"] = "\x1bOt"
-    RIGHT: Literal["\x1bOv"] = "\x1bOv"
-    HOME: Literal["\x1bOw"] = "\x1bOw"
-    UP: Literal["\x1bOx"] = "\x1bOx"
-    PAGE_UP: Literal["\x1bOy"] = "\x1bOy"
-
-
-class SS3Sequences:  # pylint: disable=too-few-public-methods
-    """Class for SS3 sequences."""
-
-    SS3: Literal["\x1bO"] = "\x1bO"
-
-    UP: Literal["\x1bOA"] = "\x1bOA"
-    DOWN: Literal["\x1bOB"] = "\x1bOB"
-    RIGHT: Literal["\x1bOC"] = "\x1bOC"
-    LEFT: Literal["\x1bOD"] = "\x1bOD"
-    END: Literal["\x1bOF"] = "\x1bOF"
-    HOME: Literal["\x1bOH"] = "\x1bOH"
-
-    KEYPAD_ENTER: Literal["\x1bOM"] = "\x1bOM"
-
-    F1: Literal["\x1bOP"] = "\x1bOP"
-    F2: Literal["\x1bOQ"] = "\x1bOQ"
-    F3: Literal["\x1bOR"] = "\x1bOR"
-    F4: Literal["\x1bOS"] = "\x1bOS"
-
-    KEYPAD_EQUALS: Literal["\x1bOX"] = "\x1bOX"
-    KEYPAD_MULTIPLY: Literal["\x1bOj"] = "\x1bOj"
-    KEYPAD_ADD: Literal["\x1bOk"] = "\x1bOk"
-    KEYPAD_COMMA: Literal["\x1bOl"] = "\x1bOl"
-    KEYPAD_MINUS: Literal["\x1bOm"] = "\x1bOm"
-    KEYPAD_PERIOD: Literal["\x1bOn"] = "\x1bOn"
-    KEYPAD_DIVIDE: Literal["\x1bOo"] = "\x1bOo"
-
-    KEYPAD_0: Literal["\x1bOp"] = "\x1bOp"
-    KEYPAD_1: Literal["\x1bOq"] = "\x1bOq"
-    KEYPAD_2: Literal["\x1bOr"] = "\x1bOr"
-    KEYPAD_3: Literal["\x1bOs"] = "\x1bOs"
-    KEYPAD_4: Literal["\x1bOt"] = "\x1bOt"
-    KEYPAD_5: Literal["\x1bOu"] = "\x1bOu"
-    KEYPAD_6: Literal["\x1bOv"] = "\x1bOv"
-    KEYPAD_7: Literal["\x1bOw"] = "\x1bOw"
-    KEYPAD_8: Literal["\x1bOx"] = "\x1bOx"
-    KEYPAD_9: Literal["\x1bOy"] = "\x1bOy"
-
-
-class CSISequences:  # pylint: disable=too-few-public-methods
-    """Class for CSI sequences."""
-
-    CSI: Literal["\x1b["] = "\x1b["
-
-    SGR_MOUSE: Literal["\x1b[<"] = "\x1b[<"
-    UP: Literal["\x1b[A"] = "\x1b[A"
-    DOWN: Literal["\x1b[B"] = "\x1b[B"
-    RIGHT: Literal["\x1b[C"] = "\x1b[C"
-    LEFT: Literal["\x1b[D"] = "\x1b[D"
-    BEGIN: Literal["\x1b[E"] = "\x1b[E"
-    END: Literal["\x1b[F"] = "\x1b[F"
-    NEXT: Literal["\x1b[G"] = "\x1b[G"
-    HOME: Literal["\x1b[H"] = "\x1b[H"
-    MOUSE: Literal["\x1b[M"] = "\x1b[M"
-    MOUSE_MOVE: Literal["\x1b[T"] = "\x1b[T"
-    SHIFT_TAB: Literal["\x1b[Z"] = "\x1b[Z"
-    MOUSE_CLICK: Literal["\x1b[t"] = "\x1b[t"
-    INSERT: Literal["\x1b[2~"] = "\x1b[2~"
-    DELETE: Literal["\x1b[3~"] = "\x1b[3~"
-    PAGE_UP: Literal["\x1b[5~"] = "\x1b[5~"
-    PAGE_DOWN: Literal["\x1b[6~"] = "\x1b[6~"
-
-    F5: Literal["\x1b[15~"] = "\x1b[15~"
-    F6: Literal["\x1b[17~"] = "\x1b[17~"
-    F7: Literal["\x1b[18~"] = "\x1b[18~"
-    F8: Literal["\x1b[19~"] = "\x1b[19~"
-    F9: Literal["\x1b[20~"] = "\x1b[20~"
-    F10: Literal["\x1b[21~"] = "\x1b[21~"
-    F11: Literal["\x1b[23~"] = "\x1b[23~"
-    F12: Literal["\x1b[24~"] = "\x1b[24~"
-    F13: Literal["\x1b[25~"] = "\x1b[25~"
-    F14: Literal["\x1b[26~"] = "\x1b[26~"
-    F15: Literal["\x1b[28~"] = "\x1b[28~"
-    F16: Literal["\x1b[29~"] = "\x1b[29~"
-    F17: Literal["\x1b[31~"] = "\x1b[31~"
-    F18: Literal["\x1b[32~"] = "\x1b[32~"
-    F19: Literal["\x1b[33~"] = "\x1b[33~"
-    F20: Literal["\x1b[34~"] = "\x1b[34~"
-
-
-class Mouse:  # pylint: disable=too-few-public-methods
-    """Class for mouse buttons."""
-
-    BUTTON_1: Literal[0x00] = 0x00
-    BUTTON_2: Literal[0x01] = 0x01
-    BUTTON_3: Literal[0x02] = 0x02
-    RELEASE: Literal[0x03] = 0x03
-
-    SHIFT: Literal[0x04] = 0x04
-    ALT: Literal[0x08] = 0x08
-    ALT_SHIFT: Literal[0x0c] = 0x0c
-    CTRL: Literal[0x10] = 0x10
-    CTRL_SHIFT: Literal[0x14] = 0x14
-    CTRL_ALT: Literal[0x18] = 0x18
-    CTRL_ALT_SHIFT: Literal[0x1c] = 0x1c
-
-    BUTTON_4: Literal[0x40] = 0x40
-    BUTTON_5: Literal[0x41] = 0x41
-    BUTTON_6: Literal[0x42] = 0x42
-    BUTTON_7: Literal[0x43] = 0x43
-
-    BUTTON_8: Literal[0x80] = 0x80
-    BUTTON_9: Literal[0x81] = 0x81
-    BUTTON_10: Literal[0x82] = 0x82
-    BUTTON_11: Literal[0x83] = 0x83
+    # CSI Sequences
+    "\x1b[A": "up",
+    "\x1b[B": "down",
+    "\x1b[C": "right",
+    "\x1b[D": "left",
+    "\x1b[F": "end",
+    "\x1b[H": "home",
+    "\x1b[P": "f1",  # For modifier+f1
+    "\x1b[Q": "f2",  # For modifier+f2
+    "\x1b[R": "f3",  # For modifier+f3
+    "\x1b[S": "f4",  # For modifier+f4
+    "\x1b[1~": "home",
+    "\x1b[2~": "insert",
+    "\x1b[3~": "delete",
+    "\x1b[4~": "end",
+    "\x1b[5~": "pageup",
+    "\x1b[6~": "pagedown",
+    "\x1b[15~": "f5",
+    "\x1b[17~": "f6",
+    "\x1b[18~": "f7",
+    "\x1b[19~": "f8",
+    "\x1b[20~": "f9",
+    "\x1b[21~": "f10",
+    "\x1b[23~": "f11",
+    "\x1b[24~": "f12",
+    "\x1b[25~": "f13",
+    "\x1b[26~": "f14",
+    "\x1b[28~": "f15",
+    "\x1b[29~": "f16",
+    "\x1b[31~": "f17",
+    "\x1b[32~": "f18",
+    "\x1b[33~": "f19",
+    "\x1b[34~": "f20",
+}
+MOUSE_BUTTONS: dict[int, str] = {
+    0x00: "primary_click",
+    0x01: "middle_click",
+    0x02: "secondary_click",
+    0x03: "no_button",
+    0x40: "scrollup",
+    0x41: "scrolldown",
+    0x42: "button6",
+    0x43: "button7",
+    0x80: "button8",
+    0x81: "button9",
+    0x82: "button10",
+    0x83: "button11",
+}
 
 
 class _KeyReader:
@@ -323,10 +162,10 @@ class _KeyReader:
         if byte is None:
             return byte
 
-        if byte == _EOF:
+        if not byte:
             raise EOFError
 
-        if byte == _CTRL_C:
+        if byte == b"\x03":
             # HACK: Automatic handling of Ctrl+C has been disabled on Windows
             raise_signal(SIGINT)
 
@@ -391,36 +230,91 @@ class _KeyReader:
             cls.byte = byte
 
 
-class Event(str):
-    """Class to represent events."""
+class InputEvent(str):
+    """Class to represent input events."""
 
-    __slots__: ClassVar[tuple[()]] = ()
+    __slots__: ClassVar[tuple[str]] = ("shortcut",)
+
+    def __init__(self, event: str, /) -> None:
+        """Create new input event instance."""
+        shift: bool = False
+        if _SHIFT_SEQUENCE.fullmatch(event) and event.isupper():
+            # Handle alt+shift+letter
+            shift, event = True, event.lower()
+
+        alt: bool = False
+        if _ALT_SEQUENCE.fullmatch(event):
+            alt, event = True, event[1:]
+
+        ctrl: bool = False
+        if _CTRL_SEQUENCE.fullmatch(event):  # Handle ctrl+letter
+            ctrl, event = True, chr(0x40 + ord(event)).lower()
+
+        meta: bool = False
+        if _MODIFIER_SEQUENCE.fullmatch(event):
+            params: list[str] = event[2:-1].split(";")
+            param1: str = params[0]
+            modifier: int = int(params[1]) - 1
+            shift = shift or modifier & 0x01 == 0x01
+            alt = alt or modifier & 0x02 == 0x02
+            ctrl = ctrl or modifier & 0x04 == 0x04
+            meta = meta or modifier & 0x08 == 0x08
+            event = event[:2] + (param1 if param1 != "1" else "") + event[-1:]
+
+        if event == "\x1b[Z":  # Handle shift+tab
+            shift, event = True, "\t"
+
+        button: int | None
+        if _SGR_MOUSE_SEQUENCE.fullmatch(event):
+            button = int(event[3:-1].split(";")[0])
+        elif _MOUSE_SEQUENCE.fullmatch(event):
+            button = ord(event[-3:-2]) - 0x20
+        else:
+            button = None
+
+        if button is not None and button & 0xc3 in MOUSE_BUTTONS:
+            shift = shift or button & 0x04 == 0x04
+            alt = alt or button & 0x08 == 0x08
+            ctrl = ctrl or button & 0x10 == 0x10
+            event = MOUSE_BUTTONS[button & 0xc3]
+        else:
+            event = INPUT_EVENTS.get(event, event)
+
+        self.shortcut: str = (
+            ("ctrl+" if ctrl else "")
+            + ("alt+" if alt else "")
+            + ("shift+" if shift else "")
+            + ("meta+" if meta else "")
+            + (event.lower() if len(event) == 1 else event)
+        )
 
     @property
-    def button(self: Self) -> int | None:
-        """Mouse button."""
-        if self.startswith((
-            esc(CSISequences.SGR_MOUSE), CSISequences.SGR_MOUSE,
-        )):
-            return int(self[:-1].partition("<")[2].split(";")[0])
+    def moving(self: Self) -> bool:
+        """Is moving."""
+        button: int
+        if _MOUSE_SEQUENCE.fullmatch(self):
+            button = ord(self[-3:-2]) - 0x20
+        elif _SGR_MOUSE_SEQUENCE.fullmatch(self):
+            button = int(self[:-1].partition("<")[2].split(";")[0])
+        else:
+            return False
 
-        if self.startswith((esc(CSISequences.MOUSE), CSISequences.MOUSE)):
-            return ord(self[-3:-2]) - 32
-
-        return None
+        return button & 0x20 == 0x20
 
     @property
     def pressed(self: Self) -> bool:
         """Is key pressed."""
-        if self.startswith((
-            esc(CSISequences.SGR_MOUSE), CSISequences.SGR_MOUSE,
-        )):
-            return self.endswith("M")
+        button: int
+        if _MOUSE_SEQUENCE.fullmatch(self):
+            button = ord(self[-3:-2]) - 0x20
+        elif _SGR_MOUSE_SEQUENCE.fullmatch(self):
+            button = int(self[:-1].partition("<")[2].split(";")[0])
+            if self.endswith("m"):
+                return False
+        else:
+            return True
 
-        if self.startswith((esc(CSISequences.MOUSE), CSISequences.MOUSE)):
-            return ord(self[-3:-2]) - 32 & 0x03 != Mouse.RELEASE
-
-        return True
+        return MOUSE_BUTTONS.get(button & 0xc3) != "no_button"
 
 
 def _get_ss3_sequence(*, timeout: float | None = None) -> str:
@@ -436,7 +330,7 @@ def _get_csi_sequence(*, timeout: float | None = None) -> str:
     if char is None:
         return csi_sequence
 
-    if CSISequences.CSI + csi_sequence + char == CSISequences.SGR_MOUSE:
+    if csi_sequence + char == "<":
         csi_sequence += char
         char = _KeyReader.read_char(raw=True)
 
@@ -445,13 +339,13 @@ def _get_csi_sequence(*, timeout: float | None = None) -> str:
         char = _KeyReader.read_char(raw=True)
 
     csi_sequence += char
-    if CSISequences.CSI + csi_sequence == CSISequences.MOUSE_CLICK:
+    if csi_sequence == "t":
         csi_sequence += _KeyReader.read(2, raw=True)
 
-    if CSISequences.CSI + csi_sequence == CSISequences.MOUSE:
+    if csi_sequence == "M":
         csi_sequence += _KeyReader.read(3, raw=True)
 
-    if CSISequences.CSI + csi_sequence == CSISequences.MOUSE_MOVE:
+    if csi_sequence == "T":
         csi_sequence += _KeyReader.read(6, raw=True)
 
     return csi_sequence
@@ -459,43 +353,43 @@ def _get_csi_sequence(*, timeout: float | None = None) -> str:
 
 # noinspection PyMissingOrEmptyDocstring
 @overload
-def get_event(*, timeout: None = None) -> Event:
+def get_input_event(*, timeout: None = None) -> InputEvent:
     ...
 
 
 # noinspection PyMissingOrEmptyDocstring
 @overload
-def get_event(*, timeout: float = ...) -> Event | None:
+def get_input_event(*, timeout: float = ...) -> InputEvent | None:
     ...
 
 
-def get_event(*, timeout: float | None = None) -> Event | None:
-    """Get event from command line."""
+def get_input_event(*, timeout: float | None = None) -> InputEvent | None:
+    """Get input event from command line."""
     key: str | None = _KeyReader.read_char(timeout=timeout)
     if key is None:
         return key
 
-    if key != CtrlCodes.ESCAPE:
-        return Event(key)
+    if key != "\x1b":
+        return InputEvent(key)
 
     char: str | None = _KeyReader.read_char(timeout=_TIMEOUT)
     if not char:
-        return Event(key)
+        return InputEvent(key)
 
     key += char
-    if key == SS3Sequences.SS3:
+    if key == "\x1bO":
         key += _get_ss3_sequence(timeout=_TIMEOUT)
-    elif key == CSISequences.CSI:
+    elif key == "\x1b[":
         key += _get_csi_sequence(timeout=_TIMEOUT)
-    elif key == esc(CtrlCodes.ESCAPE):
+    elif key == "\x1b\x1b":
         char = _KeyReader.read_char(raw=True, timeout=_TIMEOUT)
         if not char:
-            return Event(key)
+            return InputEvent(key)
 
         key += char
-        if key == CtrlCodes.ESCAPE + SS3Sequences.SS3:
+        if key == "\x1b\x1bO":
             key += _get_ss3_sequence()
-        elif key == CtrlCodes.ESCAPE + CSISequences.CSI:
+        elif key == "\x1b\x1b[":
             key += _get_csi_sequence()
 
-    return Event(key)
+    return InputEvent(key)
