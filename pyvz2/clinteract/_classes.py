@@ -2,21 +2,44 @@
 # Copyright (C) 2023-2024 Nice Zombies
 from __future__ import annotations
 
-__all__: list[str] = ["VALUE", "Cursor", "Representation"]
+__all__: list[str] = ["VALUE", "ContextEvent", "Cursor", "Representation"]
 __author__: str = "Nice Zombies"
 
 import re
 from datetime import date, datetime, time
 from enum import Enum
 from re import Pattern
+from threading import Event
 from types import FunctionType
-from typing import ClassVar, Self, TypeVar
+from typing import TYPE_CHECKING, ClassVar, Self, TypeVar
 
 from .real2float import format_real
+
+if TYPE_CHECKING:
+    from types import TracebackType
+
 
 _UNPRINTABLE: Pattern[str] = re.compile(r"[\x00-\x1f\x7f-\x9f]")
 
 VALUE = TypeVar("VALUE")
+
+
+class ContextEvent(Event):
+    """Class implementing context event objects."""
+
+    def __enter__(self: Self) -> Self:
+        """Enter context."""
+        self.clear()
+        return self
+
+    def __exit__(
+        self: Self,
+        _1: type[BaseException] | None,
+        _2: BaseException | None,
+        _3: TracebackType | None,
+    ) -> None:
+        """Exit context."""
+        self.set()
 
 
 class Cursor:

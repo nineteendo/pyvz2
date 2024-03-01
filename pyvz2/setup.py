@@ -1,6 +1,11 @@
 """Dependencies of PyVZ2."""
 # Copyright (C) 2024 Nice Zombies
 # mypy: disable-error-code=import-untyped
+from __future__ import annotations
+
+__all__: list[str] = []
+__author__: str = "Nice Zombies"
+
 from setuptools import find_packages, setup
 
 setup(

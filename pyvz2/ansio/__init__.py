@@ -2,11 +2,7 @@
 # Copyright (C) 2022-2024 Nice Zombies
 from __future__ import annotations
 
-from atexit import register
-from threading import Event
-
 __all__: list[str] = [
-    "ContextEvent",
     "RecursiveContext",
     "application_keypad",
     "colored_output",
@@ -17,30 +13,13 @@ __all__: list[str] = [
 __author__: str = "Nice Zombies"
 
 import sys
+from atexit import register
 from contextlib import ContextDecorator
 from sys import stdin, stdout
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self
 
 if TYPE_CHECKING:
     from types import FrameType, TracebackType
-
-
-class ContextEvent(Event):
-    """Class implementing context event objects."""
-
-    def __enter__(self: Self) -> Self:
-        """Enter context."""
-        self.clear()
-        return self
-
-    def __exit__(
-        self: Self,
-        _1: type[BaseException] | None,
-        _2: BaseException | None,
-        _3: TracebackType | None,
-    ) -> None:
-        """Exit context."""
-        self.set()
 
 
 class RecursiveContext(ContextDecorator):

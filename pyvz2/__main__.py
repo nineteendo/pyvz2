@@ -11,12 +11,11 @@
 # TODO(Nice Zombies): Command line arguments
 from __future__ import annotations
 
-from argparse import ArgumentParser, Namespace
-
 __all__: list[str] = []
 __author__: str = "Nice Zombies"
 __version__: str = "2.0"
 
+from argparse import ArgumentParser, Namespace
 from contextlib import suppress
 from gettext import gettext as _
 

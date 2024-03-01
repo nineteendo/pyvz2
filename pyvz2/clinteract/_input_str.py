@@ -19,15 +19,13 @@ from threading import Lock, Thread
 from typing import Literal, Self, overload
 from unicodedata import category
 
-from ansio import (
-    ContextEvent, colored_output, mouse_input, no_cursor, raw_input,
-)
+from ansio import colored_output, mouse_input, no_cursor, raw_input
 from ansio.input import InputEvent, get_input_event
 from ansio.output import (
     beep, cyan, grey, invert, raw_print, set_cursor_position,
 )
 
-from ._classes import Cursor, Representation
+from ._classes import ContextEvent, Cursor, Representation
 from ._pause import BaseInputHandler
 from .real2float import format_real
 
