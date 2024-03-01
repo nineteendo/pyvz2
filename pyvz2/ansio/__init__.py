@@ -16,7 +16,7 @@ import sys
 from atexit import register
 from contextlib import ContextDecorator
 from sys import stdin, stdout
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 if TYPE_CHECKING:
     from types import FrameType, TracebackType
@@ -27,12 +27,12 @@ class RecursiveContext(ContextDecorator):
 
     decorators: ClassVar[list[RecursiveContext]] = []
 
-    def __init__(self: Self) -> None:
+    def __init__(self) -> None:
         """Create new recursive context instance."""
         self.count: int = 0
         register(self._disable)
 
-    def __enter__(self: Self) -> Self:
+    def __enter__(self) -> RecursiveContext:
         """Enter context."""
         if not self.count:
             self.enable()
@@ -41,7 +41,7 @@ class RecursiveContext(ContextDecorator):
         return self
 
     def __exit__(
-        self: Self,
+        self,
         _1: type[BaseException] | None,
         _2: BaseException | None,
         _3: TracebackType | None,
@@ -52,19 +52,19 @@ class RecursiveContext(ContextDecorator):
 
         self.count = max(0, self.count - 1)
 
-    def _disable(self: Self) -> None:
+    def _disable(self) -> None:
         ...
 
-    def _enable(self: Self) -> None:
+    def _enable(self) -> None:
         ...
 
-    def disable(self: Self, *, tracked: bool = True) -> None:
+    def disable(self, *, tracked: bool = True) -> None:
         """Disable context."""
         self._disable()
         if self in self.decorators and tracked:
             self.decorators.remove(self)
 
-    def enable(self: Self, *, tracked: bool = True) -> None:
+    def enable(self, *, tracked: bool = True) -> None:
         """Enable context."""
         self._enable()
         if self not in self.decorators and tracked:
@@ -87,7 +87,7 @@ if sys.platform == "win32":
     _DISABLE_NEWLINE_AUTO_RETURN: Literal[0x0008] = 0x0008
 
     class _RawInput(RecursiveContext):
-        def __init__(self: Self) -> None:
+        def __init__(self) -> None:
             self._old: c_ulong = c_ulong()
             windll.kernel32.GetConsoleMode(
                 get_osfhandle(stdin.fileno()), byref(self._old),
@@ -113,19 +113,19 @@ if sys.platform == "win32":
             )
 
     class _ColoredOutput(RecursiveContext):
-        def __init__(self: Self) -> None:
+        def __init__(self) -> None:
             self._old: c_ulong = c_ulong()
             windll.kernel32.GetConsoleMode(
                 get_osfhandle(stdout.fileno()), byref(self._old),
             )
             super().__init__()
 
-        def _disable(self: Self) -> None:
+        def _disable(self) -> None:
             windll.kernel32.SetConsoleMode(
                 get_osfhandle(stdout.fileno()), self._old.value,
             )
 
-        def _enable(self: Self) -> None:
+        def _enable(self) -> None:
             value: int = self._old.value
             value |= (
                 _ENABLE_PROCESSED_OUTPUT | _ENABLE_WRAP_AT_EOL_OUTPUT
@@ -150,7 +150,7 @@ elif sys.platform == "darwin" or sys.platform == "linux":
 
     class _RawInput(RecursiveContext):
 
-        def __init__(self: Self) -> None:
+        def __init__(self) -> None:
             if not stdin.isatty():
                 # pylint: disable=redefined-outer-name
                 # noinspection PyShadowingNames

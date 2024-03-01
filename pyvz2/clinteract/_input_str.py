@@ -16,7 +16,7 @@ from gettext import gettext as _
 from math import prod
 from sys import stdout
 from threading import Lock, Thread
-from typing import Literal, Self, overload
+from typing import Literal, overload
 from unicodedata import category
 
 from ansio import colored_output, mouse_input, no_cursor, raw_input
@@ -58,7 +58,7 @@ class BaseTextInput(BaseInputHandler[str]):
 
     # pylint: disable=too-many-arguments, too-many-locals, too-many-statements
     def __init__(  # noqa: PLR0913, C901, PLR0915
-        self: Self,
+        self,
         prompt: object,
         *,
         allow_letters: bool = False,
@@ -158,7 +158,7 @@ class BaseTextInput(BaseInputHandler[str]):
         self.value: str = value
         super().__init__(prompt, representation=representation)
 
-    def display_thread(self: Self) -> None:
+    def display_thread(self) -> None:
         """Display information on separate thread."""
         while True:
             with self.lock:
@@ -183,11 +183,11 @@ class BaseTextInput(BaseInputHandler[str]):
             if self.ready_event.wait(0.1):
                 break
 
-    def enlarge_window(self: Self) -> bool:
+    def enlarge_window(self) -> bool:
         """Check if window is too small."""
         return self.terminal_size.lines < 2
 
-    def get_value_offset(self: Self, *, short: bool = False) -> int:
+    def get_value_offset(self, *, short: bool = False) -> int:
         """Get scroll offset for value."""
         max_chars: int = prod(self.terminal_size)
         if not short:
@@ -202,7 +202,7 @@ class BaseTextInput(BaseInputHandler[str]):
     @mouse_input
     @colored_output
     @no_cursor
-    def get_value(self: Self) -> str | None:
+    def get_value(self) -> str | None:
         with self.ready_event:
             Thread(target=self.display_thread, daemon=True).start()
             while True:
@@ -244,7 +244,7 @@ class BaseTextInput(BaseInputHandler[str]):
 
     # pylint: disable=too-many-branches
     def handle_input_event(  # noqa: C901, PLR0912
-        self: Self,
+        self,
         event: InputEvent,
     ) -> bool:
         """Handle input event."""
@@ -297,7 +297,7 @@ class BaseTextInput(BaseInputHandler[str]):
 
         return True
 
-    def handle_scroll(self: Self) -> None:
+    def handle_scroll(self) -> None:
         """Handle scroll & position."""
         msg: str = self.value
         offset: int = self.get_value_offset()
@@ -320,7 +320,7 @@ class BaseTextInput(BaseInputHandler[str]):
             self.text_scroll += self.text_position - max_text_position
             self.text_position = max_text_position
 
-    def invalid_value(self: Self, msg: str) -> str:
+    def invalid_value(self, msg: str) -> str:
         """Validate value, return error message."""
         if len(msg) < self.min_length:
             return _("Add {0} chars").format(
@@ -329,7 +329,7 @@ class BaseTextInput(BaseInputHandler[str]):
 
         return ""
 
-    def is_invalid_char(self: Self, char: str) -> bool:
+    def is_invalid_char(self, char: str) -> bool:
         """Check if character is invalid."""
         return (
             not char.isprintable()
@@ -342,11 +342,11 @@ class BaseTextInput(BaseInputHandler[str]):
             or (not char.isascii() and self.ascii_only)
         ) or char.lower() in self.whitelist
 
-    def is_shortcut(self: Self, event: InputEvent, key: str) -> bool:
+    def is_shortcut(self, event: InputEvent, key: str) -> bool:
         """Check if event is a shortcut."""
         return event.shortcut in self.shortcuts.get(key, [])
 
-    def print_msg(self: Self, msg: str, *, short: bool = False) -> None:
+    def print_msg(self, msg: str, *, short: bool = False) -> None:
         """Print message."""
         offset: int = self.get_value_offset(short=short)
         end: str

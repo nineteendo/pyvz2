@@ -15,7 +15,7 @@ from re import Pattern
 from signal import SIGINT, raise_signal
 from sys import stdin
 from threading import Lock, Thread
-from typing import ClassVar, Literal, Self, overload
+from typing import ClassVar, Literal, overload
 
 _ALT_SEQUENCE: Pattern[str] = re.compile(r"\x1b.|\x1b\x1b[O\[].+")
 _CTRL_SEQUENCE: Pattern[str] = re.compile(
@@ -42,6 +42,7 @@ INPUT_EVENTS: dict[str, str] = {
     "\x1bOB": "down",
     "\x1bOC": "right",
     "\x1bOD": "left",
+    "\x1bOE": "begin",
     "\x1bOF": "end",
     "\x1bOH": "home",
     "\x1bOM": "enter",
@@ -61,7 +62,7 @@ INPUT_EVENTS: dict[str, str] = {
     "\x1bOr": "down",
     "\x1bOs": "pagedown",
     "\x1bOt": "left",
-    "\x1bOu": "numpad5",
+    "\x1bOu": "begin",
     "\x1bOv": "right",
     "\x1bOw": "home",
     "\x1bOx": "up",
@@ -72,6 +73,7 @@ INPUT_EVENTS: dict[str, str] = {
     "\x1b[B": "down",
     "\x1b[C": "right",
     "\x1b[D": "left",
+    "\x1b[E": "begin",
     "\x1b[F": "end",
     "\x1b[H": "home",
     "\x1b[I": "focus",
@@ -291,7 +293,7 @@ class InputEvent(str):
         )
 
     @property
-    def moving(self: Self) -> bool:
+    def moving(self) -> bool:
         """Is moving."""
         button: int
         if _MOUSE_SEQUENCE.fullmatch(self):
@@ -304,7 +306,7 @@ class InputEvent(str):
         return button & 0x20 == 0x20
 
     @property
-    def pressed(self: Self) -> bool:
+    def pressed(self) -> bool:
         """Is key pressed."""
         button: int
         if _MOUSE_SEQUENCE.fullmatch(self):

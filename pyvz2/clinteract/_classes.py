@@ -11,7 +11,7 @@ from enum import Enum
 from re import Pattern
 from threading import Event
 from types import FunctionType
-from typing import TYPE_CHECKING, ClassVar, Self, TypeVar
+from typing import TYPE_CHECKING, ClassVar, TypeVar
 
 from .real2float import format_real
 
@@ -27,13 +27,13 @@ VALUE = TypeVar("VALUE")
 class ContextEvent(Event):
     """Class implementing context event objects."""
 
-    def __enter__(self: Self) -> Self:
+    def __enter__(self) -> ContextEvent:
         """Enter context."""
         self.clear()
         return self
 
     def __exit__(
-        self: Self,
+        self,
         _1: type[BaseException] | None,
         _2: BaseException | None,
         _3: TracebackType | None,
@@ -45,7 +45,7 @@ class ContextEvent(Event):
 class Cursor:
     """Class to keep track of cursor."""
 
-    def __init__(self: Self, columns: int) -> None:
+    def __init__(self, columns: int) -> None:
         if columns < 1:
             err: str = "columns is smaller than 1"
             raise ValueError(err)
@@ -54,12 +54,12 @@ class Cursor:
         self.row: int = 0
         self.columns: int = columns
 
-    def wrote(self: Self, text: str) -> None:
+    def wrote(self, text: str) -> None:
         """Notify wrote text to stdout."""
         self.row += (self.col + len(text) - 1) // self.columns
         self.col = (self.col + len(text) - 1) % self.columns + 1
 
-    def moved_next_line(self: Self) -> None:
+    def moved_next_line(self) -> None:
         """Notify moved to next line."""
         self.row, self.col = self.row + 1, 0
 
@@ -70,7 +70,7 @@ class Representation(str):
     __slots__: ClassVar[tuple[()]] = ()
 
     # noinspection PyTypeHints
-    def __new__(cls: type[Self], obj: object = "", /) -> Self:  # noqa: C901
+    def __new__(cls, obj: object = "", /) -> Representation:  # noqa: C901
         if isinstance(obj, BaseException):
             obj = f"{type(obj).__name__}: {obj}"
         elif isinstance(obj, Enum):

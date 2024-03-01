@@ -10,7 +10,7 @@ from gettext import gettext as _
 from math import prod
 from os import get_terminal_size, terminal_size
 from sys import stdout
-from typing import Generic, Literal, Self
+from typing import Generic, Literal
 
 from ansio import colored_output, mouse_input, no_cursor, raw_input
 from ansio.input import InputEvent, get_input_event
@@ -28,7 +28,7 @@ class BaseInputHandler(Generic[VALUE], ABC):
     """Base class for handling command line input."""
 
     def __init__(
-        self: Self,
+        self,
         prompt: object,
         *,
         representation: type[str] = Representation,
@@ -39,7 +39,7 @@ class BaseInputHandler(Generic[VALUE], ABC):
         self.representation: type[str] = representation
         self.terminal_size: terminal_size = new_terminal_size
 
-    def print_error(self: Self, err: str) -> None:
+    def print_error(self, err: str) -> None:
         """Print error message."""
         columns: int = self.terminal_size.columns
         err_len: int = len(f">> {err}")
@@ -50,12 +50,7 @@ class BaseInputHandler(Generic[VALUE], ABC):
         raw_print(red(">>"), bold(err))
         self.cursor.wrote(f">> {err}")
 
-    def print_prompt(
-        self: Self,
-        msg: str = "",
-        *,
-        short: bool = False,
-    ) -> None:
+    def print_prompt(self, msg: str = "", *, short: bool = False) -> None:
         """Print prompt."""
         prompt: str = self.get_prompt()
         offset: int = self.get_prompt_offset(msg, short=short)
@@ -65,11 +60,11 @@ class BaseInputHandler(Generic[VALUE], ABC):
         raw_print(green("?"), bold(prompt))
         self.cursor.wrote(f"? {prompt}")
 
-    def get_prompt(self: Self) -> str:
+    def get_prompt(self) -> str:
         """Get prompt for user."""
         return self.prompt
 
-    def get_prompt_offset(self: Self, msg: str, *, short: bool = False) -> int:
+    def get_prompt_offset(self, msg: str, *, short: bool = False) -> int:
         """Get offset for prompt."""
         max_chars: int = prod(self.terminal_size)
         if not short:
@@ -82,10 +77,10 @@ class BaseInputHandler(Generic[VALUE], ABC):
         )
 
     @abstractmethod
-    def get_value(self: Self) -> VALUE | None:
+    def get_value(self) -> VALUE | None:
         """Get value from user."""
 
-    def clear_screen(self: Self) -> None:
+    def clear_screen(self) -> None:
         """Clear screen & reset cursor position."""
         new_terminal_size: terminal_size = get_terminal_size()
         if new_terminal_size != self.terminal_size:
@@ -103,7 +98,7 @@ class Pause(BaseInputHandler[None]):
     """Class for pausing."""
 
     def __init__(
-        self: Self,
+        self,
         prompt: object = None,
         *,
         representation: type[str] = Representation,
@@ -122,7 +117,7 @@ class Pause(BaseInputHandler[None]):
     @mouse_input
     @colored_output
     @no_cursor
-    def get_value(self: Self) -> None:
+    def get_value(self) -> None:
         self.print_prompt(short=True)
         stdout.buffer.flush()
         event: InputEvent | None = get_input_event(timeout=self.timeout)
