@@ -1,5 +1,5 @@
-"""Contextile module for additional contexts."""
-# Copyright (C) 2023-2024 Nice Zombies
+"""AnsI/O module for ansi input & output."""
+# Copyright (C) 2022-2024 Nice Zombies
 from __future__ import annotations
 
 from atexit import register
@@ -157,7 +157,7 @@ if sys.platform == "win32":
                 get_osfhandle(stdout.fileno()), value,
             )
 # pylint: disable=consider-using-in
-elif sys.platform == "darwin" or sys.platform == "linux":  # noqa: PLR1714
+elif sys.platform == "darwin" or sys.platform == "linux":
     # pylint: disable=import-error, no-name-in-module
     from signal import SIG_DFL, SIGCONT, SIGTSTP, raise_signal, signal
     from termios import (

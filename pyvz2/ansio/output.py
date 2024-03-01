@@ -1,4 +1,4 @@
-"""RGBeep module for formatting text."""
+"""AnsI/O functions for ansi output."""
 # Copyright (C) 2022-2024 Nice Zombies
 from __future__ import annotations
 

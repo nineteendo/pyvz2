@@ -20,12 +20,12 @@ __version__: str = "2.0"
 from contextlib import suppress
 from gettext import gettext as _
 
-from clinteract import input_str
-from clinteract.custom import get_shortcuts
-from contextile import (
+from ansio import (
     application_keypad, colored_output, mouse_input, no_cursor, raw_input,
 )
-from skiboard import get_input_event
+from ansio.input import get_input_event
+from clinteract import input_str
+from clinteract.custom import get_shortcuts
 
 
 class PyVZ2Namespace(Namespace):  # pylint: disable=too-few-public-methods

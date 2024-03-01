@@ -12,12 +12,12 @@ from os import get_terminal_size, terminal_size
 from sys import stdout
 from typing import Generic, Literal, Self
 
-from contextile import colored_output, mouse_input, no_cursor, raw_input
-from rgbeep import (
+from ansio import colored_output, mouse_input, no_cursor, raw_input
+from ansio.input import InputEvent, get_input_event
+from ansio.output import (
     bold, cursor_up, erase_in_display, green, raw_print, red,
     set_cursor_position,
 )
-from skiboard import InputEvent, get_input_event
 
 from ._classes import VALUE, Cursor, Representation
 

@@ -1,4 +1,4 @@
-"""Skiboard module for keyboard input."""
+"""AnsI/O functions for ansi input."""
 # Copyright (C) 2023-2024 Nice Zombies
 from __future__ import annotations
 
