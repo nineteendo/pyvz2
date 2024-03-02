@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Font</key><data>
+		YnBsaXN0MDDUAQIDBAUGBwpYJHZlcnNpb25ZJGFyY2hpdmVyVCR0b3BYJG9iamVjdHMS
+		AAGGoF8QD05TS2V5ZWRBcmNoaXZlctEICVRyb290gAGkCwwVFlUkbnVsbNQNDg8QERIT
+		FFZOU1NpemVYTlNmRmxhZ3NWTlNOYW1lViRjbGFzcyNAJgAAAAAAABAQgAKAA15TRk1v
+		bm8tUmVndWxhctIXGBkaWiRjbGFzc25hbWVYJGNsYXNzZXNWTlNGb250ohkbWE5TT2Jq
+		ZWN0CBEaJCkyN0lMUVNYXmdud36FjpCSlKOos7zDxgAAAAAAAAEBAAAAAAAAABwAAAAA
+		AAAAAAAAAAAAAADP
+	</data>
+	<key>FontAntialias</key><true/>
+	<key>FontWidthSpacing</key><real>1.004032258064516</real>
+	<key>ProfileCurrentVersion</key><real>2.07</real>
+	<key>keyMapBoundKeys</key><dict>
+		<!--none-->
+		<!--numlock--> <key>#F739</key><string>toggleNumLock:</string>
+		<!--f1-->      <key>F704</key> <string>OP</string>
+		<!--f2-->      <key>F705</key> <string>OQ</string>
+		<!--f3-->      <key>F706</key> <string>OR</string>
+		<!--f4-->      <key>F707</key> <string>OS</string>
+		<!--f5-->      <key>F708</key> <string>[15~</string>
+		<!--f6-->      <key>F709</key> <string>[17~</string>
+		<!--f7-->      <key>F70A</key> <string>[18~</string>
+		<!--f8-->      <key>F70B</key> <string>[19~</string>
+		<!--f9-->      <key>F70C</key> <string>[20~</string>
+		<!--f10-->     <key>F70D</key> <string>[21~</string>
+		<!--f11-->     <key>F70E</key> <string>[23~</string>
+		<!--f12-->     <key>F70F</key> <string>[24~</string>
+		<!--f13-->     <key>F710</key> <string>[25~</string>
+		<!--f14-->     <key>F711</key> <string>[26~</string>
+		<!--f15-->     <key>F712</key> <string>[28~</string>
+		<!--f16-->     <key>F713</key> <string>[29~</string>
+		<!--f17-->     <key>F714</key> <string>[31~</string>
+		<!--f18-->     <key>F715</key> <string>[32~</string>
+		<!--f19-->     <key>F716</key> <string>[33~</string>
+		<!--f20-->     <key>F717</key> <string>[34~</string>
+		<!--home-->    <key>F729</key> <string>[H</string>
+		<!--end-->     <key>F72B</key> <string>[F</string>
+		<!--pageup-->  <key>F72C</key> <string>[5~</string>
+		<!--pagedown--><key>F72D</key> <string>[6~</string>
+
+		<!--shift-->
+		<!--f1-->      <key>$F704</key><string>[1;2P</string>
+		<!--f2-->      <key>$F705</key><string>[1;2Q</string>
+		<!--f3-->      <key>$F706</key><string>[1;2R</string>
+		<!--f4-->      <key>$F707</key><string>[1;2S</string>
+		<!--f5-->      <key>$F708</key><string>[15;2~</string>
+		<!--f6-->      <key>$F709</key><string>[17;2~</string>
+		<!--f7-->      <key>$F70A</key><string>[18;2~</string>
+		<!--f8-->      <key>$F70B</key><string>[19;2~</string>
+		<!--f9-->      <key>$F70C</key><string>[20;2~</string>
+		<!--f10-->     <key>$F70D</key><string>[21;2~</string>
+		<!--f11-->     <key>$F70E</key><string>[23;2~</string>
+		<!--f12-->     <key>$F70F</key><string>[24;2~</string>
+		<!--f13-->     <key>$F710</key><string>[25;2~</string>
+		<!--f14-->     <key>$F711</key><string>[26;2~</string>
+		<!--f15-->     <key>$F712</key><string>[28;2~</string>
+		<!--f16-->     <key>$F713</key><string>[29;2~</string>
+		<!--f17-->     <key>$F714</key><string>[31;2~</string>
+		<!--f18-->     <key>$F715</key><string>[32;2~</string>
+		<!--f19-->     <key>$F716</key><string>[33;2~</string>
+		<!--f20-->     <key>$F717</key><string>[34;2~</string>
+		<!--up-->      <key>$F700</key><string>[1;2A</string>
+		<!--down-->    <key>$F701</key><string>[1;2B</string>
+		<!--left-->    <key>$F702</key><string>[1;2D</string>
+		<!--right-->   <key>$F703</key><string>[1;2C</string>
+		<!--delete-->  <key>$F728</key><string>[3;2~</string>
+		<!--home-->    <key>$F729</key><string>[1;2H</string>
+		<!--end-->     <key>$F72B</key><string>[1;2F</string>
+		<!--pageup-->  <key>$F72C</key><string>[5;2~</string>
+		<!--pagedown--><key>$F72D</key><string>[6;2~</string>
+
+		<!--ctrl-->
+		<!--f1-->      <key>^F704</key><string>[1;5P</string>
+		<!--f2-->      <key>^F705</key><string>[1;5Q</string>
+		<!--f3-->      <key>^F706</key><string>[1;5R</string>
+		<!--f4-->      <key>^F707</key><string>[1;5S</string>
+		<!--f5-->      <key>^F708</key><string>[15;5~</string>
+		<!--f6-->      <key>^F709</key><string>[17;5~</string>
+		<!--f7-->      <key>^F70A</key><string>[18;5~</string>
+		<!--f8-->      <key>^F70B</key><string>[19;5~</string>
+		<!--f9-->      <key>^F70C</key><string>[20;5~</string>
+		<!--f10-->     <key>^F70D</key><string>[21;5~</string>
+		<!--f11-->     <key>^F70E</key><string>[23;5~</string>
+		<!--f12-->     <key>^F70F</key><string>[24;5~</string>
+		<!--f13-->     <key>^F710</key><string>[25;5~</string>
+		<!--f14-->     <key>^F711</key><string>[26;5~</string>
+		<!--f15-->     <key>^F712</key><string>[28;5~</string>
+		<!--f16-->     <key>^F713</key><string>[29;5~</string>
+		<!--f17-->     <key>^F714</key><string>[31;5~</string>
+		<!--f18-->     <key>^F715</key><string>[32;5~</string>
+		<!--f19-->     <key>^F716</key><string>[33;5~</string>
+		<!--f20-->     <key>^F717</key><string>[34;5~</string>
+		<!--up-->      <key>^F700</key><string>[1;5A</string>
+		<!--down-->    <key>^F701</key><string>[1;5B</string>
+		<!--left-->    <key>^F702</key><string>[1;5D</string>
+		<!--right-->   <key>^F703</key><string>[1;5C</string>
+		<!--delete-->  <key>^F728</key><string>[3;5~</string>
+		<!--home-->    <key>^F729</key><string>[1;5H</string>
+		<!--end-->     <key>^F72B</key><string>[1;5F</string>
+		<!--pageup-->  <key>^F72C</key><string>[5;5~</string>
+		<!--pagedown--><key>^F72D</key><string>[6;5~</string>
+
+		<!--ctrl+shift-->
+		<!--f1-->      <key>^$F704</key><string>[1;6P</string>
+		<!--f2-->      <key>^$F705</key><string>[1;6Q</string>
+		<!--f3-->      <key>^$F706</key><string>[1;6R</string>
+		<!--f4-->      <key>^$F707</key><string>[1;6S</string>
+		<!--f5-->      <key>^$F708</key><string>[15;6~</string>
+		<!--f6-->      <key>^$F709</key><string>[17;6~</string>
+		<!--f7-->      <key>^$F70A</key><string>[18;6~</string>
+		<!--f8-->      <key>^$F70B</key><string>[19;6~</string>
+		<!--f9-->      <key>^$F70C</key><string>[20;6~</string>
+		<!--f10-->     <key>^$F70D</key><string>[21;6~</string>
+		<!--f11-->     <key>^$F70E</key><string>[23;6~</string>
+		<!--f12-->     <key>^$F70F</key><string>[24;6~</string>
+		<!--f13-->     <key>^$F710</key><string>[25;6~</string>
+		<!--f14-->     <key>^$F711</key><string>[26;6~</string>
+		<!--f15-->     <key>^$F712</key><string>[28;6~</string>
+		<!--f16-->     <key>^$F713</key><string>[29;6~</string>
+		<!--f17-->     <key>^$F714</key><string>[31;6~</string>
+		<!--f18-->     <key>^$F715</key><string>[32;6~</string>
+		<!--f19-->     <key>^$F716</key><string>[33;6~</string>
+		<!--f20-->     <key>^$F717</key><string>[34;6~</string>
+		<!--up-->      <key>^$F700</key><string>[1;6A</string>
+		<!--down-->    <key>^$F701</key><string>[1;6B</string>
+		<!--left-->    <key>^$F702</key><string>[1;6D</string>
+		<!--right-->   <key>^$F703</key><string>[1;6C</string>
+		<!--delete-->  <key>^$F728</key><string>[3;6~</string>
+		<!--home-->    <key>^$F729</key><string>[1;6H</string>
+		<!--end-->     <key>^$F72B</key><string>[1;6F</string>
+		<!--pageup-->  <key>^$F72C</key><string>[5;6~</string>
+		<!--pagedown--><key>^$F72D</key><string>[6;6~</string>
+
+		<!--alt-->
+		<!--f1-->      <key>~F704</key><string>[1;3P</string>
+		<!--f2-->      <key>~F705</key><string>[1;3Q</string>
+		<!--f3-->      <key>~F706</key><string>[1;3R</string>
+		<!--f4-->      <key>~F707</key><string>[1;3S</string>
+		<!--f5-->      <key>~F708</key><string>[15;3~</string>
+		<!--f6-->      <key>~F709</key><string>[17;3~</string>
+		<!--f7-->      <key>~F70A</key><string>[18;3~</string>
+		<!--f8-->      <key>~F70B</key><string>[19;3~</string>
+		<!--f9-->      <key>~F70C</key><string>[20;3~</string>
+		<!--f10-->     <key>~F70D</key><string>[21;3~</string>
+		<!--f11-->     <key>~F70E</key><string>[23;3~</string>
+		<!--f12-->     <key>~F70F</key><string>[24;3~</string>
+		<!--f13-->     <key>~F710</key><string>[25;3~</string>
+		<!--f14-->     <key>~F711</key><string>[26;3~</string>
+		<!--f15-->     <key>~F712</key><string>[28;3~</string>
+		<!--f16-->     <key>~F713</key><string>[29;3~</string>
+		<!--f17-->     <key>~F714</key><string>[31;3~</string>
+		<!--f18-->     <key>~F715</key><string>[32;3~</string>
+		<!--f19-->     <key>~F716</key><string>[33;3~</string>
+		<!--f20-->     <key>~F717</key><string>[34;3~</string>
+		<!--up-->      <key>~F700</key><string>[1;3A</string>
+		<!--down-->    <key>~F701</key><string>[1;3B</string>
+		<!--left-->    <key>~F702</key><string>[1;3D</string>
+		<!--right-->   <key>~F703</key><string>[1;3C</string>
+		<!--delete-->  <key>~F728</key><string>[3;3~</string>
+		<!--home-->    <key>~F729</key><string>[1;3H</string>
+		<!--end-->     <key>~F72B</key><string>[1;3F</string>
+		<!--pageup-->  <key>~F72C</key><string>[5;3~</string>
+		<!--pagedown--><key>~F72D</key><string>[6;3~</string>
+
+		<!--alt+shift-->
+		<!--f1-->      <key>~$F704</key><string>[1;4P</string>
+		<!--f2-->      <key>~$F705</key><string>[1;4Q</string>
+		<!--f3-->      <key>~$F706</key><string>[1;4R</string>
+		<!--f4-->      <key>~$F707</key><string>[1;4S</string>
+		<!--f5-->      <key>~$F708</key><string>[15;4~</string>
+		<!--f6-->      <key>~$F709</key><string>[17;4~</string>
+		<!--f7-->      <key>~$F70A</key><string>[18;4~</string>
+		<!--f8-->      <key>~$F70B</key><string>[19;4~</string>
+		<!--f9-->      <key>~$F70C</key><string>[20;4~</string>
+		<!--f10-->     <key>~$F70D</key><string>[21;4~</string>
+		<!--f11-->     <key>~$F70E</key><string>[23;4~</string>
+		<!--f12-->     <key>~$F70F</key><string>[24;4~</string>
+		<!--f13-->     <key>~$F710</key><string>[25;4~</string>
+		<!--f14-->     <key>~$F711</key><string>[26;4~</string>
+		<!--f15-->     <key>~$F712</key><string>[28;4~</string>
+		<!--f16-->     <key>~$F713</key><string>[29;4~</string>
+		<!--f17-->     <key>~$F714</key><string>[31;4~</string>
+		<!--f18-->     <key>~$F715</key><string>[32;4~</string>
+		<!--f19-->     <key>~$F716</key><string>[33;4~</string>
+		<!--f20-->     <key>~$F717</key><string>[34;4~</string>
+		<!--up-->      <key>~$F700</key><string>[1;4A</string>
+		<!--down-->    <key>~$F701</key><string>[1;4B</string>
+		<!--left-->    <key>~$F702</key><string>[1;4D</string>
+		<!--right-->   <key>~$F703</key><string>[1;4C</string>
+		<!--delete-->  <key>~$F728</key><string>[3;4~</string>
+		<!--home-->    <key>~$F729</key><string>[1;4H</string>
+		<!--end-->     <key>~$F72B</key><string>[1;4F</string>
+		<!--pageup-->  <key>~$F72C</key><string>[5;4~</string>
+		<!--pagedown--><key>~$F72D</key><string>[6;4~</string>
+
+		<!--ctrl+alt-->
+		<!--f1-->      <key>~^F704</key><string>[1;7P</string>
+		<!--f2-->      <key>~^F705</key><string>[1;7Q</string>
+		<!--f3-->      <key>~^F706</key><string>[1;7R</string>
+		<!--f4-->      <key>~^F707</key><string>[1;7S</string>
+		<!--f5-->      <key>~^F708</key><string>[15;7~</string>
+		<!--f6-->      <key>~^F709</key><string>[17;7~</string>
+		<!--f7-->      <key>~^F70A</key><string>[18;7~</string>
+		<!--f8-->      <key>~^F70B</key><string>[19;7~</string>
+		<!--f9-->      <key>~^F70C</key><string>[20;7~</string>
+		<!--f10-->     <key>~^F70D</key><string>[21;7~</string>
+		<!--f11-->     <key>~^F70E</key><string>[23;7~</string>
+		<!--f12-->     <key>~^F70F</key><string>[24;7~</string>
+		<!--f13-->     <key>~^F710</key><string>[25;7~</string>
+		<!--f14-->     <key>~^F711</key><string>[26;7~</string>
+		<!--f15-->     <key>~^F712</key><string>[28;7~</string>
+		<!--f16-->     <key>~^F713</key><string>[29;7~</string>
+		<!--f17-->     <key>~^F714</key><string>[31;7~</string>
+		<!--f18-->     <key>~^F715</key><string>[32;7~</string>
+		<!--f19-->     <key>~^F716</key><string>[33;7~</string>
+		<!--f20-->     <key>~^F717</key><string>[34;7~</string>
+		<!--up-->      <key>~^F700</key><string>[1;7A</string>
+		<!--down-->    <key>~^F701</key><string>[1;7B</string>
+		<!--left-->    <key>~^F702</key><string>[1;7D</string>
+		<!--right-->   <key>~^F703</key><string>[1;7C</string>
+		<!--delete-->  <key>~^F728</key><string>[3;7~</string>
+		<!--home-->    <key>~^F729</key><string>[1;7H</string>
+		<!--end-->     <key>~^F72B</key><string>[1;7F</string>
+		<!--pageup-->  <key>~^F72C</key><string>[5;7~</string>
+		<!--pagedown--><key>~^F72D</key><string>[6;7~</string>
+
+		<!--ctrl+alt+shift-->
+		<!--f1-->      <key>~^$F704</key><string>[1;8P</string>
+		<!--f2-->      <key>~^$F705</key><string>[1;8Q</string>
+		<!--f3-->      <key>~^$F706</key><string>[1;8R</string>
+		<!--f4-->      <key>~^$F707</key><string>[1;8S</string>
+		<!--f5-->      <key>~^$F708</key><string>[15;8~</string>
+		<!--f6-->      <key>~^$F709</key><string>[17;8~</string>
+		<!--f7-->      <key>~^$F70A</key><string>[18;8~</string>
+		<!--f8-->      <key>~^$F70B</key><string>[19;8~</string>
+		<!--f9-->      <key>~^$F70C</key><string>[20;8~</string>
+		<!--f10-->     <key>~^$F70D</key><string>[21;8~</string>
+		<!--f11-->     <key>~^$F70E</key><string>[23;8~</string>
+		<!--f12-->     <key>~^$F70F</key><string>[24;8~</string>
+		<!--f13-->     <key>~^$F710</key><string>[25;8~</string>
+		<!--f14-->     <key>~^$F711</key><string>[26;8~</string>
+		<!--f15-->     <key>~^$F712</key><string>[28;8~</string>
+		<!--f16-->     <key>~^$F713</key><string>[29;8~</string>
+		<!--f17-->     <key>~^$F714</key><string>[31;8~</string>
+		<!--f18-->     <key>~^$F715</key><string>[32;8~</string>
+		<!--f19-->     <key>~^$F716</key><string>[33;8~</string>
+		<!--f20-->     <key>~^$F717</key><string>[34;8~</string>
+		<!--up-->      <key>~^$F700</key><string>[1;8A</string>
+		<!--down-->    <key>~^$F701</key><string>[1;8B</string>
+		<!--left-->    <key>~^$F702</key><string>[1;8D</string>
+		<!--right-->   <key>~^$F703</key><string>[1;8C</string>
+		<!--delete-->  <key>~^$F728</key><string>[3;8~</string>
+		<!--home-->    <key>~^$F729</key><string>[1;8H</string>
+		<!--end-->     <key>~^$F72B</key><string>[1;8F</string>
+		<!--pageup-->  <key>~^$F72C</key><string>[5;8~</string>
+		<!--pagedown--><key>~^$F72D</key><string>[6;8~</string>
+	</dict>
+	<key>name</key><string>Basic Plus</string>
+	<key>type</key><string>Window Settings</string>
+	<key>useOptionAsMetaKey</key><true/>
+</dict>
+</plist>
