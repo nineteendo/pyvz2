@@ -7,15 +7,16 @@ __all__: list[str] = [
     "MOUSE_BUTTONS",
     "InputEvent",
     "get_input_event",
+    "wait_for_stdin",
 ]
 __author__: str = "Nice Zombies"
 
 import re
+import sys
 from re import Pattern
 from signal import SIGINT, raise_signal
 from sys import stdin
-from threading import Lock, Thread
-from typing import ClassVar, Literal, overload
+from typing import BinaryIO, ClassVar, Literal, overload
 
 _ALT_SEQUENCE: Pattern[str] = re.compile(r"\x1b.|\x1b\x1b[O\[].+")
 _CTRL_SEQUENCE: Pattern[str] = re.compile(
@@ -120,13 +121,35 @@ MOUSE_BUTTONS: dict[int, str] = {
     0x83: "button11",
 }
 
+if sys.platform == "win32":
+    from msvcrt import kbhit
+    from time import sleep, time
+
+    def wait_for_stdin(timeout: float | None = None) -> bool:
+        """Wait until a keypress is ready to be read."""
+        start_time: float = time()
+        while not kbhit() and (
+            timeout is None
+            or time() < start_time + timeout
+        ):
+            sleep(0.001)
+
+        return kbhit()
+# pylint: disable=consider-using-in
+elif sys.platform == "darwin" or sys.platform == "linux":
+    from select import select
+
+    def wait_for_stdin(timeout: float | None = None) -> bool:
+        """Wait until a keypress is ready to be read."""
+        raw_stdin: BinaryIO = getattr(stdin.buffer, "raw", stdin.buffer)
+        return bool(select([raw_stdin], [], [], timeout)[0])
+else:
+    err: str = f"Unsupported platform: {sys.platform!r}"
+    raise RuntimeError(err)
+
 
 class _KeyReader:
     """Class to read keys from standard input."""
-
-    byte: ClassVar[bytes | None] = None
-    lock: ClassVar[Lock] = Lock()
-    thread: ClassVar[Thread | None] = None
 
     @classmethod
     def read(cls, number: int, *, raw: bool = False) -> str:
@@ -162,10 +185,11 @@ class _KeyReader:
         timeout: float | None = None,
     ) -> str | None:
         """Read character from standard input."""
-        byte: bytes | None = cls.read_byte(timeout=timeout)
-        if byte is None:
-            return byte
+        if not wait_for_stdin(timeout):
+            return None
 
+        raw_stdin: BinaryIO = getattr(stdin.buffer, "raw", stdin.buffer)
+        byte: bytes = raw_stdin.read(1)
         if not byte:
             raise EOFError
 
@@ -185,53 +209,15 @@ class _KeyReader:
             raise RuntimeError(err)
 
         if byte_ord & 0xC0 == 0xC0:  # 11xxxxxx10xxxxxx...
-            byte += cls.read_byte()
+            byte += raw_stdin.read(1)
 
         if byte_ord & 0xE0 == 0xE0:  # 111xxxxx10xxxxxx10xxxxxx...
-            byte += cls.read_byte()
+            byte += raw_stdin.read(1)
 
         if byte_ord & 0xF0 == 0xF0:  # 1111xxxx10xxxxxx10xxxxxx10xxxxxx...
-            byte += cls.read_byte()
+            byte += raw_stdin.read(1)
 
         return byte.decode()
-
-    # noinspection PyMissingOrEmptyDocstring
-    @classmethod
-    @overload
-    def read_byte(cls, *, timeout: None = None) -> bytes:
-        ...
-
-    # noinspection PyMissingOrEmptyDocstring
-    @classmethod
-    @overload
-    def read_byte(cls, *, timeout: float = ...) -> bytes | None:
-        ...
-
-    @classmethod
-    def read_byte(cls, *, timeout: float | None = None) -> bytes | None:
-        """Read byte from standard input."""
-        while True:
-            if cls.thread and cls.thread.is_alive():
-                cls.thread.join(timeout)
-            elif timeout is None:
-                while cls.byte is None:
-                    cls.read_from_stdin()
-            else:
-                cls.thread = Thread(target=cls.read_from_stdin, daemon=True)
-                cls.thread.start()
-                cls.thread.join(timeout)
-
-            with cls.lock:
-                byte, cls.byte = cls.byte, None
-
-            return byte
-
-    @classmethod
-    def read_from_stdin(cls) -> None:
-        """Read byte from standard input & store in cls.byte."""
-        byte: bytes | None = stdin.buffer.read(1)  # Don't lock before read
-        with cls.lock:
-            cls.byte = byte
 
 
 class InputEvent(str):

@@ -204,7 +204,7 @@ class BaseTextInput(BaseInputHandler[str]):
     @no_cursor
     def get_value(self) -> str | None:
         with self.ready_event:
-            Thread(target=self.display_thread, daemon=True).start()
+            Thread(target=self.display_thread).start()
             while True:
                 event: InputEvent = get_input_event()
                 if event.moving or not event.pressed:
