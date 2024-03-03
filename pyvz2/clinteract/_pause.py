@@ -10,6 +10,7 @@ from gettext import gettext as _
 from math import prod
 from os import get_terminal_size, terminal_size
 from sys import stdout
+from time import time
 from typing import Generic, Literal
 
 from ansio import colored_output, mouse_input, no_cursor, raw_input
@@ -120,9 +121,14 @@ class Pause(BaseInputHandler[None]):
     def get_value(self) -> None:
         self.print_prompt(short=True)
         stdout.buffer.flush()
+        start_time: float = time()
         event: InputEvent | None = get_input_event(timeout=self.timeout)
         while event and (event.moving or not event.pressed):
-            event = get_input_event(timeout=self.timeout)
+            if self.timeout is None:
+                event = get_input_event()
+            else:
+                elapsed_time: float = time() - start_time
+                event = get_input_event(timeout=self.timeout - elapsed_time)
 
         return self.clear_screen()
 

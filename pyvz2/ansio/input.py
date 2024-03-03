@@ -148,76 +148,70 @@ else:
     raise RuntimeError(err)
 
 
-class _KeyReader:
-    """Class to read keys from standard input."""
+# noinspection PyMissingOrEmptyDocstring
+@overload
+def _read_stdin_char(*, timeout: None = None, unicode: bool = False) -> str:
+    ...
 
-    @classmethod
-    def read(cls, number: int, *, raw: bool = False) -> str:
-        """Read from standard input."""
-        result: str = ""
-        for _1 in range(number):
-            result += cls.read_char(raw=raw)
 
-        return result
+# noinspection PyMissingOrEmptyDocstring
+@overload
+def _read_stdin_char(
+    *,
+    timeout: float = ...,
+    unicode: bool = False,
+) -> str | None:
+    ...
 
-    # noinspection PyMissingOrEmptyDocstring
-    @classmethod
-    @overload
-    def read_char(cls, *, raw: bool = False, timeout: None = None) -> str:
-        ...
 
-    # noinspection PyMissingOrEmptyDocstring
-    @classmethod
-    @overload
-    def read_char(
-        cls,
-        *,
-        raw: bool = False,
-        timeout: float = ...,
-    ) -> str | None:
-        ...
+def _read_stdin_char(
+    *,
+    timeout: float | None = None,
+    unicode: bool = False,
+) -> str | None:
+    """Read character from standard input."""
+    if not wait_for_stdin(timeout):
+        return None
 
-    @classmethod
-    def read_char(
-        cls,
-        *,
-        raw: bool = False,
-        timeout: float | None = None,
-    ) -> str | None:
-        """Read character from standard input."""
-        if not wait_for_stdin(timeout):
-            return None
+    raw_stdin: BinaryIO = getattr(stdin.buffer, "raw", stdin.buffer)
+    byte: bytes = raw_stdin.read(1)
+    if not byte:
+        raise EOFError
 
-        raw_stdin: BinaryIO = getattr(stdin.buffer, "raw", stdin.buffer)
-        byte: bytes = raw_stdin.read(1)
-        if not byte:
-            raise EOFError
+    if byte == b"\x03":
+        # HACK: Automatic handling of Ctrl+C has been disabled on Windows
+        raise_signal(SIGINT)
 
-        if byte == b"\x03":
-            # HACK: Automatic handling of Ctrl+C has been disabled on Windows
-            raise_signal(SIGINT)
+    if not unicode:
+        return byte.decode("latin_1")
 
-        if raw:
-            return byte.decode("latin_1")
+    # Handle multi-byte characters
+    byte_ord: int = ord(byte)
+    if byte_ord & 0xF8 == 0xF8:  # 11111xxx
+        # pylint: disable=redefined-outer-name
+        # noinspection PyShadowingNames
+        err: str = f"Read non-utf8 character: {byte!r}"
+        raise RuntimeError(err)
 
-        # Handle multi-byte characters
-        byte_ord: int = ord(byte)
-        if byte_ord & 0xF8 == 0xF8:  # 11111xxx
-            # pylint: disable=redefined-outer-name
-            # noinspection PyShadowingNames
-            err: str = f"Read non-utf8 character: {byte!r}"
-            raise RuntimeError(err)
+    if byte_ord & 0xC0 == 0xC0:  # 11xxxxxx10xxxxxx...
+        byte += raw_stdin.read(1)
 
-        if byte_ord & 0xC0 == 0xC0:  # 11xxxxxx10xxxxxx...
-            byte += raw_stdin.read(1)
+    if byte_ord & 0xE0 == 0xE0:  # 111xxxxx10xxxxxx10xxxxxx...
+        byte += raw_stdin.read(1)
 
-        if byte_ord & 0xE0 == 0xE0:  # 111xxxxx10xxxxxx10xxxxxx...
-            byte += raw_stdin.read(1)
+    if byte_ord & 0xF0 == 0xF0:  # 1111xxxx10xxxxxx10xxxxxx10xxxxxx...
+        byte += raw_stdin.read(1)
 
-        if byte_ord & 0xF0 == 0xF0:  # 1111xxxx10xxxxxx10xxxxxx10xxxxxx...
-            byte += raw_stdin.read(1)
+    return byte.decode()
 
-        return byte.decode()
+
+def _read_stdin(number: int, *, unicode: bool = False) -> str:
+    """Read from standard input."""
+    result: str = ""
+    for _1 in range(number):
+        result += _read_stdin_char(unicode=unicode)
+
+    return result
 
 
 class InputEvent(str):
@@ -309,34 +303,34 @@ class InputEvent(str):
 
 def _get_ss3_sequence(*, timeout: float | None = None) -> str:
     """Get SS3 sequence from command line."""
-    char: str | None = _KeyReader.read_char(raw=True, timeout=timeout)
+    char: str | None = _read_stdin_char(timeout=timeout)
     return char if char else ""
 
 
 def _get_csi_sequence(*, timeout: float | None = None) -> str:
     """Get CSI sequence from command line."""
     csi_sequence: str = ""
-    char: str | None = _KeyReader.read_char(raw=True, timeout=timeout)
+    char: str | None = _read_stdin_char(timeout=timeout)
     if char is None:
         return csi_sequence
 
     if csi_sequence + char == "<":
         csi_sequence += char
-        char = _KeyReader.read_char(raw=True)
+        char = _read_stdin_char()
 
     while char in _PARAM_CHARS:
         csi_sequence += char
-        char = _KeyReader.read_char(raw=True)
+        char = _read_stdin_char()
 
     csi_sequence += char
     if csi_sequence == "t":
-        csi_sequence += _KeyReader.read(2, raw=True)
+        csi_sequence += _read_stdin(2)
 
     if csi_sequence == "M":
-        csi_sequence += _KeyReader.read(3, raw=True)
+        csi_sequence += _read_stdin(3)
 
     if csi_sequence == "T":
-        csi_sequence += _KeyReader.read(6, raw=True)
+        csi_sequence += _read_stdin(6)
 
     return csi_sequence
 
@@ -355,14 +349,14 @@ def get_input_event(*, timeout: float = ...) -> InputEvent | None:
 
 def get_input_event(*, timeout: float | None = None) -> InputEvent | None:
     """Get input event from command line."""
-    key: str | None = _KeyReader.read_char(timeout=timeout)
+    key: str | None = _read_stdin_char(timeout=timeout, unicode=True)
     if key is None:
         return key
 
     if key != "\x1b":
         return InputEvent(key)
 
-    char: str | None = _KeyReader.read_char(timeout=_TIMEOUT)
+    char: str | None = _read_stdin_char(timeout=_TIMEOUT, unicode=True)
     if not char:
         return InputEvent(key)
 
@@ -372,7 +366,7 @@ def get_input_event(*, timeout: float | None = None) -> InputEvent | None:
     elif key == "\x1b[":
         key += _get_csi_sequence(timeout=_TIMEOUT)
     elif key == "\x1b\x1b":
-        char = _KeyReader.read_char(raw=True, timeout=_TIMEOUT)
+        char = _read_stdin_char(timeout=_TIMEOUT)
         if not char:
             return InputEvent(key)
 

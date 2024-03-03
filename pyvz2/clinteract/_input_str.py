@@ -282,16 +282,13 @@ class BaseTextInput(BaseInputHandler[str]):
         elif (
             not self.max_length or len(self.value) < self.max_length
         ) and not self.is_invalid_char(event):
-            char: str
-            if self.make_lowercase:
-                char = event.lower()
-            elif self.make_uppercase:
-                char = event.upper()
-            else:
-                char = event
-
-            self.value = start + char + end
             self.text_position += 1
+            if self.make_lowercase:
+                self.value = start + event.lower() + end
+            elif self.make_uppercase:
+                self.value = start + event.upper() + end
+            else:
+                self.value = start + event + end
         else:
             return False
 
