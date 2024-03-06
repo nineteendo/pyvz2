@@ -1,8 +1,15 @@
-"""CLInteract type var & helper classes for command line input."""
+"""CLInteract typevar, classes & functions for custom command line input."""
 # Copyright (C) 2023-2024 Nice Zombies
 from __future__ import annotations
 
-__all__: list[str] = ["VALUE", "ContextEvent", "Cursor", "Representation"]
+__all__: list[str] = [
+    "VALUE",
+    "ContextEvent",
+    "Cursor",
+    "Representation",
+    "get_contexts",
+    "get_shortcuts",
+]
 __author__: str = "Nice Zombies"
 
 import re
@@ -13,7 +20,9 @@ from threading import Event
 from types import FunctionType
 from typing import TYPE_CHECKING, ClassVar, TypeVar
 
-from .real2float import format_real
+from ansio import RecursiveContext, application_keypad, mouse_input
+
+from .utils import format_real
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -22,6 +31,31 @@ if TYPE_CHECKING:
 _UNPRINTABLE: Pattern[str] = re.compile(r"[\x00-\x1f\x7f-\x9f]")
 
 VALUE = TypeVar("VALUE")
+
+
+def get_contexts() -> list[RecursiveContext]:
+    """Get (a copy of) the default contexts."""
+    return [application_keypad, mouse_input]
+
+
+def get_shortcuts() -> dict[str, list[str]]:
+    """Get (a copy of) the default shortcuts."""
+    return {
+        "Cancel": ["escape"],
+        "Clear screen": ["ctrl+l"],
+        "Delete char after cursor": ["ctrl+d", "delete"],
+        "Delete char before cursor": ["backspace", "ctrl+h"],
+        "Delete everything after cursor": ["ctrl+end", "ctrl+k"],
+        "Delete everything before cursor": ["ctrl+home", "ctrl+u"],
+        "Delete whole line": ["alt+q", "escape"],
+        "Move cursor back": ["ctrl+b", "left"],
+        "Move cursor forward": ["ctrl+f", "right"],
+        "Move cursor to end": ["ctrl+e", "end"],
+        "Move cursor to start": ["ctrl+a", "home"],
+        "Scroll cursor back": [],
+        "Scroll cursor forward": [],
+        "Submit input": ["enter", "middle_click"],
+    }
 
 
 class ContextEvent(Event):

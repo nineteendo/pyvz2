@@ -1,4 +1,4 @@
-"""CLInteract helper functions for real numbers."""
+"""CLInteract utilities for command line input."""
 # Copyright (C) 2023-2024 Nice Zombies
 from __future__ import annotations
 

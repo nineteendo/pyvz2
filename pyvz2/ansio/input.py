@@ -122,8 +122,10 @@ MOUSE_BUTTONS: dict[int, str] = {
 }
 
 if sys.platform == "win32":
-    from msvcrt import kbhit
+    from msvcrt import kbhit  # pylint: disable=import-error
     from time import sleep, time
+
+    _TIMEOUT_STEP: float = 0.001
 
     def wait_for_stdin(timeout: float | None = None) -> bool:
         """Wait until a keypress is ready to be read."""
@@ -132,7 +134,7 @@ if sys.platform == "win32":
             timeout is None
             or time() < start_time + timeout
         ):
-            sleep(0.001)
+            sleep(_TIMEOUT_STEP)
 
         return kbhit()
 # pylint: disable=consider-using-in
@@ -141,8 +143,7 @@ elif sys.platform == "darwin" or sys.platform == "linux":
 
     def wait_for_stdin(timeout: float | None = None) -> bool:
         """Wait until a keypress is ready to be read."""
-        raw_stdin: BinaryIO = getattr(stdin.buffer, "raw", stdin.buffer)
-        return bool(select([raw_stdin], [], [], timeout)[0])
+        return bool(select([stdin.buffer], [], [], timeout)[0])
 else:
     err: str = f"Unsupported platform: {sys.platform!r}"
     raise RuntimeError(err)

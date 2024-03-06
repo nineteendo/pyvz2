@@ -6,6 +6,7 @@ __all__: list[str] = ["BaseInputHandler", "Pause", "pause"]
 __author__: str = "Nice Zombies"
 
 from abc import ABC, abstractmethod
+from contextlib import ExitStack
 from gettext import gettext as _
 from math import prod
 from os import get_terminal_size, terminal_size
@@ -13,14 +14,14 @@ from sys import stdout
 from time import time
 from typing import Generic, Literal
 
-from ansio import colored_output, mouse_input, no_cursor, raw_input
+from ansio import RecursiveContext, colored_output, no_cursor, raw_input
 from ansio.input import InputEvent, get_input_event
 from ansio.output import (
     bold, cursor_up, erase_in_display, green, raw_print, red,
     set_cursor_position,
 )
 
-from ._classes import VALUE, Cursor, Representation
+from ._custom import VALUE, Cursor, Representation, get_contexts
 
 _ELLIPSIS: Literal["\u2026"] = "\u2026"
 
@@ -32,9 +33,14 @@ class BaseInputHandler(Generic[VALUE], ABC):
         self,
         prompt: object,
         *,
+        contexts: list[RecursiveContext] | None = None,
         representation: type[str] = Representation,
     ) -> None:
+        if contexts is None:
+            contexts = get_contexts()
+
         new_terminal_size: terminal_size = get_terminal_size()
+        self.contexts: list[RecursiveContext] = contexts
         self.cursor: Cursor = Cursor(new_terminal_size.columns)
         self.prompt: str = representation(prompt)
         self.representation: type[str] = representation
@@ -102,6 +108,7 @@ class Pause(BaseInputHandler[None]):
         self,
         prompt: object = None,
         *,
+        contexts: list[RecursiveContext] | None = None,
         representation: type[str] = Representation,
         timeout: float | None = None,
     ) -> None:
@@ -112,23 +119,32 @@ class Pause(BaseInputHandler[None]):
                 prompt = _("Wait / Press enter to continue...")
 
         self.timeout: float | None = timeout
-        super().__init__(prompt, representation=representation)
+        super().__init__(
+            prompt,
+            contexts=contexts,
+            representation=representation,
+        )
 
     @raw_input
-    @mouse_input
     @colored_output
     @no_cursor
     def get_value(self) -> None:
-        self.print_prompt(short=True)
-        stdout.buffer.flush()
-        start_time: float = time()
-        event: InputEvent | None = get_input_event(timeout=self.timeout)
-        while event and (event.moving or not event.pressed):
-            if self.timeout is None:
-                event = get_input_event()
-            else:
-                elapsed_time: float = time() - start_time
-                event = get_input_event(timeout=self.timeout - elapsed_time)
+        with ExitStack() as stack:
+            for context in self.contexts:
+                stack.enter_context(context)
+
+            self.print_prompt(short=True)
+            stdout.buffer.flush()
+            start_time: float = time()
+            event: InputEvent | None = get_input_event(timeout=self.timeout)
+            while event and (event.moving or not event.pressed):
+                if self.timeout is None:
+                    event = get_input_event()
+                else:
+                    elapsed_time: float = time() - start_time
+                    event = get_input_event(
+                        timeout=self.timeout - elapsed_time,
+                    )
 
         return self.clear_screen()
 
@@ -136,8 +152,14 @@ class Pause(BaseInputHandler[None]):
 def pause(
     prompt: object = None,
     *,
+    contexts: list[RecursiveContext] | None = None,
     representation: type[str] = Representation,
     timeout: float | None = None,
 ) -> None:
     """Pause with message."""
-    Pause(prompt, representation=representation, timeout=timeout).get_value()
+    Pause(
+        prompt,
+        contexts=contexts,
+        representation=representation,
+        timeout=timeout,
+    ).get_value()

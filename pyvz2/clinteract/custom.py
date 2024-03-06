@@ -11,10 +11,13 @@ __all__: list[str] = [
     "InputStr",
     "Pause",
     "Representation",
+    "get_contexts",
     "get_shortcuts",
 ]
 __author__: str = "Nice Zombies"
 
-from ._classes import VALUE, ContextEvent, Cursor, Representation
-from ._input_str import BaseTextInput, InputStr, get_shortcuts
+from ._custom import (
+    VALUE, ContextEvent, Cursor, Representation, get_contexts, get_shortcuts,
+)
+from ._input_str import BaseTextInput, InputStr
 from ._pause import BaseInputHandler, Pause

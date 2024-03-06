@@ -4,14 +4,10 @@
 # TODO(Nice Zombies): Selecting text is disabled
 from __future__ import annotations
 
-__all__: list[str] = [
-    "BaseTextInput",
-    "InputStr",
-    "get_shortcuts",
-    "input_str",
-]
+__all__: list[str] = ["BaseTextInput", "InputStr", "input_str"]
 __author__: str = "Nice Zombies"
 
+from contextlib import ExitStack
 from gettext import gettext as _
 from math import prod
 from sys import stdout
@@ -19,37 +15,17 @@ from threading import Lock, Thread
 from typing import Literal, overload
 from unicodedata import category
 
-from ansio import colored_output, mouse_input, no_cursor, raw_input
+from ansio import RecursiveContext, colored_output, no_cursor, raw_input
 from ansio.input import InputEvent, get_input_event
 from ansio.output import (
     beep, cyan, grey, invert, raw_print, set_cursor_position,
 )
 
-from ._classes import ContextEvent, Cursor, Representation
+from ._custom import ContextEvent, Cursor, Representation, get_shortcuts
 from ._pause import BaseInputHandler
-from .real2float import format_real
+from .utils import format_real
 
 _ELLIPSIS: Literal["\u2026"] = "\u2026"
-
-
-def get_shortcuts() -> dict[str, list[str]]:
-    """Get (a copy of) the default shortcuts."""
-    return {
-        "Cancel": ["escape"],
-        "Clear screen": ["ctrl+l"],
-        "Delete char after cursor": ["ctrl+d", "delete"],
-        "Delete char before cursor": ["backspace", "ctrl+h"],
-        "Delete everything after cursor": ["ctrl+end", "ctrl+k"],
-        "Delete everything before cursor": ["ctrl+home", "ctrl+u"],
-        "Delete whole line": ["alt+q", "escape"],
-        "Move cursor back": ["ctrl+b", "left"],
-        "Move cursor forward": ["ctrl+f", "right"],
-        "Move cursor to end": ["ctrl+e", "end"],
-        "Move cursor to start": ["ctrl+a", "home"],
-        "Scroll cursor back": [],
-        "Scroll cursor forward": [],
-        "Submit input": ["enter", "middle_click"],
-    }
 
 
 # pylint: disable=too-many-instance-attributes
@@ -69,9 +45,10 @@ class BaseTextInput(BaseInputHandler[str]):
         allow_symbols: bool = False,
         ascii_only: bool = False,
         clear: bool = False,
+        contexts: list[RecursiveContext] | None = None,
         make_lowercase: bool = False,
         make_uppercase: bool = False,
-        max_length: int = 0,
+        max_length: int | None = None,
         min_length: int = 0,
         placeholder: str | None = None,
         representation: type[str] = Representation,
@@ -116,7 +93,7 @@ class BaseTextInput(BaseInputHandler[str]):
         whitelist = whitelist.lower()
         if not value:
             value = ""
-        elif max_length and len(value) > max_length:
+        elif max_length is not None and len(value) > max_length:
             err = "value is longer than max_length"
             raise ValueError(err)
 
@@ -147,7 +124,7 @@ class BaseTextInput(BaseInputHandler[str]):
         self.clear: bool = clear
         self.make_lowercase: bool = make_lowercase
         self.make_uppercase: bool = make_uppercase
-        self.max_length: int = max_length
+        self.max_length: int | None = max_length
         self.text_position: int = len(value)
         self.text_scroll: int = 0
         self.min_length: int = min_length
@@ -156,7 +133,11 @@ class BaseTextInput(BaseInputHandler[str]):
         self.ready_event: ContextEvent = ContextEvent()
         self.shortcuts: dict[str, list[str]] = shortcuts
         self.value: str = value
-        super().__init__(prompt, representation=representation)
+        super().__init__(
+            prompt,
+            contexts=contexts,
+            representation=representation,
+        )
 
     def display_thread(self) -> None:
         """Display information on separate thread."""
@@ -199,11 +180,13 @@ class BaseTextInput(BaseInputHandler[str]):
         return max(0, msg_len + min(prompt_len, max_chars // 2) - max_chars)
 
     @raw_input
-    @mouse_input
     @colored_output
     @no_cursor
     def get_value(self) -> str | None:
-        with self.ready_event:
+        with self.ready_event, ExitStack() as stack:
+            for context in self.contexts:
+                stack.enter_context(context)
+
             Thread(target=self.display_thread).start()
             while True:
                 event: InputEvent = get_input_event()
@@ -280,7 +263,7 @@ class BaseTextInput(BaseInputHandler[str]):
         elif self.is_shortcut(event, "Scroll cursor forward") and end:
             self.text_scroll += 1
         elif (
-            not self.max_length or len(self.value) < self.max_length
+            self.max_length is None or len(self.value) < self.max_length
         ) and not self.is_invalid_char(event):
             self.text_position += 1
             if self.make_lowercase:
@@ -385,9 +368,10 @@ def input_str(  # pylint: disable=too-many-arguments
     *,
     ascii_only: bool = False,
     clear: bool = False,
+    contexts: list[RecursiveContext] | None = None,
     make_lowercase: bool = False,
     make_uppercase: bool = False,
-    max_length: int = 0,
+    max_length: int | None = None,
     min_length: int = 0,
     placeholder: str | None = None,
     representation: type[str] = Representation,
@@ -410,9 +394,10 @@ def input_str(  # pylint: disable=too-many-arguments, too-many-locals
     allow_symbols: bool = False,
     ascii_only: bool = False,
     clear: bool = False,
+    contexts: list[RecursiveContext] | None = None,
     make_lowercase: bool = False,
     make_uppercase: bool = False,
-    max_length: int = 0,
+    max_length: int | None = None,
     min_length: int = 0,
     placeholder: str | None = None,
     representation: type[str] = Representation,
@@ -435,9 +420,10 @@ def input_str(  # noqa: PLR0913
     allow_symbols: bool = False,
     ascii_only: bool = False,
     clear: bool = False,
+    contexts: list[RecursiveContext] | None = None,
     make_lowercase: bool = False,
     make_uppercase: bool = False,
-    max_length: int = 0,
+    max_length: int | None = None,
     min_length: int = 0,
     placeholder: str | None = None,
     representation: type[str] = Representation,
@@ -456,6 +442,7 @@ def input_str(  # noqa: PLR0913
         allow_symbols=allow_symbols,
         ascii_only=ascii_only,
         clear=clear,
+        contexts=contexts,
         make_lowercase=make_lowercase,
         make_uppercase=make_uppercase,
         max_length=max_length,
