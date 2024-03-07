@@ -14,7 +14,7 @@ from sys import stdout
 from time import time
 from typing import Generic, Literal
 
-from ansio import RecursiveContext, colored_output, no_cursor, raw_input
+from ansio import TerminalContext, colored_output, no_cursor, raw_input
 from ansio.input import InputEvent, get_input_event
 from ansio.output import (
     bold, cursor_up, erase_in_display, green, raw_print, red,
@@ -33,14 +33,14 @@ class BaseInputHandler(Generic[VALUE], ABC):
         self,
         prompt: object,
         *,
-        contexts: list[RecursiveContext] | None = None,
+        contexts: list[TerminalContext] | None = None,
         representation: type[str] = Representation,
     ) -> None:
         if contexts is None:
             contexts = get_contexts()
 
         new_terminal_size: terminal_size = get_terminal_size()
-        self.contexts: list[RecursiveContext] = contexts
+        self.contexts: list[TerminalContext] = contexts
         self.cursor: Cursor = Cursor(new_terminal_size.columns)
         self.prompt: str = representation(prompt)
         self.representation: type[str] = representation
@@ -108,7 +108,7 @@ class Pause(BaseInputHandler[None]):
         self,
         prompt: object = None,
         *,
-        contexts: list[RecursiveContext] | None = None,
+        contexts: list[TerminalContext] | None = None,
         representation: type[str] = Representation,
         timeout: float | None = None,
     ) -> None:
@@ -152,7 +152,7 @@ class Pause(BaseInputHandler[None]):
 def pause(
     prompt: object = None,
     *,
-    contexts: list[RecursiveContext] | None = None,
+    contexts: list[TerminalContext] | None = None,
     representation: type[str] = Representation,
     timeout: float | None = None,
 ) -> None:

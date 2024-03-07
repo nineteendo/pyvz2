@@ -15,7 +15,7 @@ from threading import Lock, Thread
 from typing import Literal, overload
 from unicodedata import category
 
-from ansio import RecursiveContext, colored_output, no_cursor, raw_input
+from ansio import TerminalContext, colored_output, no_cursor, raw_input
 from ansio.input import InputEvent, get_input_event
 from ansio.output import (
     beep, cyan, grey, invert, raw_print, set_cursor_position,
@@ -45,7 +45,7 @@ class BaseTextInput(BaseInputHandler[str]):
         allow_symbols: bool = False,
         ascii_only: bool = False,
         clear: bool = False,
-        contexts: list[RecursiveContext] | None = None,
+        contexts: list[TerminalContext] | None = None,
         make_lowercase: bool = False,
         make_uppercase: bool = False,
         max_length: int | None = None,
@@ -368,7 +368,7 @@ def input_str(  # pylint: disable=too-many-arguments
     *,
     ascii_only: bool = False,
     clear: bool = False,
-    contexts: list[RecursiveContext] | None = None,
+    contexts: list[TerminalContext] | None = None,
     make_lowercase: bool = False,
     make_uppercase: bool = False,
     max_length: int | None = None,
@@ -394,7 +394,7 @@ def input_str(  # pylint: disable=too-many-arguments, too-many-locals
     allow_symbols: bool = False,
     ascii_only: bool = False,
     clear: bool = False,
-    contexts: list[RecursiveContext] | None = None,
+    contexts: list[TerminalContext] | None = None,
     make_lowercase: bool = False,
     make_uppercase: bool = False,
     max_length: int | None = None,
@@ -420,7 +420,7 @@ def input_str(  # noqa: PLR0913
     allow_symbols: bool = False,
     ascii_only: bool = False,
     clear: bool = False,
-    contexts: list[RecursiveContext] | None = None,
+    contexts: list[TerminalContext] | None = None,
     make_lowercase: bool = False,
     make_uppercase: bool = False,
     max_length: int | None = None,

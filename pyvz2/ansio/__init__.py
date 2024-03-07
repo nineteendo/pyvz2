@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 __all__: list[str] = [
-    "RecursiveContext",
+    "TerminalContext",
     "application_keypad",
     "colored_output",
     "mouse_input",
@@ -22,17 +22,17 @@ if TYPE_CHECKING:
     from types import FrameType, TracebackType
 
 
-class RecursiveContext(ContextDecorator):
-    """Class for recursive context decorators."""
+class TerminalContext(ContextDecorator):
+    """Class for terminal context decorators."""
 
-    decorators: ClassVar[list[RecursiveContext]] = []
+    decorators: ClassVar[list[TerminalContext]] = []
 
     def __init__(self) -> None:
-        """Create new recursive context instance."""
+        """Create new terminal context instance."""
         self.count: int = 0
         register(self._disable)
 
-    def __enter__(self) -> RecursiveContext:
+    def __enter__(self) -> TerminalContext:
         """Enter context."""
         if not self.count:
             self.enable()
@@ -86,7 +86,7 @@ if sys.platform == "win32":
     _ENABLE_VIRTUAL_TERMINAL_PROCESSING: Literal[0x0004] = 0x0004
     _DISABLE_NEWLINE_AUTO_RETURN: Literal[0x0008] = 0x0008
 
-    class _RawInput(RecursiveContext):
+    class _RawInput(TerminalContext):
         def __init__(self) -> None:
             self._old: c_ulong = c_ulong()
             windll.kernel32.GetConsoleMode(
@@ -112,7 +112,7 @@ if sys.platform == "win32":
                 get_osfhandle(stdin.fileno()), value,
             )
 
-    class _ColoredOutput(RecursiveContext):
+    class _ColoredOutput(TerminalContext):
         def __init__(self) -> None:
             self._old: c_ulong = c_ulong()
             windll.kernel32.GetConsoleMode(
@@ -148,7 +148,7 @@ elif sys.platform == "darwin" or sys.platform == "linux":
     _IFLAG: Literal[0] = 0
     _OFLAG: Literal[1] = 1
 
-    class _RawInput(RecursiveContext):
+    class _RawInput(TerminalContext):
 
         def __init__(self) -> None:
             if not stdin.isatty():
@@ -177,17 +177,17 @@ elif sys.platform == "darwin" or sys.platform == "linux":
             # Disable line buffering & erase/kill character-processing
             setcbreak(stdin, TCSANOW)
 
-    _ColoredOutput = RecursiveContext
+    _ColoredOutput = TerminalContext
 
     def _resume(_1: int, _2: FrameType | None) -> None:
         """Enable all contexts on resume."""
         signal(SIGTSTP, _suspend)
-        for decorator in RecursiveContext.decorators:
+        for decorator in TerminalContext.decorators:
             decorator.enable(tracked=False)
 
     def _suspend(signum: int, _2: FrameType | None) -> None:
         """Disable all contexts on suspend."""
-        for decorator in reversed(RecursiveContext.decorators):
+        for decorator in reversed(TerminalContext.decorators):
             decorator.disable(tracked=False)
 
         signal(signum, SIG_DFL)
@@ -200,9 +200,9 @@ else:
     raise RuntimeError(err)
 
 
-def _make_terminal_context(start: str, end: str) -> RecursiveContext:
-    class TerminalContext(RecursiveContext):
-        """Class for terminal contexts."""
+def _make_ansi_context(start: str, end: str) -> TerminalContext:
+    class AnsiContext(TerminalContext):
+        """Class for ansi contexts decorators."""
 
         def _disable(self) -> None:  # noqa: PLR6301
             print(end=end, flush=True)
@@ -210,13 +210,13 @@ def _make_terminal_context(start: str, end: str) -> RecursiveContext:
         def _enable(self) -> None:  # noqa: PLR6301
             print(end=start, flush=True)
 
-    return TerminalContext()
+    return AnsiContext()
 
 
-raw_input: RecursiveContext = _RawInput()
-application_keypad: RecursiveContext = _make_terminal_context("\x1b=", "\x1b>")
-mouse_input: RecursiveContext = _make_terminal_context(
+raw_input: TerminalContext = _RawInput()
+application_keypad: TerminalContext = _make_ansi_context("\x1b=", "\x1b>")
+mouse_input: TerminalContext = _make_ansi_context(
     "\x1b[?1000h\x1b[?1006h", "\x1b[?1000l\x1b[?1006l",
 )
-colored_output: RecursiveContext = _ColoredOutput()
-no_cursor: RecursiveContext = _make_terminal_context("\x1b[?25l", "\x1b[?25h")
+colored_output: TerminalContext = _ColoredOutput()
+no_cursor: TerminalContext = _make_ansi_context("\x1b[?25l", "\x1b[?25h")

@@ -20,7 +20,7 @@ from threading import Event
 from types import FunctionType
 from typing import TYPE_CHECKING, ClassVar, TypeVar
 
-from ansio import RecursiveContext, application_keypad, mouse_input
+from ansio import TerminalContext, application_keypad, mouse_input
 
 from .utils import format_real
 
@@ -33,7 +33,7 @@ _UNPRINTABLE: Pattern[str] = re.compile(r"[\x00-\x1f\x7f-\x9f]")
 VALUE = TypeVar("VALUE")
 
 
-def get_contexts() -> list[RecursiveContext]:
+def get_contexts() -> list[TerminalContext]:
     """Get (a copy of) the default contexts."""
     return [application_keypad, mouse_input]
 
@@ -47,7 +47,7 @@ def get_shortcuts() -> dict[str, list[str]]:
         "Delete char before cursor": ["backspace", "ctrl+h"],
         "Delete everything after cursor": ["ctrl+end", "ctrl+k"],
         "Delete everything before cursor": ["ctrl+home", "ctrl+u"],
-        "Delete whole line": ["alt+q", "escape"],
+        "Delete whole line": ["escape"],
         "Move cursor back": ["ctrl+b", "left"],
         "Move cursor forward": ["ctrl+f", "right"],
         "Move cursor to end": ["ctrl+e", "end"],
