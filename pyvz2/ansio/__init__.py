@@ -13,7 +13,7 @@ __all__: list[str] = [
 __author__: str = "Nice Zombies"
 
 import sys
-from atexit import register
+from atexit import register, unregister
 from contextlib import ContextDecorator
 from sys import stdin, stdout
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
@@ -30,7 +30,6 @@ class TerminalContext(ContextDecorator):
     def __init__(self) -> None:
         """Create new terminal context instance."""
         self.count: int = 0
-        register(self._disable)
 
     def __enter__(self) -> TerminalContext:
         """Enter context."""
@@ -61,14 +60,19 @@ class TerminalContext(ContextDecorator):
     def disable(self, *, tracked: bool = True) -> None:
         """Disable context."""
         self._disable()
-        if self in self.decorators and tracked:
-            self.decorators.remove(self)
+        if tracked:
+            unregister(self._disable)
+            if self in self.decorators:
+                self.decorators.remove(self)
 
     def enable(self, *, tracked: bool = True) -> None:
         """Enable context."""
+        if tracked:
+            register(self._disable)
+            if self not in self.decorators:
+                self.decorators.append(self)
+
         self._enable()
-        if self not in self.decorators and tracked:
-            self.decorators.append(self)
 
 
 if sys.platform == "win32":

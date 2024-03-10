@@ -25,6 +25,7 @@ from ._custom import ContextEvent, Cursor, Representation, get_shortcuts
 from ._pause import BaseInputHandler
 from .utils import format_real
 
+_DELAY: float = 1 / 10
 _ELLIPSIS: Literal["\u2026"] = "\u2026"
 
 
@@ -161,7 +162,7 @@ class BaseTextInput(BaseInputHandler[str]):
 
                 stdout.buffer.flush()
 
-            if self.ready_event.wait(0.1):
+            if self.ready_event.wait(_DELAY):
                 break
 
     def enlarge_window(self) -> bool:
