@@ -12,7 +12,7 @@ from math import prod
 from os import get_terminal_size, terminal_size
 from sys import stdout
 from time import time
-from typing import Generic, Literal
+from typing import Generic
 
 from ansio import TerminalContext, colored_output, no_cursor, raw_input
 from ansio.input import InputEvent, get_input_event
@@ -23,7 +23,7 @@ from ansio.output import (
 
 from ._custom import VALUE, Cursor, Representation, get_contexts
 
-_ELLIPSIS: Literal["\u2026"] = "\u2026"
+_ELLIPSIS: str = "\u2026"
 
 
 class BaseInputHandler(Generic[VALUE], ABC):

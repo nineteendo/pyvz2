@@ -16,7 +16,7 @@ import sys
 from re import Pattern
 from signal import SIGINT, raise_signal
 from sys import stdin
-from typing import BinaryIO, ClassVar, Literal, overload
+from typing import BinaryIO, ClassVar, overload
 
 _ALT_SEQUENCE: Pattern[str] = re.compile(r"\x1b.|\x1b\x1b[O\[].+")
 _CTRL_SEQUENCE: Pattern[str] = re.compile(
@@ -24,7 +24,7 @@ _CTRL_SEQUENCE: Pattern[str] = re.compile(
 )
 _MODIFIER_SEQUENCE: Pattern[str] = re.compile(r"\x1b\[\d+;\d+[A-Z~]")
 _MOUSE_SEQUENCE: Pattern[str] = re.compile(r"\x1b?\x1b\[M...")
-_PARAM_CHARS: Literal["0123456789;"] = "0123456789;"
+_PARAM_CHARS: str = "0123456789;"
 _SGR_MOUSE_SEQUENCE: Pattern[str] = re.compile(r"\x1b?\x1b\[<\d+;\d+;\d+[Mm]")
 _SHIFT_SEQUENCE: Pattern[str] = re.compile(r"\x1b.")
 _TIMEOUT: float = 0.01

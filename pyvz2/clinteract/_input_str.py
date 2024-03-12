@@ -12,7 +12,7 @@ from gettext import gettext as _
 from math import prod
 from sys import stdout
 from threading import Lock, Thread
-from typing import Literal, overload
+from typing import overload
 from unicodedata import category
 
 from ansio import TerminalContext, colored_output, no_cursor, raw_input
@@ -26,7 +26,7 @@ from ._pause import BaseInputHandler
 from .utils import format_real
 
 _DELAY: float = 1 / 10
-_ELLIPSIS: Literal["\u2026"] = "\u2026"
+_ELLIPSIS: str = "\u2026"
 
 
 # pylint: disable=too-many-instance-attributes

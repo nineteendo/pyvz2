@@ -16,10 +16,14 @@ import sys
 from atexit import register, unregister
 from contextlib import ContextDecorator
 from sys import stdin, stdout
-from typing import TYPE_CHECKING, Any, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
     from types import FrameType, TracebackType
+
+if not stdin.isatty() or not stdout.isatty():
+    err: str = "stdin / stdout don't refer to a terminal"
+    raise RuntimeError(err)
 
 
 class TerminalContext(ContextDecorator):
@@ -80,64 +84,74 @@ if sys.platform == "win32":
     # noinspection PyCompatibility
     from msvcrt import get_osfhandle  # pylint: disable=import-error
 
-    _ENABLE_PROCESSED_INPUT: Literal[0x0001] = 0x0001
-    _ENABLE_LINE_INPUT: Literal[0x0002] = 0x0002
-    _ENABLE_ECHO_INPUT: Literal[0x0004] = 0x0004
-    _ENABLE_VIRTUAL_TERMINAL_INPUT: Literal[0x0200] = 0x0200
+    _ENABLE_PROCESSED_INPUT: int = 0x0001
+    _ENABLE_LINE_INPUT: int = 0x0002
+    _ENABLE_ECHO_INPUT: int = 0x0004
+    _ENABLE_VIRTUAL_TERMINAL_INPUT: int = 0x0200
 
-    _ENABLE_PROCESSED_OUTPUT: Literal[0x0001] = 0x0001
-    _ENABLE_WRAP_AT_EOL_OUTPUT: Literal[0x0002] = 0x0002
-    _ENABLE_VIRTUAL_TERMINAL_PROCESSING: Literal[0x0004] = 0x0004
-    _DISABLE_NEWLINE_AUTO_RETURN: Literal[0x0008] = 0x0008
+    _ENABLE_PROCESSED_OUTPUT: int = 0x0001
+    _ENABLE_WRAP_AT_EOL_OUTPUT: int = 0x0002
+    _ENABLE_VIRTUAL_TERMINAL_PROCESSING: int = 0x0004
+    _DISABLE_NEWLINE_AUTO_RETURN: int = 0x0008
 
     class _RawInput(TerminalContext):
         def __init__(self) -> None:
-            self._old: c_ulong = c_ulong()
+            _old: c_ulong = c_ulong()
             windll.kernel32.GetConsoleMode(
-                get_osfhandle(stdin.fileno()), byref(self._old),
+                get_osfhandle(stdin.fileno()), byref(_old),
             )
+            self._old_mode: int = _old.value
             super().__init__()
 
         def _disable(self) -> None:
             windll.kernel32.SetConsoleMode(
-                get_osfhandle(stdin.fileno()), self._old.value,
+                get_osfhandle(stdin.fileno()), self._old_mode,
             )
 
-        def _enable(self) -> None:
-            value: int = self._old.value
+        def _enable(self) -> None:  # noqa: PLR6301
+            new: c_ulong = c_ulong()
+            windll.kernel32.GetConsoleMode(
+                get_osfhandle(stdin.fileno()), byref(new),
+            )
+            mode: int = new.value
             # HACK: Disable processed input, Windows has one key delay
             # Disable line input and echo input
-            value &= ~(
+            mode &= ~(
                 _ENABLE_PROCESSED_INPUT | _ENABLE_LINE_INPUT
                 | _ENABLE_ECHO_INPUT
             )
-            value |= _ENABLE_VIRTUAL_TERMINAL_INPUT
+            mode |= _ENABLE_VIRTUAL_TERMINAL_INPUT
             windll.kernel32.SetConsoleMode(
-                get_osfhandle(stdin.fileno()), value,
+                get_osfhandle(stdin.fileno()), mode,
             )
 
     class _ColoredOutput(TerminalContext):
         def __init__(self) -> None:
-            self._old: c_ulong = c_ulong()
+            _old: c_ulong = c_ulong()
             windll.kernel32.GetConsoleMode(
-                get_osfhandle(stdout.fileno()), byref(self._old),
+                get_osfhandle(stdout.fileno()), byref(_old),
             )
+            self._old_mode: int = _old.value
             super().__init__()
 
         def _disable(self) -> None:
             windll.kernel32.SetConsoleMode(
-                get_osfhandle(stdout.fileno()), self._old.value,
+                get_osfhandle(stdout.fileno()), self._old_mode,
             )
 
-        def _enable(self) -> None:
-            value: int = self._old.value
-            value |= (
+        def _enable(self) -> None:  # noqa: PLR6301
+            new: c_ulong = c_ulong()
+            windll.kernel32.GetConsoleMode(
+                get_osfhandle(stdin.fileno()), byref(new),
+            )
+            mode: int = new.value
+            mode |= (
                 _ENABLE_PROCESSED_OUTPUT | _ENABLE_WRAP_AT_EOL_OUTPUT
                 | _ENABLE_VIRTUAL_TERMINAL_PROCESSING
                 | _DISABLE_NEWLINE_AUTO_RETURN
             )
             windll.kernel32.SetConsoleMode(
-                get_osfhandle(stdout.fileno()), value,
+                get_osfhandle(stdout.fileno()), mode,
             )
 # pylint: disable=consider-using-in
 elif sys.platform == "darwin" or sys.platform == "linux":
@@ -149,23 +163,17 @@ elif sys.platform == "darwin" or sys.platform == "linux":
     )
     from tty import setcbreak
 
-    _IFLAG: Literal[0] = 0
-    _OFLAG: Literal[1] = 1
+    _IFLAG: int = 0
+    _OFLAG: int = 1
 
     class _RawInput(TerminalContext):
 
         def __init__(self) -> None:
-            if not stdin.isatty():
-                # pylint: disable=redefined-outer-name
-                # noinspection PyShadowingNames
-                err: str = "stdin doesn't refer to a terminal"
-                raise RuntimeError(err)
-
-            self._old_value: list[Any] = tcgetattr(stdin)
+            self._old_mode: list[Any] = tcgetattr(stdin)
             super().__init__()
 
         def _disable(self) -> None:
-            tcsetattr(stdin, TCSANOW, self._old_value)
+            tcsetattr(stdin, TCSANOW, self._old_mode)
 
         def _enable(self) -> None:  # noqa: PLR6301
             mode: list[Any] = tcgetattr(stdin)

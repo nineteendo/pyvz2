@@ -16,8 +16,8 @@ Work in progress. Initial implementation phase.
 
 ## Future Plans
 
-- Error logging
 - Interactive menus
+- Error logging
 - Built-in file manager
 - CLInteract demo
 - Translations
