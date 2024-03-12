@@ -65,12 +65,7 @@ def main() -> None:
         action="store_true",
         help="log at debug level",
     )
-    commands = parser.add_subparsers(
-        title="commands",
-        dest="command",
-        help="run one of the following commands",
-        metavar="[command]",
-    )
+    commands = parser.add_subparsers(dest="command", help="command")
     commands.add_parser("keyboard", help="print keyboard events")
     args: PyVZ2Namespace = parser.parse_args(namespace=PyVZ2Namespace())
     with chdir(RES_DIR), suppress(EOFError, KeyboardInterrupt):
