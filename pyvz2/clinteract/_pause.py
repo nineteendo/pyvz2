@@ -10,7 +10,7 @@ from contextlib import ExitStack
 from gettext import gettext as _
 from math import prod
 from os import get_terminal_size, terminal_size
-from sys import stdout
+from sys import stdin, stdout
 from time import time
 from typing import Generic
 
@@ -36,6 +36,10 @@ class BaseInputHandler(Generic[VALUE], ABC):
         contexts: list[TerminalContext] | None = None,
         representation: type[str] = Representation,
     ) -> None:
+        if not stdin.isatty() or not stdout.isatty():
+            err: str = "stdin / stdout don't refer to a terminal"
+            raise RuntimeError(err)
+
         if contexts is None:
             contexts = get_contexts()
 

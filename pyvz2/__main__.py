@@ -2,13 +2,16 @@
 """PyVZ2, a command line utility to modify PVZ2."""
 # Copyright (C) 2020-2024 Nice Zombies
 # TODO(Nice Zombies): Interactive menus
-# TODO(Nice Zombies): Error logging
-# TODO(Nice Zombies): CLInteract demo
-# TODO(Nice Zombies): Translations
-# TODO(Nice Zombies): Custom keyboard shortcuts
 # TODO(Nice Zombies): Update checking
+# TODO(Nice Zombies): PathPicker error logging
+# TODO(Nice Zombies): Open folder command
+# TODO(Nice Zombies): CLInteract demo
+# TODO(Nice Zombies): CLInteract translations
+# TODO(Nice Zombies): Custom keyboard shortcuts
 # TODO(Nice Zombies): Reimplement old functionality
+# TODO(Nice Zombies): Error logging
 # TODO(Nice Zombies): Command line arguments
+# TODO(Nice Zombies): Translations
 from __future__ import annotations
 
 __all__: list[str] = []
@@ -21,12 +24,14 @@ from gettext import gettext as _
 from logging import DEBUG, INFO, basicConfig, critical, info
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+from sys import stderr
+from typing import Literal, assert_never
 
 from ansio import (
     application_keypad, colored_output, mouse_input, no_cursor, raw_input,
 )
 from ansio.input import get_input_event
-from clinteract import input_str, pause
+from clinteract import input_str
 from fsys import RES_DIR
 
 _LOG_DIR: Path = Path("logs")
@@ -37,17 +42,10 @@ _LOG_SIZE: int = 5 * 1024 * 1024
 class PyVZ2Namespace:  # pylint: disable=too-few-public-methods
     """Namespace of PyVZ2."""
 
-    command: str | None
+    command: Literal["keyboard"] | None
     debug: bool
 
 
-# Enable raw & mouse input, application_keypad, colored output and no cursor
-# for entire program
-@raw_input
-@application_keypad
-@mouse_input
-@colored_output
-@no_cursor
 def main() -> None:
     """Start PyVZ2."""
     parser: ArgumentParser = ArgumentParser(
@@ -84,13 +82,20 @@ def main() -> None:
         try:
             if args.command is None:
                 input_str(_("Enter a string:"))
+            elif args.command == "keyboard":
+                with (
+                    raw_input, application_keypad, mouse_input, colored_output,
+                    no_cursor,
+                ):
+                    while True:
+                        print(repr(get_input_event().shortcut))
             else:
-                while True:
-                    print(repr(get_input_event().shortcut))
+                assert_never(args.command)
         # pylint: disable=broad-exception-caught
         except (Exception, GeneratorExit) as err:
             critical(err, exc_info=True)
-            pause(err)
+            print(f"{type(err).__name__}: {err}", file=stderr)
+            print(f"Please refer to {RES_DIR / _LOG_DIR}", file=stderr)
 
 
 if __name__ == "__main__":

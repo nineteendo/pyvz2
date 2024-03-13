@@ -21,10 +21,6 @@ from typing import TYPE_CHECKING, Any, ClassVar
 if TYPE_CHECKING:
     from types import FrameType, TracebackType
 
-if not stdin.isatty() or not stdout.isatty():
-    err: str = "stdin / stdout don't refer to a terminal"
-    raise RuntimeError(err)
-
 
 class TerminalContext(ContextDecorator):
     """Class for terminal context decorators."""
@@ -63,6 +59,12 @@ class TerminalContext(ContextDecorator):
 
     def disable(self, *, tracked: bool = True) -> None:
         """Disable context."""
+        if not stdin.isatty() or not stdout.isatty():
+            # pylint: disable=redefined-outer-name
+            # noinspection PyShadowingNames
+            err: str = "stdin / stdout don't refer to a terminal"
+            raise RuntimeError(err)
+
         self._disable()
         if tracked:
             unregister(self._disable)
@@ -71,6 +73,12 @@ class TerminalContext(ContextDecorator):
 
     def enable(self, *, tracked: bool = True) -> None:
         """Enable context."""
+        if not stdin.isatty() or not stdout.isatty():
+            # pylint: disable=redefined-outer-name
+            # noinspection PyShadowingNames
+            err: str = "stdin / stdout don't refer to a terminal"
+            raise RuntimeError(err)
+
         if tracked:
             register(self._disable)
             if self not in self.decorators:
@@ -95,25 +103,24 @@ if sys.platform == "win32":
     _DISABLE_NEWLINE_AUTO_RETURN: int = 0x0008
 
     class _RawInput(TerminalContext):
-        def __init__(self) -> None:
-            _old: c_ulong = c_ulong()
-            windll.kernel32.GetConsoleMode(
-                get_osfhandle(stdin.fileno()), byref(_old),
-            )
-            self._old_mode: int = _old.value
-            super().__init__()
+        _old_mode: int | None = None
 
         def _disable(self) -> None:
-            windll.kernel32.SetConsoleMode(
-                get_osfhandle(stdin.fileno()), self._old_mode,
-            )
+            if self._old_mode is not None:
+                windll.kernel32.SetConsoleMode(
+                    get_osfhandle(stdin.fileno()), self._old_mode,
+                )
+                self._old_mode = None
 
-        def _enable(self) -> None:  # noqa: PLR6301
+        def _enable(self) -> None:
             new: c_ulong = c_ulong()
             windll.kernel32.GetConsoleMode(
                 get_osfhandle(stdin.fileno()), byref(new),
             )
             mode: int = new.value
+            if self._old_mode is None:
+                self._old_mode = mode
+
             # HACK: Disable processed input, Windows has one key delay
             # Disable line input and echo input
             mode &= ~(
@@ -126,25 +133,24 @@ if sys.platform == "win32":
             )
 
     class _ColoredOutput(TerminalContext):
-        def __init__(self) -> None:
-            _old: c_ulong = c_ulong()
-            windll.kernel32.GetConsoleMode(
-                get_osfhandle(stdout.fileno()), byref(_old),
-            )
-            self._old_mode: int = _old.value
-            super().__init__()
+        _old_mode: int | None = None
 
         def _disable(self) -> None:
-            windll.kernel32.SetConsoleMode(
-                get_osfhandle(stdout.fileno()), self._old_mode,
-            )
+            if self._old_mode is not None:
+                windll.kernel32.SetConsoleMode(
+                    get_osfhandle(stdout.fileno()), self._old_mode,
+                )
+                self._old_mode = None
 
-        def _enable(self) -> None:  # noqa: PLR6301
+        def _enable(self) -> None:
             new: c_ulong = c_ulong()
             windll.kernel32.GetConsoleMode(
                 get_osfhandle(stdin.fileno()), byref(new),
             )
             mode: int = new.value
+            if self._old_mode is None:
+                self._old_mode = mode
+
             mode |= (
                 _ENABLE_PROCESSED_OUTPUT | _ENABLE_WRAP_AT_EOL_OUTPUT
                 | _ENABLE_VIRTUAL_TERMINAL_PROCESSING
@@ -167,16 +173,18 @@ elif sys.platform == "darwin" or sys.platform == "linux":
     _OFLAG: int = 1
 
     class _RawInput(TerminalContext):
-
-        def __init__(self) -> None:
-            self._old_mode: list[Any] = tcgetattr(stdin)
-            super().__init__()
+        _old_mode: list[Any] | None = None
 
         def _disable(self) -> None:
-            tcsetattr(stdin, TCSANOW, self._old_mode)
+            if self._old_mode is not None:
+                tcsetattr(stdin, TCSANOW, self._old_mode)
+                self._old_mode = None
 
-        def _enable(self) -> None:  # noqa: PLR6301
+        def _enable(self) -> None:
             mode: list[Any] = tcgetattr(stdin)
+            if self._old_mode is None:
+                self._old_mode = tcgetattr(stdin)
+
             # Disable stripping of input to seven bits
             # Disable converting of '\r' & '\n' on input
             # Disable start/stop control on output

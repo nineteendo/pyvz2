@@ -17,14 +17,17 @@ Work in progress. Initial implementation phase.
 ## Future Plans
 
 - Interactive menus
-- Error logging
-- Built-in file manager
-- CLInteract demo
-- Translations
-- Custom keyboard shortcuts
 - Update checking
+- Built-in file manager
+- PathPicker error logging
+- Open folder command
+- CLInteract demo
+- CLInteract translations
+- Custom keyboard shortcuts
 - Reimplement old functionality
+- Error logging
 - Command line arguments
+- Translations
 
 ## Contact
 
