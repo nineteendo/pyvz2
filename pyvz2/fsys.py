@@ -1,5 +1,5 @@
-"""FSys module for file system utilities."""
-# Copyright (C) 2023-2024 Nice Zombies
+"""FSys module for file system operations."""
+# Copyright (C) 2022-2024 Nice Zombies
 from __future__ import annotations
 
 __all__: list[str] = ["RES_DIR"]

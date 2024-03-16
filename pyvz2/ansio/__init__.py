@@ -145,7 +145,7 @@ if sys.platform == "win32":
         def _enable(self) -> None:
             new: c_ulong = c_ulong()
             windll.kernel32.GetConsoleMode(
-                get_osfhandle(stdin.fileno()), byref(new),
+                get_osfhandle(stdout.fileno()), byref(new),
             )
             mode: int = new.value
             if self._old_mode is None:

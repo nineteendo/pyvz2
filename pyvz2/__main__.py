@@ -43,7 +43,7 @@ class PyVZ2Namespace:  # pylint: disable=too-few-public-methods
     """Namespace of PyVZ2."""
 
     command: Literal["keyboard"] | None
-    debug: bool
+    verbose: bool
 
 
 def main() -> None:
@@ -52,16 +52,16 @@ def main() -> None:
         description="PyVZ2, a command line utility to modify PVZ2",
     )
     parser.add_argument(
-        "-v",
+        "-V",
         "--version",
         action="version",
         version=f"%(prog)s v{__version__}",
     )
     parser.add_argument(
-        "-d",
-        "--debug",
+        "-v",
+        "--verbose",
         action="store_true",
-        help="log at debug level",
+        help="enable verbose logging",
     )
     commands = parser.add_subparsers(dest="command", help="command")
     commands.add_parser("keyboard", help="print keyboard events")
@@ -75,7 +75,7 @@ def main() -> None:
         )
         basicConfig(
             format=_LOG_FORMAT,
-            level=DEBUG if args.debug else INFO,
+            level=DEBUG if args.verbose else INFO,
             handlers=[handler],
         )
         info("Program started")
