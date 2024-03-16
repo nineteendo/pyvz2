@@ -5,6 +5,7 @@ from __future__ import annotations
 __all__: list[str] = [
     "INPUT_EVENTS",
     "MOUSE_BUTTONS",
+    "EndOfStdinError",
     "InputEvent",
     "get_input_event",
     "wait_for_stdin",
@@ -149,6 +150,10 @@ else:
     raise RuntimeError(err)
 
 
+class EndOfStdinError(EOFError):
+    """Read beyond end of stdin."""
+
+
 # noinspection PyMissingOrEmptyDocstring
 @overload
 def _read_stdin_char(*, timeout: None = None, unicode: bool = False) -> str:
@@ -177,7 +182,7 @@ def _read_stdin_char(
     raw_stdin: BinaryIO = getattr(stdin.buffer, "raw", stdin.buffer)
     byte: bytes = raw_stdin.read(1)
     if not byte:
-        raise EOFError
+        raise EndOfStdinError
 
     if byte == b"\x03":
         # HACK: Automatic handling of Ctrl+C has been disabled on Windows
