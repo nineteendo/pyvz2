@@ -1,5 +1,7 @@
 # Python Vs. Zombies 2 (PyVZ2)
 
+[![Tests](https://github.com/nineteendo/pyvz2/actions/workflows/pytest.yml/badge.svg)](https://github.com/nineteendo/pyvz2/actions/workflows/pytest.yml)
+
 ## About
 
 PyVZ2 is a command line utility to modify PvZ2.
