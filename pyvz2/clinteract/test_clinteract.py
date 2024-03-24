@@ -5,7 +5,6 @@ from __future__ import annotations
 __all__: list[str] = []
 __author__: str = "Nice Zombies"
 
-from datetime import UTC, date, datetime, time
 from enum import Enum
 from re import escape
 from sys import float_info
@@ -67,17 +66,11 @@ def test_representation() -> None:
     assert Representation(my_function) == "my_function"
     assert Representation(1 + 0j) == "1+0j"
     assert Representation(0.0) == "0"
-    assert (
-        Representation(datetime(1, 1, 1, tzinfo=UTC))
-        == "Mon 01 Jan 0001 00:00:00"
-    )
-    assert Representation(date(1, 1, 1)) == "Mon 01 Jan 0001"
     assert Representation({}) == "{...}"
     assert Representation({"foo"}) == "{...}"
     assert Representation(10 ** 16) == "1e+16"
     assert Representation(False) == "False"  # noqa: FBT003
     assert Representation([]) == "[...]"
-    assert Representation(time(0, 0)) == "00:00:00"
     assert Representation(()) == "(...)"
     # replace unprintable characters
     assert Representation("\x00") == "?"
