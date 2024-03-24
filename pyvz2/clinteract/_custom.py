@@ -7,18 +7,21 @@ __all__: list[str] = [
     "ContextEvent",
     "Cursor",
     "Representation",
+    "get_allowed",
     "get_contexts",
     "get_shortcuts",
+    "iscategory",
 ]
 __author__: str = "Nice Zombies"
 
 import re
+import unicodedata
 from datetime import date, datetime, time
 from enum import Enum
 from re import Pattern
 from threading import Event
 from types import FunctionType
-from typing import TYPE_CHECKING, ClassVar, TypeVar
+from typing import TYPE_CHECKING, ClassVar, Literal, TypeVar
 
 from ansio import TerminalContext, application_keypad, mouse_input
 
@@ -31,6 +34,19 @@ if TYPE_CHECKING:
 _UNPRINTABLE: Pattern[str] = re.compile(r"[\x00-\x1f\x7f-\x9f]")
 
 VALUE = TypeVar("VALUE")
+
+
+def get_allowed(*, unicode: bool = True) -> set[Literal[
+    "letters", "marks", "numbers", "punctuations", "separators", "symbols",
+]]:
+    """Get (a copy of) the default allowed."""
+    result: set[Literal[
+        "letters", "marks", "numbers", "punctuations", "separators", "symbols",
+    ]] = {"letters", "numbers", "punctuations", "separators", "symbols"}
+    if unicode:
+        result.add("marks")
+
+    return result
 
 
 def get_contexts() -> list[TerminalContext]:
@@ -56,6 +72,14 @@ def get_shortcuts() -> dict[str, list[str]]:
         "Scroll cursor forward": [],
         "Submit input": ["enter", "middle_click"],
     }
+
+
+def iscategory(
+    char: str,
+    category: Literal["C", "L", "M", "N", "P", "S", "Z"],
+) -> bool:
+    """Is character from category."""
+    return unicodedata.category(char).startswith(category)
 
 
 class ContextEvent(Event):
@@ -90,8 +114,9 @@ class Cursor:
 
     def wrote(self, text: str) -> None:
         """Notify wrote text to stdout."""
-        self.row += (self.col + len(text) - 1) // self.columns
-        self.col = (self.col + len(text) - 1) % self.columns + 1
+        if text:
+            self.row += (self.col + len(text) - 1) // self.columns
+            self.col = (self.col + len(text) - 1) % self.columns + 1
 
     def moved_next_line(self) -> None:
         """Notify moved to next line."""
@@ -105,19 +130,20 @@ class Representation(str):
 
     # noinspection PyTypeHints
     def __new__(cls, obj: object = "", /) -> Representation:  # noqa: C901
+        if isinstance(obj, Enum):
+            obj = obj.value
+
         if isinstance(obj, BaseException):
             obj = f"{type(obj).__name__}: {obj}"
-        elif isinstance(obj, Enum):
-            obj = obj.value
         elif isinstance(obj, FunctionType):
             obj = obj.__name__
-        elif isinstance(obj, complex):
+        elif isinstance(obj, (complex, float)):
             obj = f"{obj:g}"
         elif isinstance(obj, datetime):
             obj = obj.strftime("%a %d %b %Y %X")
         elif isinstance(obj, date):
             obj = obj.strftime("%a %d %b %Y")
-        elif isinstance(obj, dict):
+        elif isinstance(obj, (dict, set)):
             obj = "{...}"
         elif isinstance(obj, int) and not isinstance(obj, bool):
             obj = format_real(obj)
@@ -128,4 +154,5 @@ class Representation(str):
         elif isinstance(obj, tuple):
             obj = "(...)"
 
+        # noinspection PyTypeChecker
         return super().__new__(cls, _UNPRINTABLE.sub(lambda _1: "?", str(obj)))

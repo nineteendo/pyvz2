@@ -11,13 +11,16 @@ __all__: list[str] = [
     "InputStr",
     "Pause",
     "Representation",
+    "get_allowed",
     "get_contexts",
     "get_shortcuts",
+    "iscategory",
 ]
 __author__: str = "Nice Zombies"
 
 from ._custom import (
-    VALUE, ContextEvent, Cursor, Representation, get_contexts, get_shortcuts,
+    VALUE, ContextEvent, Cursor, Representation, get_allowed, get_contexts,
+    get_shortcuts, iscategory,
 )
 from ._input_str import BaseTextInput, InputStr
 from ._pause import BaseInputHandler, Pause

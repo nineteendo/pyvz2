@@ -10,18 +10,19 @@ __author__: str = "Nice Zombies"
 from contextlib import ExitStack
 from gettext import gettext as _
 from math import prod
-from sys import stdout
+from sys import stdin, stdout
 from threading import Lock, Thread
-from typing import overload
-from unicodedata import category
+from typing import Literal
 
 from ansio import TerminalContext, colored_output, no_cursor, raw_input
+from ansio.colors import cyan, grey, invert
 from ansio.input import InputEvent, get_input_event
-from ansio.output import (
-    beep, cyan, grey, invert, raw_print, set_cursor_position,
-)
+from ansio.output import beep, raw_print, set_cursor_position
 
-from ._custom import ContextEvent, Cursor, Representation, get_shortcuts
+from ._custom import (
+    ContextEvent, Cursor, Representation, get_allowed, get_shortcuts,
+    iscategory,
+)
 from ._pause import BaseInputHandler
 from .utils import format_real
 
@@ -34,47 +35,42 @@ class BaseTextInput(BaseInputHandler[str]):
     """Base class for text input."""
 
     # pylint: disable=too-many-arguments, too-many-locals, too-many-statements
-    def __init__(  # noqa: PLR0913, C901, PLR0915
+    def __init__(  # noqa: PLR0913, C901
         self,
-        prompt: object,
+        prompt: object = "",
         *,
-        allow_letters: bool = False,
-        allow_marks: bool = False,
-        allow_numbers: bool = False,
-        allow_punctuations: bool = False,
-        allow_separators: bool = False,
-        allow_symbols: bool = False,
-        ascii_only: bool = False,
+        allowed: set[Literal[
+            "letters", "marks", "numbers", "punctuations", "separators",
+            "symbols",
+        ]] | None = None,
         clear: bool = False,
         contexts: list[TerminalContext] | None = None,
-        make_lowercase: bool = False,
-        make_uppercase: bool = False,
         max_length: int | None = None,
         min_length: int = 0,
         placeholder: str | None = None,
         representation: type[str] = Representation,
         shortcuts: dict[str, list[str]] | None = None,
+        transform_to: Literal["lowercase", "uppercase", None] = None,
+        unicode: bool = True,
         value: str | None = None,
         whitelist: str = "",
     ) -> None:
-        if not (
-            allow_letters
-            or (allow_marks and not ascii_only)
-            or allow_numbers
-            or allow_punctuations
-            or allow_separators
-            or allow_symbols
-        ) and not whitelist:
-            # Allow everything when nothing is explicitly allowed
-            allow_letters = allow_marks = allow_numbers = True
-            allow_punctuations = allow_separators = allow_symbols = True
-
         err: str
-        if make_lowercase and make_uppercase:
-            err = "make_lowercase & make_uppercase are both True"
+        if not allowed:
+            # Allow everything when nothing is explicitly allowed
+            allowed = set() if whitelist else get_allowed(unicode=unicode)
+
+        if "marks" in allowed and not unicode:
+            err = "there are no ascii marks"
             raise ValueError(err)
 
-        if min_length < 0 or (max_length and min_length > max_length):
+        if max_length is not None and max_length < 1:
+            err = "max_length is smaller than 1"
+            raise ValueError(err)
+
+        if min_length < 0 or (
+            max_length is not None and min_length > max_length
+        ):
             err = "min_length doesn't lay between 0 & max_length"
             raise ValueError(err)
 
@@ -98,14 +94,12 @@ class BaseTextInput(BaseInputHandler[str]):
             err = "value is longer than max_length"
             raise ValueError(err)
 
-        # Initialise variables for self.is_valid_char
-        self.allow_letters: bool = allow_letters
-        self.allow_marks: bool = allow_marks
-        self.allow_numbers: bool = allow_numbers
-        self.allow_punctuations: bool = allow_punctuations
-        self.allow_separators: bool = allow_separators
-        self.allow_symbols: bool = allow_symbols
-        self.ascii_only: bool = ascii_only
+        # Initialise variables for self.is_invalid_char
+        self.allowed: set[Literal[
+            "letters", "marks", "numbers", "punctuations", "separators",
+            "symbols",
+        ]] = allowed
+        self.unicode: bool = unicode
         self.whitelist: str = whitelist
         invalid_char = next(
             (char for char in value if self.is_invalid_char(char)), None,
@@ -114,17 +108,15 @@ class BaseTextInput(BaseInputHandler[str]):
             err = f"value contains an invalid character: {invalid_char!r}"
             raise ValueError(err)
 
-        if make_lowercase:
+        if transform_to == "lowercase":
             value = value.lower()
-        elif make_uppercase:
+        elif transform_to == "uppercase":
             value = value.upper()
 
         if placeholder is None:
             placeholder = _("Enter text...")
 
         self.clear: bool = clear
-        self.make_lowercase: bool = make_lowercase
-        self.make_uppercase: bool = make_uppercase
         self.max_length: int | None = max_length
         self.text_position: int = len(value)
         self.text_scroll: int = 0
@@ -133,6 +125,8 @@ class BaseTextInput(BaseInputHandler[str]):
         self.lock: Lock = Lock()
         self.ready_event: ContextEvent = ContextEvent()
         self.shortcuts: dict[str, list[str]] = shortcuts
+        self.transform_to: Literal["lowercase", "uppercase", None]
+        self.transform_to = transform_to
         self.value: str = value
         super().__init__(
             prompt,
@@ -184,6 +178,10 @@ class BaseTextInput(BaseInputHandler[str]):
     @colored_output
     @no_cursor
     def get_value(self) -> str | None:
+        if not stdin.isatty() or not stdout.isatty():
+            err: str = "stdin / stdout don't refer to a terminal"
+            raise RuntimeError(err)
+
         with self.ready_event, ExitStack() as stack:
             for context in self.contexts:
                 stack.enter_context(context)
@@ -267,9 +265,9 @@ class BaseTextInput(BaseInputHandler[str]):
             self.max_length is None or len(self.value) < self.max_length
         ) and not self.is_invalid_char(event):
             self.text_position += 1
-            if self.make_lowercase:
+            if self.transform_to == "lowercase":
                 self.value = start + event.lower() + end
-            elif self.make_uppercase:
+            elif self.transform_to == "uppercase":
                 self.value = start + event.upper() + end
             else:
                 self.value = start + event + end
@@ -314,14 +312,14 @@ class BaseTextInput(BaseInputHandler[str]):
         """Check if character is invalid."""
         return (
             not char.isprintable()
-            or (char.isalpha() and not self.allow_letters)
-            or (category(char).startswith("M") and not self.allow_marks)
-            or (char.isnumeric() and not self.allow_numbers)
-            or (category(char).startswith("P") and not self.allow_punctuations)
-            or (char.isspace() and not self.allow_separators)
-            or (category(char).startswith("S") and not self.allow_symbols)
-            or (not char.isascii() and self.ascii_only)
-        ) or char.lower() in self.whitelist
+            or (char.isalpha() and "letters" not in self.allowed)
+            or (iscategory(char, "M") and "marks" not in self.allowed)
+            or (char.isnumeric() and "numbers" not in self.allowed)
+            or (iscategory(char, "P") and "punctuations" not in self.allowed)
+            or (char.isspace() and "separators" not in self.allowed)
+            or (iscategory(char, "S") and "symbols" not in self.allowed)
+            or (not char.isascii() and not self.unicode)
+        ) and char.lower() not in self.whitelist
 
     def is_shortcut(self, event: InputEvent, key: str) -> bool:
         """Check if event is a shortcut."""
@@ -362,95 +360,38 @@ class InputStr(BaseTextInput):
     """Class for str input."""
 
 
-# noinspection PyMissingOrEmptyDocstring
-@overload
-def input_str(  # pylint: disable=too-many-arguments
-    prompt: object,
-    *,
-    ascii_only: bool = False,
-    clear: bool = False,
-    contexts: list[TerminalContext] | None = None,
-    make_lowercase: bool = False,
-    make_uppercase: bool = False,
-    max_length: int | None = None,
-    min_length: int = 0,
-    placeholder: str | None = None,
-    representation: type[str] = Representation,
-    shortcuts: dict[str, list[str]] | None = None,
-    value: str | None = None,
-) -> str | None:
-    ...
-
-
-# noinspection PyMissingOrEmptyDocstring
-@overload
-def input_str(  # pylint: disable=too-many-arguments, too-many-locals
-    prompt: object,
-    *,
-    allow_letters: bool = False,
-    allow_marks: bool = False,
-    allow_numbers: bool = False,
-    allow_punctuations: bool = False,
-    allow_separators: bool = False,
-    allow_symbols: bool = False,
-    ascii_only: bool = False,
-    clear: bool = False,
-    contexts: list[TerminalContext] | None = None,
-    make_lowercase: bool = False,
-    make_uppercase: bool = False,
-    max_length: int | None = None,
-    min_length: int = 0,
-    placeholder: str | None = None,
-    representation: type[str] = Representation,
-    shortcuts: dict[str, list[str]] | None = None,
-    value: str | None = None,
-    whitelist: str = "",
-) -> str | None:
-    ...
-
-
-# pylint: disable=too-many-arguments, too-many-locals
+# pylint: disable=too-many-arguments
 def input_str(  # noqa: PLR0913
-    prompt: object,
+    prompt: object = "",
     *,
-    allow_letters: bool = False,
-    allow_marks: bool = False,
-    allow_numbers: bool = False,
-    allow_punctuations: bool = False,
-    allow_separators: bool = False,
-    allow_symbols: bool = False,
-    ascii_only: bool = False,
+    allowed: set[Literal[
+        "letters", "marks", "numbers", "punctuations", "separators", "symbols",
+    ]] | None = None,
     clear: bool = False,
     contexts: list[TerminalContext] | None = None,
-    make_lowercase: bool = False,
-    make_uppercase: bool = False,
     max_length: int | None = None,
     min_length: int = 0,
     placeholder: str | None = None,
     representation: type[str] = Representation,
     shortcuts: dict[str, list[str]] | None = None,
+    transform_to: Literal["lowercase", "uppercase", None] = None,
+    unicode: bool = True,
     value: str | None = None,
     whitelist: str = "",
 ) -> str | None:
     """Read str from command line input."""
     return InputStr(
         prompt,
-        allow_letters=allow_letters,
-        allow_marks=allow_marks,
-        allow_numbers=allow_numbers,
-        allow_punctuations=allow_punctuations,
-        allow_separators=allow_separators,
-        allow_symbols=allow_symbols,
-        ascii_only=ascii_only,
+        allowed=allowed,
         clear=clear,
         contexts=contexts,
-        make_lowercase=make_lowercase,
-        make_uppercase=make_uppercase,
         max_length=max_length,
         min_length=min_length,
         placeholder=placeholder,
         representation=representation,
         shortcuts=shortcuts,
+        transform_to=transform_to,
+        unicode=unicode,
         value=value,
         whitelist=whitelist,
     ).get_value()

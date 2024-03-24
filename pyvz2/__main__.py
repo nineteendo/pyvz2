@@ -3,15 +3,20 @@
 # Copyright (C) 2020-2024 Nice Zombies
 # TODO(Nice Zombies): Interactive menus
 # TODO(Nice Zombies): Update checking
+# TODO(Nice Zombies): Custom keyboard shortcuts
+# TODO(Nice Zombies): Built-in file manager
 # TODO(Nice Zombies): PathPicker error logging
+# TODO(Nice Zombies): CLInteract unit tests
 # TODO(Nice Zombies): Open folder command
 # TODO(Nice Zombies): CLInteract demo
 # TODO(Nice Zombies): CLInteract translations
-# TODO(Nice Zombies): Custom keyboard shortcuts
+# TODO(Nice Zombies): Libraries documentation
 # TODO(Nice Zombies): Reimplement old functionality
 # TODO(Nice Zombies): Error logging
+# TODO(Nice Zombies): Unit tests
 # TODO(Nice Zombies): Command line arguments
 # TODO(Nice Zombies): Translations
+# TODO(Nice Zombies): Documentation
 from __future__ import annotations
 
 __all__: list[str] = []

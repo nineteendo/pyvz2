@@ -23,7 +23,7 @@ _ALT_SEQUENCE: Pattern[str] = re.compile(r"\x1b.|\x1b\x1b[O\[].+")
 _CTRL_SEQUENCE: Pattern[str] = re.compile(
     r"[\x00-\x08\x0b\x0c\x0e-\x1a\x1c-\x1f]",
 )
-_MODIFIER_SEQUENCE: Pattern[str] = re.compile(r"\x1b\[\d+;\d+[A-Z~]")
+_MODIFIER_SEQUENCE: Pattern[str] = re.compile(r"\x1b\[\d+;\d+[A-S~]")
 _MOUSE_SEQUENCE: Pattern[str] = re.compile(r"\x1b?\x1b\[M...")
 _PARAM_CHARS: str = "0123456789;"
 _SGR_MOUSE_SEQUENCE: Pattern[str] = re.compile(r"\x1b?\x1b\[<\d+;\d+;\d+[Mm]")
@@ -122,10 +122,21 @@ MOUSE_BUTTONS: dict[int, str] = {
     0x83: "button11",
 }
 
-if sys.platform == "win32":
-    from msvcrt import kbhit  # pylint: disable=import-error
+# noinspection PyCompatibility
+# pylint: disable=import-error
+if sys.platform != "win32":
+    from select import select
+
+    _ALWAYS_UNICODE: bool = False
+
+    def wait_for_stdin(timeout: float | None = None) -> bool:
+        """Wait until a keypress is ready to be read."""
+        return bool(select([stdin.buffer], [], [], timeout)[0])
+else:
+    from msvcrt import kbhit
     from time import sleep, time
 
+    _ALWAYS_UNICODE: bool = True
     _TIMEOUT_STEP: float = 0.001
 
     def wait_for_stdin(timeout: float | None = None) -> bool:
@@ -138,16 +149,6 @@ if sys.platform == "win32":
             sleep(_TIMEOUT_STEP)
 
         return kbhit()
-# pylint: disable=consider-using-in
-elif sys.platform == "darwin" or sys.platform == "linux":
-    from select import select
-
-    def wait_for_stdin(timeout: float | None = None) -> bool:
-        """Wait until a keypress is ready to be read."""
-        return bool(select([stdin.buffer], [], [], timeout)[0])
-else:
-    err: str = f"Unsupported platform: {sys.platform!r}"
-    raise RuntimeError(err)
 
 
 class EndOfStdinError(EOFError):
@@ -188,24 +189,18 @@ def _read_stdin_char(
         # HACK: Automatic handling of Ctrl+C has been disabled on Windows
         raise_signal(SIGINT)
 
-    if not unicode:
+    if not _ALWAYS_UNICODE and not unicode:
         return byte.decode("latin_1")
 
-    # Handle multi-byte characters
+    # Handle unicode, see https://rfc-editor.org/rfc/rfc3629#section-3
     byte_ord: int = ord(byte)
     if byte_ord & 0xF8 == 0xF8:  # 11111xxx
-        # pylint: disable=redefined-outer-name
-        # noinspection PyShadowingNames
-        err: str = f"Read non-utf8 character: {byte!r}"
-        raise RuntimeError(err)
-
-    if byte_ord & 0xC0 == 0xC0:  # 11xxxxxx10xxxxxx...
-        byte += raw_stdin.read(1)
-
-    if byte_ord & 0xE0 == 0xE0:  # 111xxxxx10xxxxxx10xxxxxx...
-        byte += raw_stdin.read(1)
-
-    if byte_ord & 0xF0 == 0xF0:  # 1111xxxx10xxxxxx10xxxxxx10xxxxxx...
+        pass  # Invalid start byte, don't read extra bytes
+    elif byte_ord & 0xF0 == 0xF0:  # 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+        byte += raw_stdin.read(3)
+    elif byte_ord & 0xE0 == 0xE0:  # 1110xxxx 10xxxxxx 10xxxxxx
+        byte += raw_stdin.read(2)
+    elif byte_ord & 0xC0 == 0xC0:  # 110xxxxx 10xxxxxx
         byte += raw_stdin.read(1)
 
     return byte.decode()
@@ -218,6 +213,17 @@ def _read_stdin(number: int, *, unicode: bool = False) -> str:
         result += _read_stdin_char(unicode=unicode)
 
     return result
+
+
+def _get_button(string: str) -> int | None:
+    """Get button from string."""
+    if _MOUSE_SEQUENCE.fullmatch(string):
+        return ord(string[-3:-2]) - 0x20
+
+    if _SGR_MOUSE_SEQUENCE.fullmatch(string):
+        return int(string[:-1].partition("<")[2].split(";")[0])
+
+    return None
 
 
 class InputEvent(str):
@@ -249,19 +255,16 @@ class InputEvent(str):
             alt = alt or modifier & 0x02 == 0x02
             ctrl = ctrl or modifier & 0x04 == 0x04
             meta = meta or modifier & 0x08 == 0x08
-            event = event[:2] + (param1 if param1 != "1" else "") + event[-1:]
+            event = (
+                event[:2]
+                + (param1 if param1 != "1" or event[-1:] == "~" else "")
+                + event[-1:]
+            )
 
         if event == "\x1b[Z":  # Handle shift+tab
             shift, event = True, "\t"
 
-        button: int | None
-        if _SGR_MOUSE_SEQUENCE.fullmatch(event):
-            button = int(event[3:-1].split(";")[0])
-        elif _MOUSE_SEQUENCE.fullmatch(event):
-            button = ord(event[-3:-2]) - 0x20
-        else:
-            button = None
-
+        button: int | None = _get_button(event)
         if button is not None and button & 0xc3 in MOUSE_BUTTONS:
             shift = shift or button & 0x04 == 0x04
             alt = alt or button & 0x08 == 0x08
@@ -281,30 +284,16 @@ class InputEvent(str):
     @property
     def moving(self) -> bool:
         """Is moving."""
-        button: int
-        if _MOUSE_SEQUENCE.fullmatch(self):
-            button = ord(self[-3:-2]) - 0x20
-        elif _SGR_MOUSE_SEQUENCE.fullmatch(self):
-            button = int(self[:-1].partition("<")[2].split(";")[0])
-        else:
-            return False
-
-        return button & 0x20 == 0x20
+        button: int | None = _get_button(self)
+        return button is not None and button & 0x20 == 0x20
 
     @property
     def pressed(self) -> bool:
         """Is key pressed."""
-        button: int
-        if _MOUSE_SEQUENCE.fullmatch(self):
-            button = ord(self[-3:-2]) - 0x20
-        elif _SGR_MOUSE_SEQUENCE.fullmatch(self):
-            button = int(self[:-1].partition("<")[2].split(";")[0])
-            if self.endswith("m"):
-                return False
-        else:
-            return True
+        if _SGR_MOUSE_SEQUENCE.fullmatch(self) and self.endswith("m"):
+            return False
 
-        return MOUSE_BUTTONS.get(button & 0xc3) != "no_button"
+        return self.shortcut != "no_button"
 
 
 def _get_ss3_sequence(*, timeout: float | None = None) -> str:

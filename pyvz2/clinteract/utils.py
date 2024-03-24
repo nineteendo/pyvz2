@@ -22,11 +22,11 @@ def format_real(
     else:
         # Calculate manually, int too large
         exponent: int = int(log10(abs(real)))
-        mantissa: float = real / 10 ** exponent
-        if round(mantissa, 5) == 10:
-            string = f"1e{exponent + 1}"
-        else:
-            string = f"{mantissa:,g}e{exponent}"
+        mantissa: float = round(real / 10 ** exponent, 5)
+        if abs(mantissa) == 10:
+            exponent, mantissa = exponent + 1, mantissa / 10
+
+        string = f"{mantissa:,g}e{exponent:+}"
 
     return string.translate({
         ord("."): decimal_point,

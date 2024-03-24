@@ -18,16 +18,20 @@ Work in progress. Initial implementation phase.
 
 - Interactive menus
 - Update checking
+- Custom keyboard shortcuts
 - Built-in file manager
 - PathPicker error logging
+- CLInteract unit tests
 - Open folder command
 - CLInteract demo
 - CLInteract translations
-- Custom keyboard shortcuts
+- Libraries documentation
 - Reimplement old functionality
 - Error logging
+- Unit tests
 - Command line arguments
 - Translations
+- Documentation
 
 ## Contact
 

@@ -15,10 +15,10 @@ from time import time
 from typing import Generic
 
 from ansio import TerminalContext, colored_output, no_cursor, raw_input
+from ansio.colors import bold, green, red
 from ansio.input import InputEvent, get_input_event
 from ansio.output import (
-    bold, cursor_up, erase_in_display, green, raw_print, red,
-    set_cursor_position,
+    cursor_up, erase_in_display, raw_print, set_cursor_position,
 )
 
 from ._custom import VALUE, Cursor, Representation, get_contexts
@@ -31,24 +31,19 @@ class BaseInputHandler(Generic[VALUE], ABC):
 
     def __init__(
         self,
-        prompt: object,
+        prompt: object = "",
         *,
         contexts: list[TerminalContext] | None = None,
         representation: type[str] = Representation,
     ) -> None:
-        if not stdin.isatty() or not stdout.isatty():
-            err: str = "stdin / stdout don't refer to a terminal"
-            raise RuntimeError(err)
-
         if contexts is None:
             contexts = get_contexts()
 
-        new_terminal_size: terminal_size = get_terminal_size()
         self.contexts: list[TerminalContext] = contexts
-        self.cursor: Cursor = Cursor(new_terminal_size.columns)
+        self.cursor: Cursor = Cursor(1)
         self.prompt: str = representation(prompt)
         self.representation: type[str] = representation
-        self.terminal_size: terminal_size = new_terminal_size
+        self.terminal_size: terminal_size = terminal_size((1, 1))
 
     def print_error(self, err: str) -> None:
         """Print error message."""
@@ -68,8 +63,11 @@ class BaseInputHandler(Generic[VALUE], ABC):
         if offset:
             prompt = prompt[:-offset - 1] + _ELLIPSIS
 
-        raw_print(green("?"), bold(prompt))
-        self.cursor.wrote(f"? {prompt}")
+        raw_print(green("?"))
+        self.cursor.wrote("?")
+        if prompt:
+            raw_print("", bold(prompt))
+            self.cursor.wrote(f" {prompt}")
 
     def get_prompt(self) -> str:
         """Get prompt for user."""
@@ -82,7 +80,7 @@ class BaseInputHandler(Generic[VALUE], ABC):
             max_chars -= self.terminal_size.columns
 
         prompt: str = self.get_prompt()
-        prompt_len: int = len(f"? {prompt}")
+        prompt_len: int = len(f"? {prompt}" if prompt else "?")
         return max(
             0, prompt_len + min(len(msg), (max_chars + 1) // 2) - max_chars,
         )
@@ -133,10 +131,15 @@ class Pause(BaseInputHandler[None]):
     @colored_output
     @no_cursor
     def get_value(self) -> None:
+        if not stdin.isatty() or not stdout.isatty():
+            err: str = "stdin / stdout don't refer to a terminal"
+            raise RuntimeError(err)
+
         with ExitStack() as stack:
             for context in self.contexts:
                 stack.enter_context(context)
 
+            self.clear_screen()
             self.print_prompt(short=True)
             stdout.buffer.flush()
             start_time: float = time()

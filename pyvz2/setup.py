@@ -12,8 +12,8 @@ if __name__ == "__main__":
     setup(
         name="pyvz2-dependencies",
         version="0.1.0",
-        packages=find_packages(),
-        py_modules=["fsys"],
+        packages=find_packages(),  # Exclude forked packages
+        py_modules=[],
         author="Nice Zombies",
         author_email="nineteendo19d0@gmail.com",
         description="Dependencies of PyVZ2",
