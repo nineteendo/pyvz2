@@ -122,7 +122,6 @@ MOUSE_BUTTONS: dict[int, str] = {
     0x83: "button11",
 }
 
-# noinspection PyCompatibility
 # pylint: disable=import-error
 if sys.platform != "win32":
     from select import select
@@ -133,6 +132,7 @@ if sys.platform != "win32":
         """Wait until a keypress is ready to be read."""
         return bool(select([stdin.buffer], [], [], timeout)[0])
 else:
+    # noinspection PyCompatibility
     from msvcrt import kbhit
     from time import sleep, time
 

@@ -83,7 +83,6 @@ class TerminalContext(ContextDecorator):
         self._enable()
 
 
-# noinspection PyCompatibility
 # pylint: disable=import-error, no-name-in-module
 if sys.platform != "win32":
     from signal import SIG_DFL, SIGCONT, SIGTSTP, raise_signal, signal
@@ -141,6 +140,7 @@ if sys.platform != "win32":
     signal(SIGTSTP, _suspend)
 else:
     from ctypes import byref, c_ulong, windll
+    # noinspection PyCompatibility
     from msvcrt import get_osfhandle
 
     # stdin flags

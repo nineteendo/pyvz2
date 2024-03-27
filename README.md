@@ -1,7 +1,6 @@
 # Python Vs. Zombies 2 (PyVZ2)
 
 [![pytest](https://github.com/nineteendo/pyvz2/actions/workflows/pytest.yml/badge.svg)](https://github.com/nineteendo/pyvz2/actions/workflows/pytest.yml)
-[![CodeQL](https://github.com/nineteendo/pyvz2/actions/workflows/codeql.yml/badge.svg)](https://github.com/nineteendo/pyvz2/actions/workflows/codeql.yml)
 
 ## About
 

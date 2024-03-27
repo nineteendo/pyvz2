@@ -9,6 +9,7 @@ from enum import Enum
 from re import escape
 from sys import float_info
 
+# noinspection PyPackageRequirements
 import pytest
 
 from ._custom import Cursor, Representation, iscategory
