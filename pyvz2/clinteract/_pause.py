@@ -53,7 +53,7 @@ class BaseInputHandler(Generic[VALUE], ABC):
         if offset:
             err = err[:-offset - 1] + _ELLIPSIS
 
-        raw_print(f"{red(">>")} {bold(err)}")
+        raw_print(f'{red(">>")} {bold(err)}')
         self.cursor.wrote(f">> {err}")
 
     def print_prompt(self, msg: str = "", *, short: bool = False) -> None:
