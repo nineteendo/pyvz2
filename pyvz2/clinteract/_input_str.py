@@ -141,7 +141,7 @@ class BaseTextInput(BaseInputHandler[str]):
                 if self.ready_event.is_set():
                     break
 
-                msg: str = self.value if self.value else self.placeholder
+                msg: str = self.value or self.placeholder
                 self.clear_screen()
                 if self.enlarge_window():
                     self.print_error(_("Enlarge window"))
@@ -170,7 +170,7 @@ class BaseTextInput(BaseInputHandler[str]):
             max_chars -= self.terminal_size.columns
 
         prompt_len: int = len(f"? {self.get_prompt()}")
-        msg: str = self.value if self.value else self.placeholder
+        msg: str = self.value or self.placeholder
         msg_len: int = len(f" {msg} ")
         return max(0, msg_len + min(prompt_len, max_chars // 2) - max_chars)
 
@@ -333,13 +333,13 @@ class BaseTextInput(BaseInputHandler[str]):
             if offset:
                 msg = msg[:-offset - 1] + _ELLIPSIS
 
-            raw_print("", cyan(msg), end=" ")
+            raw_print(f" {cyan(msg)} ")
         elif not self.value:
             if offset:
                 msg = msg[:-offset - 1] + _ELLIPSIS
 
             end = msg + " "
-            raw_print("", grey(invert(end[:1]) + end[1:]))
+            raw_print(f" {grey(invert(end[:1]) + end[1:])}")
         else:
             self.handle_scroll()
             msg = msg[self.text_scroll:self.text_scroll + len(msg) - offset]
@@ -351,7 +351,7 @@ class BaseTextInput(BaseInputHandler[str]):
 
             start: str = msg[:self.text_position]
             end = msg[self.text_position:] + " "
-            raw_print("", start + invert(end[:1]) + end[1:])
+            raw_print(f" {start}{invert(end[:1])}{end[1:]}")
 
         self.cursor.wrote(f" {msg} ")
 

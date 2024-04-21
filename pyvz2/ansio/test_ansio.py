@@ -5,18 +5,37 @@ from __future__ import annotations
 __all__: list[str] = []
 __author__: str = "Nice Zombies"
 
-from .colors import bold
+import pytest
+
+from .colors import bold, rgb
 from .input import InputEvent
 
 
 def test_make_formatter() -> None:
     """Test _make_formatter."""
-    # ansi formatting
-    assert bold() == "\x1b[1m\x1b[22m"
+    # Incorrect usage
+    pytest.raises(
+        ValueError, lambda: rgb("foo", -1, 0, 0),
+    ).match("r, g and b don't lay between 0 & 255")
+    pytest.raises(
+        ValueError, lambda: rgb("foo", 256, 0, 0),
+    ).match("r, g and b don't lay between 0 & 255")
+    pytest.raises(
+        ValueError, lambda: rgb("foo", 0, -1, 0),
+    ).match("r, g and b don't lay between 0 & 255")
+    pytest.raises(
+        ValueError, lambda: rgb("foo", 0, 256, 0),
+    ).match("r, g and b don't lay between 0 & 255")
+    pytest.raises(
+        ValueError, lambda: rgb("foo", 0, 0, -1),
+    ).match("r, g and b don't lay between 0 & 255")
+    pytest.raises(
+        ValueError, lambda: rgb("foo", 0, 0, 256),
+    ).match("r, g and b don't lay between 0 & 255")
+    # Correct usage
     assert bold("foo") == "\x1b[1mfoo\x1b[22m"
-    # separator
-    assert bold("foo", "bar") == "\x1b[1mfoo bar\x1b[22m"
-    assert bold("foo", "bar", sep=",") == "\x1b[1mfoo,bar\x1b[22m"
+    assert rgb("foo", 0x00, 0x00, 0x00) == "\x1b[38;2;0;0;0mfoo\x1b[39m"
+    assert rgb("foo", 0xff, 0xff, 0xff) == "\x1b[38;2;255;255;255mfoo\x1b[39m"
 
 
 def get_shortcut(string: str) -> str:

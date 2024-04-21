@@ -299,7 +299,7 @@ class InputEvent(str):
 def _get_ss3_sequence(*, timeout: float | None = None) -> str:
     """Get SS3 sequence from command line."""
     char: str | None = _read_stdin_char(timeout=timeout)
-    return char if char else ""
+    return char or ""
 
 
 def _get_csi_sequence(*, timeout: float | None = None) -> str:
