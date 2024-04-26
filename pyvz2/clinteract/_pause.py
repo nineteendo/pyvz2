@@ -17,11 +17,9 @@ from typing import Generic
 from ansio import TerminalContext, colored_output, no_cursor, raw_input
 from ansio.colors import bold, green, red
 from ansio.input import InputEvent, get_input_event
-from ansio.output import (
-    cursor_up, erase_in_display, raw_print, set_cursor_position,
-)
 
 from ._custom import VALUE, Cursor, Representation, get_contexts
+from .utils import cursor_up, erase_in_display, raw_print, set_cursor_position
 
 _ELLIPSIS: str = "\u2026"
 

@@ -2,11 +2,41 @@
 # Copyright (C) 2023-2024 Nice Zombies
 from __future__ import annotations
 
-__all__: list[str] = ["format_real", "real_to_float"]
+__all__: list[str] = [
+    "beep",
+    "cursor_up",
+    "erase_in_display",
+    "erase_in_line",
+    "format_real",
+    "raw_print",
+    "real_to_float",
+    "set_cursor_position",
+]
 __author__: str = "Nice Zombies"
 
 from math import log10
-from sys import float_info
+from sys import float_info, stdout
+
+
+def beep() -> None:
+    """Emit a short attention sound."""
+    print(end="\a", flush=True)
+
+
+def cursor_up(cells: int = 1) -> None:
+    """Move cursor up."""
+    if cells:
+        raw_print(f"\x1b[{cells}A")
+
+
+def erase_in_display(mode: int = 0) -> None:
+    """Erase text in display."""
+    raw_print(f"\x1b[{mode}J")
+
+
+def erase_in_line(mode: int = 0) -> None:
+    """Erase text in line."""
+    raw_print(f"\x1b[{mode}K")
 
 
 def format_real(
@@ -34,6 +64,18 @@ def format_real(
     })
 
 
+def raw_print(
+    *values: object,
+    sep: str = " ",
+    end: str = "",
+    flush: bool = False,
+) -> None:
+    """Print to stdout without automatic flusing."""
+    stdout.buffer.write((sep.join(map(str, values)) + end).encode())
+    if flush:
+        stdout.buffer.flush()
+
+
 def real_to_float(real: float) -> float:
     """Convert real to float."""
     if isinstance(real, float):
@@ -41,3 +83,8 @@ def real_to_float(real: float) -> float:
 
     # Clamp int
     return float(max(-float_info.max, min(real, float_info.max)))
+
+
+def set_cursor_position(row: int = 1, col: int = 1) -> None:
+    """Set cursor position."""
+    raw_print(f"\x1b[{row};{col}H")

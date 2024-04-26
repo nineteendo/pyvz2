@@ -17,14 +17,13 @@ from typing import Literal
 from ansio import TerminalContext, colored_output, no_cursor, raw_input
 from ansio.colors import cyan, grey, invert
 from ansio.input import InputEvent, get_input_event
-from ansio.output import beep, raw_print, set_cursor_position
 
 from ._custom import (
     ContextEvent, Cursor, Representation, get_allowed, get_shortcuts,
     iscategory,
 )
 from ._pause import BaseInputHandler
-from .utils import format_real
+from .utils import beep, format_real, raw_print, set_cursor_position
 
 _DELAY: float = 1 / 10
 _ELLIPSIS: str = "\u2026"
