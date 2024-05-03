@@ -14,7 +14,7 @@ from sys import stdin, stdout
 from time import time
 from typing import Generic
 
-from ansio import TerminalContext, colored_output, no_cursor, raw_input
+from ansio import TerminalContext, ansi_input, ansi_output, no_cursor
 from ansio.colors import bold, green, red
 from ansio.input import InputEvent, get_input_event
 
@@ -125,8 +125,8 @@ class Pause(BaseInputHandler[None]):
             representation=representation,
         )
 
-    @raw_input
-    @colored_output
+    @ansi_input
+    @ansi_output
     @no_cursor
     def get_value(self) -> None:
         if not stdin.isatty() or not stdout.isatty():

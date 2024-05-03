@@ -4,11 +4,11 @@ from __future__ import annotations
 
 __all__: list[str] = [
     "TerminalContext",
+    "ansi_input",
+    "ansi_output",
     "application_keypad",
-    "colored_output",
     "mouse_input",
     "no_cursor",
-    "raw_input",
 ]
 __author__: str = "Nice Zombies"
 
@@ -95,7 +95,7 @@ if sys.platform != "win32":
     _IFLAG: int = 0
     _OFLAG: int = 1
 
-    class _RawInput(TerminalContext):
+    class _AnsiInput(TerminalContext):
         _old_mode: list[Any] | None = None
 
         def _disable(self) -> None:
@@ -120,7 +120,7 @@ if sys.platform != "win32":
             # Disable line buffering & erase/kill character-processing
             setcbreak(stdin, TCSANOW)
 
-    _ColoredOutput = TerminalContext
+    _AnsiOutput = TerminalContext
 
     def _resume(_1: int, _2: FrameType | None) -> None:
         """Enable all contexts on resume."""
@@ -155,7 +155,7 @@ else:
     _ENABLE_VIRTUAL_TERMINAL_PROCESSING: int = 0x0004
     _DISABLE_NEWLINE_AUTO_RETURN: int = 0x0008
 
-    class _RawInput(TerminalContext):
+    class _AnsiInput(TerminalContext):
         _old_mode: int | None = None
 
         def _disable(self) -> None:
@@ -185,7 +185,7 @@ else:
                 get_osfhandle(stdin.fileno()), mode,
             )
 
-    class _ColoredOutput(TerminalContext):
+    class _AnsiOutput(TerminalContext):
         _old_mode: int | None = None
 
         def _disable(self) -> None:
@@ -227,10 +227,10 @@ def _make_ansi_context(start: str, end: str) -> TerminalContext:
     return AnsiContext()
 
 
-raw_input: TerminalContext = _RawInput()
+ansi_input: TerminalContext = _AnsiInput()
 application_keypad: TerminalContext = _make_ansi_context("\x1b=", "\x1b>")
 mouse_input: TerminalContext = _make_ansi_context(
     "\x1b[?1000h\x1b[?1006h", "\x1b[?1000l\x1b[?1006l",
 )
-colored_output: TerminalContext = _ColoredOutput()
+ansi_output: TerminalContext = _AnsiOutput()
 no_cursor: TerminalContext = _make_ansi_context("\x1b[?25l", "\x1b[?25h")

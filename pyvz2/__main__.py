@@ -32,7 +32,7 @@ from sys import stderr
 from typing import TYPE_CHECKING, Literal, assert_never
 
 from ansio import (
-    application_keypad, colored_output, mouse_input, no_cursor, raw_input,
+    ansi_input, ansi_output, application_keypad, mouse_input, no_cursor,
 )
 from ansio.input import EndOfStdinError, get_input_event
 from clinteract import input_str
@@ -91,7 +91,7 @@ def main() -> None:
                 input_str(_("Enter a string:"))
             elif args.command == "keyboard":
                 with (
-                    raw_input, application_keypad, mouse_input, colored_output,
+                    ansi_input, application_keypad, mouse_input, ansi_output,
                     no_cursor,
                 ):
                     while True:

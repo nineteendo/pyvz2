@@ -14,7 +14,7 @@ from sys import stdin, stdout
 from threading import Lock, Thread
 from typing import Literal
 
-from ansio import TerminalContext, colored_output, no_cursor, raw_input
+from ansio import TerminalContext, ansi_input, ansi_output, no_cursor
 from ansio.colors import cyan, grey, invert
 from ansio.input import InputEvent, get_input_event
 
@@ -173,8 +173,8 @@ class BaseTextInput(BaseInputHandler[str]):
         msg_len: int = len(f" {msg} ")
         return max(0, msg_len + min(prompt_len, max_chars // 2) - max_chars)
 
-    @raw_input
-    @colored_output
+    @ansi_input
+    @ansi_output
     @no_cursor
     def get_value(self) -> str | None:
         if not stdin.isatty() or not stdout.isatty():
