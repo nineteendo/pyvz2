@@ -163,11 +163,7 @@ def _read_stdin_char(*, timeout: None = None, unicode: bool = False) -> str:
 
 # noinspection PyMissingOrEmptyDocstring
 @overload
-def _read_stdin_char(
-    *,
-    timeout: float = ...,
-    unicode: bool = False,
-) -> str | None:
+def _read_stdin_char(*, timeout: float, unicode: bool = False) -> str | None:
     ...
 
 
@@ -338,7 +334,7 @@ def get_input_event(*, timeout: None = None) -> InputEvent:
 
 # noinspection PyMissingOrEmptyDocstring
 @overload
-def get_input_event(*, timeout: float = ...) -> InputEvent | None:
+def get_input_event(*, timeout: float) -> InputEvent | None:
     ...
 
 
