@@ -5,48 +5,26 @@ __all__: list[str] = []
 __version__: str = "2.0.0-dev"
 
 from contextlib import suppress
-from pathlib import Path
-from shutil import get_terminal_size
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any
 
 import jsonyx
+from utils import parse_path, process_items
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
 
-    _T = TypeVar("_T")
+    from pathlib import Path
 
 _decoder: jsonyx.Decoder = jsonyx.Decoder()
 _encoder: jsonyx.Encoder = jsonyx.Encoder(indent=4)
 
 
-def _process_items(items: list[_T], callback: Callable[[_T], None]) -> None:
-    if not (total := len(items)):
-        return
-
-    width: int = max(20, get_terminal_size().columns) - 2
-    full: str = "." * width
-    for end in range(width, 0, -10):
-        percentage: str = f"{100 * end // width}%"
-        if (start := end - len(percentage)) >= 0:
-            full = full[:start] + percentage + full[end:]
-
-    print(end="[", flush=True)
-    for i, item in enumerate(items, start=1):
-        callback(item)
-        if progress := full[width * (i - 1) // total:width * i // total]:
-            print(end=progress, flush=True)
-
-    print("]")
-
-
 def _format_json() -> None:
-    input_path: Path = Path(input("JSON input file or directory: "))
+    input_path: Path = parse_path(input("JSON input file or directory: "))
     if input_path.is_dir():
-        output_path: Path = Path(input("JSON output directory: "))
+        output_path: Path = parse_path(input("JSON output directory: "))
         output_dir: Path = output_path
     else:
-        output_path = Path(input("JSON output file: "))
+        output_path = parse_path(input("JSON output file: "))
         output_dir = output_path.parent
 
     def collect_files(
@@ -72,7 +50,7 @@ def _format_json() -> None:
 
     output_dir.mkdir(parents=True, exist_ok=True)
     files: list[tuple[Path, Path]] = collect_files(input_path, output_dir)
-    _process_items(files, format_json_file)
+    process_items(files, format_json_file)
 
 
 def _interactive_main() -> None:
