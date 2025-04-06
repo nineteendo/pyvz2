@@ -7,7 +7,6 @@ __version__: str = "2.0.0-dev"
 from contextlib import suppress
 from pathlib import Path
 from shutil import get_terminal_size
-from time import time
 from typing import TYPE_CHECKING, Any, TypeVar
 
 import jsonyx
@@ -17,109 +16,28 @@ if TYPE_CHECKING:
 
     _T = TypeVar("_T")
 
-_RED: str = "\033[91m"
-_GREEN: str = "\033[92m"
-_YELLOW: str = "\033[93m"
-_RESET: str = "\033[0m"
-
 _decoder: jsonyx.Decoder = jsonyx.Decoder()
 _encoder: jsonyx.Encoder = jsonyx.Encoder(indent=4)
 
 
-def _process_items(
-    items: list[tuple[str, _T]],
-    callback: Callable[[_T], None],
-    *,
-    colored: bool = False,
-    verbose: bool = False,
-) -> None:
-    failed: int = 0
-    succeeded: int = 0
-    width: int = get_terminal_size().columns
-    print(f" Processing {len(items)} items ".center(width, "="))
-    start_time: float = time()
-    for i, (name, item) in enumerate(items, start=1):
-        try:
-            callback(item)
-            status: str = "SUCCEEDED"
-            succeeded += 1
-        # pylint: disable=W0718
-        except Exception:  # noqa: BLE001
-            status = "FAILED"
-            failed += 1
+def _process_items(items: list[_T], callback: Callable[[_T], None]) -> None:
+    if not (total := len(items)):
+        return
 
-        percentage: str = f"[{100 * i // len(items):3d}%]"
-        if not colored:
-            display_percentage: str = percentage
-        elif failed:
-            display_percentage = f"{_RED}{percentage}{_RESET}"
-        else:
-            display_percentage = f"{_GREEN}{percentage}{_RESET}"
+    width: int = max(20, get_terminal_size().columns) - 2
+    full: str = "." * width
+    for end in range(width, 0, -10):
+        percentage: str = f"{100 * end // width}%"
+        if (start := end - len(percentage)) >= 0:
+            full = full[:start] + percentage + full[end:]
 
-        if verbose:
-            length: int = len(f"{status} {name} {percentage}")
-            padding: str = " " * (width - length % width)
-            if not colored:
-                display_status: str = status
-            elif status == "SUCCEEDED":
-                display_status = f"{_GREEN}{status}{_RESET}"
-            else:
-                display_status = f"{_RED}{status}{_RESET}"
+    print(end="[", flush=True)
+    for i, item in enumerate(items, start=1):
+        callback(item)
+        if progress := full[width * (i - 1) // total:width * i // total]:
+            print(end=progress, flush=True)
 
-            print(f"{display_status} {name}{padding} {display_percentage}")
-            continue
-
-        if status == "SUCCEEDED":
-            dot: str = "."
-            if colored:
-                dot = f"{_GREEN}{dot}{_RESET}"
-        else:
-            dot = "F"
-            if colored:
-                dot = f"{_RED}{dot}{_RESET}"
-
-        print(end=dot, flush=True)
-        if not i % (width - 7) or i == len(items):
-            # count written dots
-            dots: str = "?" * ((i - 1) % (width - 7) + 1)
-            length = len(f"{dots} {percentage}")
-            padding = " " * (width - length)
-            print(f"{padding} {display_percentage}")
-
-    elapsed_time: float = time() - start_time
-    msg: str = ""
-    display_msg: str = ""
-    if failed:
-        msg = f"{failed} failed"
-        display_msg = msg
-        if colored:
-            display_msg = f"{_RED}{msg}{_RESET}"
-
-    if succeeded:
-        new_msg: str = f"{succeeded} succeeded"
-        new_display_msg: str = new_msg
-        if colored:
-            new_display_msg = f"{_GREEN}{new_display_msg}{_RESET}"
-
-        if msg:
-            msg += f", {new_msg}"
-            display_msg += f", {new_display_msg}"
-        else:
-            msg = new_msg
-            display_msg = new_display_msg
-
-    if not items:
-        msg = "no items processed"
-        display_msg = msg
-        if colored:
-            display_msg = f"{_YELLOW}{display_msg}{_RESET}"
-
-    length = len(f" {msg} in {elapsed_time:.2f}s ")
-    left_padding: str = "=" * ((width - length) // 2)
-    right_padding: str = "=" * ((width - length + 1) // 2)
-    print(
-        f"{left_padding} {display_msg} in {elapsed_time:.2f}s {right_padding}",
-    )
+    print("]")
 
 
 def _format_json() -> None:
@@ -132,20 +50,18 @@ def _format_json() -> None:
         output_dir = output_path.parent
 
     def collect_files(
-        name: Path, input_path: Path, output_path: Path,
-    ) -> list[tuple[str, tuple[Path, Path]]]:
+        input_path: Path, output_path: Path,
+    ) -> list[tuple[Path, Path]]:
         if not input_path.is_dir():  # crash if the path doesn't exist
-            return [(str(name), (input_path, output_path))]
+            return [(input_path, output_path)]
 
-        files: list[tuple[str, tuple[Path, Path]]] = []
+        files: list[tuple[Path, Path]] = []
         output_path.mkdir(exist_ok=True)
         for item in sorted(input_path.iterdir()):
             if not item.name.startswith(".") and (
                 item.is_dir() or item.suffix.lower() == ".json"
             ):
-                files.extend(collect_files(
-                    name / item.name, item, output_path / item.name,
-                ))
+                files.extend(collect_files(item, output_path / item.name))
 
         return files
 
@@ -155,10 +71,8 @@ def _format_json() -> None:
         _encoder.write(obj, output_filename)
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    files: list[tuple[str, tuple[Path, Path]]] = collect_files(
-        Path(), input_path, output_dir,
-    )
-    _process_items(files, format_json_file, colored=True)
+    files: list[tuple[Path, Path]] = collect_files(input_path, output_dir)
+    _process_items(files, format_json_file)
 
 
 def _interactive_main() -> None:
