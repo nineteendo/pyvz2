@@ -1,4 +1,5 @@
 """Python VS. Zombies 2 (PyVZ2)."""
+# TODO(Nice Zombies): add tests
 from __future__ import annotations
 
 __all__: list[str] = ["parse_path", "process_items"]
