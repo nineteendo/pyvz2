@@ -2,16 +2,51 @@
 # TODO(Nice Zombies): add tests
 from __future__ import annotations
 
-__all__: list[str] = ["parse_path", "process_items"]
+__all__: list[str] = [
+    "ErrorCounter",
+    "get_main_dir",
+    "parse_path",
+    "process_items",
+]
 
+import sys
+from logging import ERROR, Filter, LogRecord
 from pathlib import Path
 from shutil import get_terminal_size
+from sys import executable
 from typing import TYPE_CHECKING, TypeVar
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     _T = TypeVar("_T")
+
+
+# pylint: disable-next=R0903
+class ErrorCounter(Filter):
+    """Error counter."""
+
+    def __init__(self) -> None:
+        """Create new error counter."""
+        super().__init__()
+        self.count: int = 0
+
+    def filter(self, record: LogRecord) -> bool:
+        """Update error count."""
+        if record.levelno >= ERROR:
+            self.count += 1
+
+        return True
+
+
+def get_main_dir() -> Path:
+    """Get the directory of the main script."""
+    if getattr(sys, "frozen", False):
+        main_dir: str = executable
+    else:
+        main_dir = sys.path[0]
+
+    return Path(main_dir).parent
 
 
 def parse_path(string: str) -> Path:

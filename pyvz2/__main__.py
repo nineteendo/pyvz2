@@ -1,18 +1,20 @@
 """Python VS. Zombies 2 (PyVZ2)."""
-# TODO(Nice Zombies): add error handling
 from __future__ import annotations
 
 __all__: list[str] = []
 __version__: str = "2.0.0-dev"
 
-from contextlib import suppress
+from logging import FileHandler, Formatter, Logger, getLogger
+from sys import stderr
 from typing import TYPE_CHECKING, Any
 
 import jsonyx
-from utils import parse_path, process_items
+from utils import ErrorCounter, get_main_dir, parse_path, process_items
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+_logger: Logger = getLogger(__name__)
 
 # TODO(Nice Zombies): load configuration from settings
 _decoder: jsonyx.Decoder = jsonyx.Decoder()
@@ -53,12 +55,19 @@ def _json_diff(input_path: Path, input2_path: Path, output_path: Path) -> None:
 
     def callback(item: tuple[Path, Path, Path]) -> None:
         input_filename, input2_filename, output_filename = item
-        obj: Any = _decoder.read(input_filename)
-        obj2: Any = _decoder.read(input2_filename)
-        if patch := jsonyx.make_patch(obj, obj2):
-            _encoder.write(patch, output_filename)
-        else:
-            output_filename.unlink(missing_ok=True)
+        try:
+            obj: Any = _decoder.read(input_filename)
+            obj2: Any = _decoder.read(input2_filename)
+            if patch := jsonyx.make_patch(obj, obj2):
+                _encoder.write(patch, output_filename)
+            else:
+                output_filename.unlink(missing_ok=True)
+        except (
+            jsonyx.TruncatedSyntaxError, OSError, RecursionError, TypeError,
+            ValueError,
+        ) as exc:
+            exc.with_traceback(None)
+            _logger.exception("Failed to generate JSON patch")
 
     if input_path.is_dir():
         output_dir: Path = output_path
@@ -92,8 +101,15 @@ def _json_format(input_path: Path, output_path: Path) -> None:
 
     def callback(item: tuple[Path, Path]) -> None:
         input_filename, output_filename = item
-        obj: Any = _decoder.read(input_filename)
-        _encoder.write(obj, output_filename)
+        try:
+            obj: Any = _decoder.read(input_filename)
+            _encoder.write(obj, output_filename)
+        except (
+            jsonyx.TruncatedSyntaxError, OSError, RecursionError, TypeError,
+            ValueError,
+        ) as exc:
+            exc.with_traceback(None)
+            _logger.exception("Failed to format JSON file")
 
     if input_path.is_dir():
         output_dir: Path = output_path
@@ -137,10 +153,17 @@ def _json_patch(input_path: Path, patch_path: Path, output_path: Path) -> None:
 
     def callback(item: tuple[Path, Path, Path]) -> None:
         input_filename, patch_filename, output_filename = item
-        obj: Any = _decoder.read(input_filename)
-        patch: Any = _decoder.read(patch_filename)
-        obj = _manipulator.apply_patch(obj, patch)
-        _encoder.write(obj, output_filename)
+        try:
+            obj: Any = _decoder.read(input_filename)
+            patch: Any = _decoder.read(patch_filename)
+            obj = _manipulator.apply_patch(obj, patch)
+            _encoder.write(obj, output_filename)
+        except (
+            AssertionError, jsonyx.TruncatedSyntaxError, LookupError, OSError,
+            RecursionError, TypeError, ValueError,
+        ) as exc:
+            exc.with_traceback(None)
+            _logger.exception("Failed to apply JSON patch")
 
     if input_path.is_dir():
         output_dir: Path = output_path
@@ -160,8 +183,7 @@ def _interactive_main() -> None:
     print("a: JSON diff")
     print("b: JSON format")
     print("c: JSON patch")
-    tool: str = input("Choose tool: ")
-    if tool == "a":
+    if (tool := input("Choose tool: ")) == "a":
         input_path: Path = parse_path(
             input("First JSON input file or directory: "),
         )
@@ -194,10 +216,30 @@ def _interactive_main() -> None:
 
         _json_patch(input_path, patch_path, output_path)
     else:
-        msg: str = "Unknown tool"
-        raise ValueError(msg)
+        stderr.write(f"Invalid tool: {tool!r}\n")
+
+
+def _main() -> None:
+    log_file: Path = get_main_dir() / "pyvz2.log"
+    handler: FileHandler = FileHandler(log_file, "w", "utf-8")
+    fmt: str = "%(asctime)s - %(levelname)s - %(message)s"
+    handler.setFormatter(Formatter(fmt))
+    _logger.addHandler(handler)
+    error_counter: ErrorCounter = ErrorCounter()
+    _logger.addFilter(error_counter)
+    try:
+        _interactive_main()
+    # pylint: disable-next=W0718
+    except Exception:
+        _logger.exception("Something went wrong")
+    except KeyboardInterrupt:
+        pass
+
+    if error_counter.count:
+        stderr.write(f"Something went wrong, check: {log_file}\n")
+
+    input("Press enter to continue...")
 
 
 if __name__ == "__main__":
-    with suppress(KeyboardInterrupt):
-        _interactive_main()
+    _main()
