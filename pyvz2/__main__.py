@@ -4,11 +4,13 @@ from __future__ import annotations
 __all__: list[str] = []
 __version__: str = "2.0.0-dev"
 
+from contextlib import suppress
 from logging import FileHandler, Formatter, Logger, getLogger
 from sys import stderr
 from typing import TYPE_CHECKING, Any
 
 import jsonyx
+import jsonyx.allow
 from utils import ErrorCounter, get_main_dir, parse_path, process_items
 
 if TYPE_CHECKING:
@@ -16,13 +18,34 @@ if TYPE_CHECKING:
 
 _logger: Logger = getLogger(__name__)
 
-# TODO(Nice Zombies): load configuration from settings
-_decoder: jsonyx.Decoder = jsonyx.Decoder()
-_encoder: jsonyx.Encoder = jsonyx.Encoder(indent=4)
-_manipulator: jsonyx.Manipulator = jsonyx.Manipulator()
+
+# pylint: disable-next=R0903
+class _Config:
+    def __init__(self, settings: dict[str, Any]) -> None:
+        if settings["nonstrict"]:
+            allow: frozenset[str] = jsonyx.allow.EVERYTHING
+        else:
+            allow = jsonyx.allow.NOTHING
+
+        self.json_decoder: jsonyx.Decoder = jsonyx.Decoder(allow=allow)
+        self.json_encoder: jsonyx.Encoder = jsonyx.Encoder(
+            allow=allow,
+            end=settings["end"],
+            ensure_ascii=settings["ensure_ascii"],
+            indent=settings["indent"],
+            indent_leaves=settings["indent_leaves"],
+            max_indent_level=settings["max_indent_level"],
+            separators=(settings["item_separator"], settings["key_separator"]),
+            sort_keys=settings["sort_keys"],
+        )
+        self.json_manipulator: jsonyx.Manipulator = jsonyx.Manipulator(
+            allow=allow,
+        )
 
 
-def _json_diff(input_path: Path, input2_path: Path, output_path: Path) -> None:
+def _json_diff(
+    config: _Config, input_path: Path, input2_path: Path, output_path: Path,
+) -> None:
     def collect_items(
         input_path: Path, input2_path: Path, output_path: Path,
     ) -> list[tuple[Path, Path, Path]]:
@@ -56,10 +79,10 @@ def _json_diff(input_path: Path, input2_path: Path, output_path: Path) -> None:
     def callback(item: tuple[Path, Path, Path]) -> None:
         input_filename, input2_filename, output_filename = item
         try:
-            obj: Any = _decoder.read(input_filename)
-            obj2: Any = _decoder.read(input2_filename)
+            obj: Any = config.json_decoder.read(input_filename)
+            obj2: Any = config.json_decoder.read(input2_filename)
             if patch := jsonyx.make_patch(obj, obj2):
-                _encoder.write(patch, output_filename)
+                config.json_encoder.write(patch, output_filename)
             else:
                 output_filename.unlink(missing_ok=True)
         except (
@@ -80,7 +103,7 @@ def _json_diff(input_path: Path, input2_path: Path, output_path: Path) -> None:
     )
 
 
-def _json_format(input_path: Path, output_path: Path) -> None:
+def _json_format(config: _Config, input_path: Path, output_path: Path) -> None:
     def collect_items(
         input_path: Path, output_path: Path,
     ) -> list[tuple[Path, Path]]:
@@ -102,8 +125,8 @@ def _json_format(input_path: Path, output_path: Path) -> None:
     def callback(item: tuple[Path, Path]) -> None:
         input_filename, output_filename = item
         try:
-            obj: Any = _decoder.read(input_filename)
-            _encoder.write(obj, output_filename)
+            obj: Any = config.json_decoder.read(input_filename)
+            config.json_encoder.write(obj, output_filename)
         except (
             jsonyx.TruncatedSyntaxError, OSError, RecursionError, TypeError,
             ValueError,
@@ -120,7 +143,9 @@ def _json_format(input_path: Path, output_path: Path) -> None:
     process_items(collect_items(input_path, output_path), callback)
 
 
-def _json_patch(input_path: Path, patch_path: Path, output_path: Path) -> None:
+def _json_patch(
+    config: _Config, input_path: Path, patch_path: Path, output_path: Path,
+) -> None:
     def collect_items(
         input_path: Path, patch_path: Path, output_path: Path,
     ) -> list[tuple[Path, Path, Path]]:
@@ -154,10 +179,10 @@ def _json_patch(input_path: Path, patch_path: Path, output_path: Path) -> None:
     def callback(item: tuple[Path, Path, Path]) -> None:
         input_filename, patch_filename, output_filename = item
         try:
-            obj: Any = _decoder.read(input_filename)
-            patch: Any = _decoder.read(patch_filename)
-            obj = _manipulator.apply_patch(obj, patch)
-            _encoder.write(obj, output_filename)
+            obj: Any = config.json_decoder.read(input_filename)
+            patch: Any = config.json_decoder.read(patch_filename)
+            obj = config.json_manipulator.apply_patch(obj, patch)
+            config.json_encoder.write(obj, output_filename)
         except (
             AssertionError, jsonyx.TruncatedSyntaxError, LookupError, OSError,
             RecursionError, TypeError, ValueError,
@@ -177,6 +202,11 @@ def _json_patch(input_path: Path, patch_path: Path, output_path: Path) -> None:
 
 
 def _interactive_main() -> None:
+    settings: dict[str, Any] = jsonyx.read(
+        get_main_dir() / "settings.jsonc",
+        allow=jsonyx.allow.COMMENTS | jsonyx.allow.TRAILING_COMMA,
+    )
+    config: _Config = _Config(settings)
     print(f"Python VS. Zombies 2 v{__version__}")
     print()
     print("Tools:")
@@ -196,7 +226,7 @@ def _interactive_main() -> None:
             input2_path = parse_path(input("Second JSON input file"))
             output_path = parse_path(input("JSON output file: "))
 
-        _json_diff(input_path, input2_path, output_path)
+        _json_diff(config, input_path, input2_path, output_path)
     elif tool == "b":
         input_path = parse_path(input("JSON input file or directory: "))
         if input_path.is_dir():
@@ -204,7 +234,7 @@ def _interactive_main() -> None:
         else:
             output_path = parse_path(input("JSON output file: "))
 
-        _json_format(input_path, output_path)
+        _json_format(config, input_path, output_path)
     elif tool == "c":
         input_path = parse_path(input("JSON input file or directory: "))
         if input_path.is_dir():
@@ -214,7 +244,7 @@ def _interactive_main() -> None:
             patch_path = parse_path(input("JSON patch file"))
             output_path = parse_path(input("JSON output file: "))
 
-        _json_patch(input_path, patch_path, output_path)
+        _json_patch(config, input_path, patch_path, output_path)
     else:
         stderr.write(f"Invalid tool: {tool!r}\n")
 
@@ -232,8 +262,6 @@ def _main() -> None:
     # pylint: disable-next=W0718
     except Exception:
         _logger.exception("Something went wrong")
-    except KeyboardInterrupt:
-        pass
 
     if error_counter.count:
         stderr.write(f"Something went wrong, check: {log_file}\n")
@@ -242,4 +270,5 @@ def _main() -> None:
 
 
 if __name__ == "__main__":
-    _main()
+    with suppress(KeyboardInterrupt):
+        _main()

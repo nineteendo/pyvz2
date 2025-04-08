@@ -1,0 +1,46 @@
+{
+    // The string to append at the end
+    // Type: string
+    // Default: "\n"
+    "end": "\n",
+
+    // Escape non-ASCII characters
+    // Type: boolean
+    // Default: false
+    "ensure_ascii": false,
+
+    // The number of spaces or string to indent with
+    // Type: number, string or null
+    // Default: 4
+    "indent": 4,
+
+    // Indent leaf objects and arrays
+    // Type: boolean
+    // Default: true
+    "indent_leaves": true,
+
+    // The item separator
+    // Type: string
+    // Default: ", "
+    "item_separator": ", ",
+
+    // The key separator
+    // Type: string
+    // Default: ": "
+    "key_separator": ": ",
+
+    // The level up to which to indent
+    // Type: number or null
+    // Default: null
+    "max_indent_level": null,
+
+    // Allow all JSON deviations provided by jsonyx
+    // Type: boolean
+    // Default: false
+    "nonstrict": false,
+
+    // Sort the keys of objects
+    // Type: boolean
+    // Default: false
+    "sort_keys": false
+}
