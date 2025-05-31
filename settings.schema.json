@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "JSON Settings",
+  "type": "object",
+  "properties": {
+    "end": {
+      "type": "string",
+      "description": "The string to append at the end",
+      "default": "\n"
+    },
+    "ensure_ascii": {
+      "type": "boolean",
+      "description": "Escape non-ASCII characters",
+      "default": false
+    },
+    "indent": {
+      "type": ["number" ,"string" ,"null" ],
+      "description": "The number of spaces or string to indent with",
+      "default": 4
+    },
+    "indent_leaves": {
+      "type": "boolean",
+      "description": "Indent leaf objects and arrays",
+      "default": true
+    },
+    "item_separator": {
+      "type": "string",
+      "description": "The item separator",
+      "default": ", "
+    },
+    "key_separator": {
+      "type": "string",
+      "description": "The key separator",
+      "default": ": "
+    },
+    "max_indent_level": {
+      "type": ["number", "null"],
+      "description": "The level up to which to indent",
+      "default": null
+    },
+    "strict": {
+      "type": "boolean",
+      "description": "Reject all JSON deviations provided by jsonyx",
+      "default": true
+    },
+    "sort_keys": {
+      "type": "boolean",
+      "description": "Sort the keys of objects",
+      "default": false
+    }
+  },
+  "additionalProperties": false
+}
