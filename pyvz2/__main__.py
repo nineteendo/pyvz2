@@ -22,10 +22,10 @@ _logger: Logger = getLogger(__name__)
 # pylint: disable-next=R0903
 class _Config:
     def __init__(self, settings: dict[str, Any]) -> None:
-        if settings["nonstrict"]:
-            allow: frozenset[str] = jsonyx.allow.EVERYTHING
+        if settings["strict"]:
+            allow: frozenset[str] = jsonyx.allow.NOTHING
         else:
-            allow = jsonyx.allow.NOTHING
+            allow = jsonyx.allow.EVERYTHING
 
         self.json_decoder: jsonyx.Decoder = jsonyx.Decoder(allow=allow)
         self.json_encoder: jsonyx.Encoder = jsonyx.Encoder(

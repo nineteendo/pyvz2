@@ -34,10 +34,10 @@
     // Default: null
     "max_indent_level": null,
 
-    // Allow all JSON deviations provided by jsonyx
+    // Reject all JSON deviations provided by jsonyx
     // Type: boolean
-    // Default: false
-    "nonstrict": false,
+    // Default: true
+    "strict": true,
 
     // Sort the keys of objects
     // Type: boolean
