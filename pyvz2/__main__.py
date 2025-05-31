@@ -76,8 +76,9 @@ def _json_diff(
 
         return items
 
-    def callback(item: tuple[Path, Path, Path]) -> None:
-        input_filename, input2_filename, output_filename = item
+    def callback(
+        input_filename: Path, input2_filename: Path, output_filename: Path,
+    ) -> None:
         try:
             obj: Any = config.json_decoder.read(input_filename)
             obj2: Any = config.json_decoder.read(input2_filename)
@@ -120,8 +121,7 @@ def _json_format(config: _Config, input_path: Path, output_path: Path) -> None:
 
         return items
 
-    def callback(item: tuple[Path, Path]) -> None:
-        input_filename, output_filename = item
+    def callback(input_filename: Path, output_filename: Path) -> None:
         try:
             obj: Any = config.json_decoder.read(input_filename)
             config.json_encoder.write(obj, output_filename)
@@ -174,8 +174,9 @@ def _json_patch(
 
         return items
 
-    def callback(item: tuple[Path, Path, Path]) -> None:
-        input_filename, patch_filename, output_filename = item
+    def callback(
+        input_filename: Path, patch_filename: Path, output_filename: Path,
+    ) -> None:
         try:
             obj: Any = config.json_decoder.read(input_filename)
             patch: Any = config.json_decoder.read(patch_filename)

@@ -3,10 +3,7 @@
 from __future__ import annotations
 
 __all__: list[str] = [
-    "ErrorCounter",
-    "get_main_dir",
-    "parse_path",
-    "process_items",
+    "ErrorCounter", "get_main_dir", "parse_path", "process_items",
 ]
 
 import sys
@@ -14,12 +11,10 @@ from logging import ERROR, Filter, LogRecord
 from pathlib import Path
 from shutil import get_terminal_size
 from sys import executable
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-
-    _T = TypeVar("_T")
 
 
 # pylint: disable-next=R0903
@@ -83,7 +78,9 @@ def parse_path(string: str) -> Path:
     return Path(new_string)
 
 
-def process_items(items: list[_T], callback: Callable[[_T], None]) -> None:
+def process_items(
+    items: list[tuple[Any, ...]], callback: Callable[..., None],
+) -> None:
     """Process items."""
     if not (total := len(items)):
         return
@@ -97,7 +94,7 @@ def process_items(items: list[_T], callback: Callable[[_T], None]) -> None:
 
     print(end="[", flush=True)
     for i, item in enumerate(items, start=1):
-        callback(item)
+        callback(*item)
         if progress := full[width * (i - 1) // total:width * i // total]:
             print(end=progress, flush=True)
 
