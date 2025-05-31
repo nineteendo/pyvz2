@@ -115,7 +115,7 @@ def process_items(
     if not (total := len(items)):
         return
 
-    width: int = max(20, get_terminal_size().columns) - 2
+    width: int = min(total, max(20, get_terminal_size().columns) - 2)
     full: str = "." * width
     for end in range(width, 0, -10):
         percentage: str = f"{100 * end // width}%"
