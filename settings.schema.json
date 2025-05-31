@@ -54,6 +54,5 @@
       "default": false
     }
   },
-  "required": ["end", "ensure_ascii", "indent", "indent_leaves", "item_separator", "key_separator", "max_indent_level", "strict", "sort_keys"],
   "additionalProperties": false
 }

@@ -22,21 +22,23 @@ _logger: Logger = getLogger(__name__)
 # pylint: disable-next=R0903
 class _Config:
     def __init__(self, settings: dict[str, Any]) -> None:
-        if settings["strict"]:
+        if settings.get("strict", True):
             allow: frozenset[str] = jsonyx.allow.NOTHING
         else:
             allow = jsonyx.allow.EVERYTHING
 
+        item_separator: str = settings.get("item_separator", ", ")
+        key_separator: str = settings.get("key_separator", ": ")
         self.json_decoder: jsonyx.Decoder = jsonyx.Decoder(allow=allow)
         self.json_encoder: jsonyx.Encoder = jsonyx.Encoder(
             allow=allow,
-            end=settings["end"],
-            ensure_ascii=settings["ensure_ascii"],
-            indent=settings["indent"],
-            indent_leaves=settings["indent_leaves"],
-            max_indent_level=settings["max_indent_level"],
-            separators=(settings["item_separator"], settings["key_separator"]),
-            sort_keys=settings["sort_keys"],
+            end=settings.get("end", "\n"),
+            ensure_ascii=settings.get("ensure_ascii", False),
+            indent=settings.get("indent", 4),
+            indent_leaves=settings.get("indent_leaves", True),
+            max_indent_level=settings.get("max_indent_level", None),
+            separators=(item_separator, key_separator),
+            sort_keys=settings.get("sort_keys", False),
         )
         self.json_manipulator: jsonyx.Manipulator = jsonyx.Manipulator(
             allow=allow,
