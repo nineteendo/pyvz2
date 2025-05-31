@@ -46,6 +46,10 @@ class _Config:
 def _json_diff(
     config: _Config, input_path: Path, input2_path: Path, output_path: Path,
 ) -> None:
+    if input_path in output_path.parents:
+        msg: str = "Output path cannot be a subdirectory of the input path"
+        raise ValueError(msg)
+
     def collect_items(
         input_path: Path, input2_path: Path, output_path: Path,
     ) -> list[tuple[Path, Path, Path]]:
@@ -103,6 +107,10 @@ def _json_diff(
 
 
 def _json_format(config: _Config, input_path: Path, output_path: Path) -> None:
+    if input_path in output_path.parents:
+        msg: str = "Output path cannot be a subdirectory of the input path"
+        raise ValueError(msg)
+
     def collect_items(
         input_path: Path, output_path: Path,
     ) -> list[tuple[Path, Path]]:
@@ -144,6 +152,10 @@ def _json_format(config: _Config, input_path: Path, output_path: Path) -> None:
 def _json_patch(
     config: _Config, input_path: Path, patch_path: Path, output_path: Path,
 ) -> None:
+    if input_path in output_path.parents:
+        msg: str = "Output path cannot be a subdirectory of the input path"
+        raise ValueError(msg)
+
     def collect_items(
         input_path: Path, patch_path: Path, output_path: Path,
     ) -> list[tuple[Path, Path, Path]]:
