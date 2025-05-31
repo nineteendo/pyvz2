@@ -28,8 +28,6 @@ jobs:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: true
         cache: pip
-    - name: Build package
-      run: pip install -v .
     - name: Install test dependencies
       run: pip install -r .github/workflows/requirements.txt
     - name: Test with pytest
