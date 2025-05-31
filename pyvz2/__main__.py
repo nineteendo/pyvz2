@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 import jsonyx
 import jsonyx.allow
-from utils import ErrorCounter, get_main_dir, parse_path, process_items
+from utils import ErrorCounter, get_main_dir, path_input, process_items
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -227,35 +227,31 @@ def _interactive_main() -> None:
     print("b: JSON format")
     print("c: JSON patch")
     if (tool := input("Choose tool: ")) == "a":
-        input_path: Path = parse_path(
-            input("First JSON input file or directory: "),
-        )
+        input_path: Path = path_input("First JSON input file or directory: ")
         if input_path.is_dir():
-            input2_path: Path = parse_path(
-                input("Second JSON input directory: "),
-            )
-            output_path: Path = parse_path(input("JSON output directory: "))
+            input2_path: Path = path_input("Second JSON input directory: ")
+            output_path: Path = path_input("JSON output directory: ")
         else:
-            input2_path = parse_path(input("Second JSON input file"))
-            output_path = parse_path(input("JSON output file: "))
+            input2_path = path_input("Second JSON input file")
+            output_path = path_input("JSON output file: ")
 
         _json_diff(config, input_path, input2_path, output_path)
     elif tool == "b":
-        input_path = parse_path(input("JSON input file or directory: "))
+        input_path = path_input("JSON input file or directory: ")
         if input_path.is_dir():
-            output_path = parse_path(input("JSON output directory: "))
+            output_path = path_input("JSON output directory: ")
         else:
-            output_path = parse_path(input("JSON output file: "))
+            output_path = path_input("JSON output file: ")
 
         _json_format(config, input_path, output_path)
     elif tool == "c":
-        input_path = parse_path(input("JSON input file or directory: "))
+        input_path = path_input("JSON input file or directory: ")
         if input_path.is_dir():
-            patch_path: Path = parse_path(input("JSON patch directory: "))
-            output_path = parse_path(input("JSON output directory: "))
+            patch_path: Path = path_input("JSON patch directory: ")
+            output_path = path_input("JSON output directory: ")
         else:
-            patch_path = parse_path(input("JSON patch file"))
-            output_path = parse_path(input("JSON output file: "))
+            patch_path = path_input("JSON patch file")
+            output_path = path_input("JSON output file: ")
 
         _json_patch(config, input_path, patch_path, output_path)
     else:
