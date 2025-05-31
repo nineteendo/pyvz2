@@ -83,8 +83,6 @@ def _json_diff(
             obj2: Any = config.json_decoder.read(input2_filename)
             if patch := jsonyx.make_patch(obj, obj2):
                 config.json_encoder.write(patch, output_filename)
-            else:
-                output_filename.unlink(missing_ok=True)
         except (
             jsonyx.TruncatedSyntaxError, OSError, RecursionError, TypeError,
             ValueError,
